@@ -399,28 +399,6 @@
 
 개발/테스트 편의를 위해 아래 툴들이 같이 들어있습니다.
 
----
-
-## Docs 통합 요약
-
-프로젝트의 `docs/` 하위 문서들을 하나로 통합한 요약을 여기에 포함합니다. 이 섹션은 개발자 및 호스트가 빠르게 참고할 수 있도록 핵심 개념과 파일 위치, 실행/테스트 지침을 정리합니다.
-
-### 핵심 요약
-- 목적: 사내망에서 다수 스마트폰으로 플레이하는 One Night 게임의 LLM/TTS 기반 데모
-- 운영 방식: 호스트 TTS 안내(웹 Speech API 우선) + 각 플레이어의 모바일 화면에서 개인 행동 수행
-- 스토리/시나리오: 테마 → 시리즈 → 에피소드 → 세그먼트(JSON) 구조로 관리
-- 모바일 UI: 대기(큰 숫자+색) / 개인보기(Private Role View) / 행동(Action Grid)
-
-### 주요 파일(참고)
-- `docs/TOOLING.md`: GPT-SoVITS 실행 및 `tts-playground` 사용법
-- 시나리오 예시와 템플릿(이전 `docs/tts_scenarios/` 내용)은 리포지토리의 `docs` 변경 내역에 통합되어 있으며, 필요한 경우 아카이브로 복원 가능합니다.
-
-### 데모 실행 제안
-- `tts-playground`에 통합 데모(호스트 TTS + 클라이언트 uiAction 시뮬레이션) 추가 권장
-- Web Speech API 동작 확인: 모바일 브라우저에서 `tts-playground/index.html`을 `python -m http.server`로 서빙 후 테스트
-
-필요하시면 이 섹션을 기반으로 `docs/`의 상세 예시(시나리오 JSON, UI 스케치)를 다시 분리하거나, `tts-playground/demo.html` + `demo.js` 형태의 시연용 페이지를 생성해 드리겠습니다.
-
 - GPT-SoVITS API 서버(`api_v2.py`) + CORS 허용
 - 모바일용 테스트 페이지 `tts-playground/index.html`
   - 서버 ref 목록 로딩: `GET /ref_library?base=/workspace/Ref`
