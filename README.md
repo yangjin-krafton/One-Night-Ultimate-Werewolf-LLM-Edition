@@ -395,6 +395,18 @@
 
 ---
 
+## Tooling (Dev Notes)
+
+개발/테스트 편의를 위해 아래 툴들이 같이 들어있습니다.
+
+- GPT-SoVITS API 서버(`api_v2.py`) + CORS 허용
+- 모바일용 테스트 페이지 `tts-playground/index.html`
+  - 서버 ref 목록 로딩: `GET /ref_library?base=/workspace/Ref`
+  - 로그 UX(필터/검색/일시정지/라인 제한/복사)
+- (옵션) Hugging Face 한국어 보이스 다운로드 스크립트: `download_korean.py`
+
+자세한 사용법은 `TOOLING.md` 참고.
+
 ## 8. 시스템 아키텍처 개요
 
 ### 8.1 구성
