@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>Multi User Launcher</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <main class="main">
+        <section class="join">
+          <div class="panel">
+            <h1 class="title">멀티 유저 테스트</h1>
+            <p class="subtitle">Windows PC에서 여러 창을 자동으로 열어 테스트합니다.</p>
+
+            <label class="field">
+              <span>열 유저 수</span>
+              <input id="count" type="number" min="1" max="12" value="5" />
+            </label>
+            <button class="btn btn--primary" id="open">열기</button>
+
+            <div class="hint">
+              각 창은 <code>?debugClientId=U1&amp;debugName=U1</code> 형태로 실행됩니다.
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script>
+      const openBtn = document.getElementById("open");
+      const count = document.getElementById("count");
+      openBtn.addEventListener("click", () => {
+        const n = Math.max(1, Math.min(12, Number(count.value || 5)));
+        for (let i = 1; i <= n; i++) {
+          const id = `U${i}`;
+          const u = new URL("/", window.location.origin);
+          u.searchParams.set("debugClientId", id);
+          u.searchParams.set("debugName", id);
+          window.open(u.toString(), `_u_${id}`, "popup,width=440,height=860");
+        }
+      });
+    </script>
+  </body>
+</html>
+

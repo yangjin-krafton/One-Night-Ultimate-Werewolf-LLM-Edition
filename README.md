@@ -207,3 +207,24 @@
   * 각 클라이언트는 로컬 시간 기준으로 카운트다운
 
 ---
+
+## 9. TTS 오디오(.wav) 생성 (사전 생성)
+
+게임에서 로딩할 오디오 파일 경로(예: `voice.wav`)는 그대로 두고, `scripts/gpt_sovits_tts.py`에서 TTS 백엔드를 선택해 생성할 수 있습니다.
+
+### 9.1 GPT-SoVITS 사용(기본값)
+
+- 캐릭터 설정(`characters/<id>/character.json`)을 쓰는 경우(감정 태그 분절 + ref/prompt 기반):
+  - `python scripts/gpt_sovits_tts.py --tts gpt-sovits --character characters/_template/character.json --text-file <대사.txt> --out <voice.wav>`
+- `--character` 없이 단일 ref로 호출하는 경우:
+  - `python scripts/gpt_sovits_tts.py --tts gpt-sovits --ref-audio-path /workspace/Ref/Wolf/refs/normal.wav --text "안녕하세요" --out <voice.wav>`
+
+### 9.2 Windows 내장 TTS 사용(SoVITS 없는 환경용)
+
+- SoVITS/API 없이 Windows SAPI로 바로 `.wav` 생성:
+  - `python scripts/gpt_sovits_tts.py --tts windows --text-file <대사.txt> --out <voice.wav>`
+- 감정 태그 분절은 유지하고 싶으면 `--character`만 같이 사용(레퍼런스/프롬프트는 사용하지 않음):
+  - `python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/character.json --text-file <대사.txt> --out <voice.wav>`
+  - python scripts\generate_scenario_audio.py --scenario scenarios\ghost_survey_club.json --tts windows
+
+Windows 음성/속도/볼륨/샘플레이트는 옵션으로 조절할 수 있습니다: `--windows-voice`, `--windows-rate`, `--windows-volume`, `--windows-sample-rate` (또는 `--windows-format` 별칭).

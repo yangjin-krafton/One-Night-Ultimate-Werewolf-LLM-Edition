@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>One Night Ultimate Werewolf (LAN)</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="topbar">
+        <div class="phase">
+          <span class="phase__dot" id="connDot" title="connection"></span>
+          <span class="phase__label" id="phaseLabel">WAIT</span>
+          <span class="phase__meta" id="scenarioLabel"></span>
+        </div>
+        <div class="timer" id="timer">--:--</div>
+      </header>
+
+      <main class="main">
+        <section class="join" id="join">
+          <div class="panel">
+            <h1 class="title">한밤의 늑대인간</h1>
+            <p class="subtitle">사내망 테스트용 · 같은 PC에서 여러 창도 가능</p>
+            <label class="field">
+              <span>닉네임</span>
+              <input id="nameInput" maxlength="20" placeholder="예: 철수" autocomplete="off" />
+            </label>
+            <button class="btn btn--primary" id="joinBtn">입장</button>
+            <div class="hint">
+              개발용: <code>?debugClientId=U1&amp;debugName=Alice</code>
+            </div>
+          </div>
+        </section>
+
+        <section class="room hidden" id="room">
+          <div class="grid" id="grid"></div>
+
+          <div class="actionbar" id="actionbar">
+            <button class="btn" id="scenarioBtn">시나리오 선택</button>
+            <button class="btn btn--primary" id="startBtn">게임 시작</button>
+            <button class="btn hidden" id="voteBtn">투표</button>
+          </div>
+        </section>
+      </main>
+
+      <div class="modal hidden" id="scenarioModal" role="dialog" aria-modal="true">
+        <div class="modal__backdrop" id="scenarioBackdrop"></div>
+        <div class="modal__panel">
+          <div class="modal__header">
+            <div>
+              <div class="modal__title">시나리오</div>
+              <div class="modal__subtitle">호스트만 선택할 수 있어요</div>
+            </div>
+            <button class="iconbtn" id="scenarioClose" aria-label="close">✕</button>
+          </div>
+          <div class="modal__body">
+            <div class="scenarioList" id="scenarioList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal hidden" id="voteModal" role="dialog" aria-modal="true">
+        <div class="modal__backdrop" id="voteBackdrop"></div>
+        <div class="modal__panel">
+          <div class="modal__header">
+            <div>
+              <div class="modal__title">투표</div>
+              <div class="modal__subtitle">가장 의심스러운 좌석을 선택하세요</div>
+            </div>
+            <button class="iconbtn" id="voteClose" aria-label="close">✕</button>
+          </div>
+          <div class="modal__body">
+            <div class="voteGrid" id="voteGrid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
+

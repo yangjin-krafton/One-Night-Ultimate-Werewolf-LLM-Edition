@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import random
 import re
+import subprocess
 import tempfile
 import wave
 from dataclasses import dataclass
@@ -168,17 +170,30 @@ def concat_wavs(wav_paths: list[Path], out_wav_path: Path) -> Path:
 
     out_wav_path.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(wav_paths[0]), "rb") as w0:
-        params = w0.getparams()
+        channels = w0.getnchannels()
+        sampwidth = w0.getsampwidth()
+        framerate = w0.getframerate()
+        comptype = w0.getcomptype()
+        compname = w0.getcompname()
         frames = [w0.readframes(w0.getnframes())]
 
     for p in wav_paths[1:]:
         with wave.open(str(p), "rb") as w:
-            if w.getparams()[:4] != params[:4]:
+            if (
+                w.getnchannels() != channels
+                or w.getsampwidth() != sampwidth
+                or w.getframerate() != framerate
+                or w.getcomptype() != comptype
+            ):
                 raise ValueError(f"WAV params mismatch, cannot concat: {wav_paths[0].name} vs {p.name}")
             frames.append(w.readframes(w.getnframes()))
 
     with wave.open(str(out_wav_path), "wb") as out:
-        out.setparams(params)
+        out.setnchannels(channels)
+        out.setsampwidth(sampwidth)
+        out.setframerate(framerate)
+        if comptype != "NONE":
+            out.setcomptype(comptype, compname)
         for chunk in frames:
             out.writeframes(chunk)
     return out_wav_path
@@ -294,8 +309,147 @@ def gpt_sovits_tts_to_wav(
     return out_path
 
 
+def windows_tts_to_wav(
+    *,
+    text: str,
+    out_wav_path: str | os.PathLike[str],
+    voice: str = "",
+    rate: int = 0,
+    volume: int = 100,
+    sample_rate_hz: int = 16000,
+) -> Path:
+    if os.name != "nt":
+        raise RuntimeError("windows TTS backend is only supported on Windows.")
+
+    out_path = Path(out_wav_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Avoid quoting issues by passing UTF-8 base64 text to PowerShell.
+    text_b64 = base64.b64encode((text or "").encode("utf-8")).decode("ascii")
+    ps_script = r"""
+param(
+  [Parameter(Mandatory=$true)][string]$TextB64,
+  [Parameter(Mandatory=$true)][string]$Out,
+  [string]$Voice = "",
+  [int]$Rate = 0,
+  [int]$Volume = 100,
+  [int]$SampleRate = 16000
+)
+try {
+  $ErrorActionPreference = 'Stop'
+  Add-Type -AssemblyName System.Speech
+  $text = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($TextB64))
+  $sp = New-Object System.Speech.Synthesis.SpeechSynthesizer
+  if ($Voice -and $Voice.Trim().Length -gt 0) { $sp.SelectVoice($Voice) }
+  $sp.Rate = $Rate
+  $sp.Volume = $Volume
+  try {
+    $fmt = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(
+      $SampleRate,
+      [System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen,
+      [System.Speech.AudioFormat.AudioChannel]::Mono
+    )
+    $sp.SetOutputToWaveFile($Out, $fmt)
+    $sp.Speak($text)
+  } finally {
+    $sp.Dispose()
+  }
+} catch {
+  Write-Error $_
+  exit 1
+}
+"""
+
+    with tempfile.TemporaryDirectory(prefix="win_tts_") as td:
+        ps1 = Path(td) / "tts.ps1"
+        ps1.write_text(ps_script, encoding="utf-8")
+        cmd = [
+            "powershell",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(ps1),
+            "-TextB64",
+            text_b64,
+            "-Out",
+            str(out_path),
+            "-Voice",
+            voice or "",
+            "-Rate",
+            str(int(rate)),
+            "-Volume",
+            str(int(volume)),
+            "-SampleRate",
+            str(int(sample_rate_hz)),
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if proc.returncode != 0:
+            raise RuntimeError(
+                "Windows TTS failed.\n"
+                f"stdout:\n{proc.stdout}\n"
+                f"stderr:\n{proc.stderr}\n"
+            )
+
+    if not out_path.exists() or out_path.stat().st_size == 0:
+        raise RuntimeError("Windows TTS did not produce a wav file.")
+
+    return out_path
+
+
+def generate_windows_tts_wav(
+    *,
+    text: str,
+    out_wav_path: str | os.PathLike[str],
+    voice: str = "",
+    rate: int = 0,
+    volume: int = 100,
+    sample_rate_hz: int = 16000,
+    keep_parts_dir: str | os.PathLike[str] | None = None,
+) -> Path:
+    segments = split_text_by_emotion_tags(text)
+    if not segments:
+        raise ValueError("Empty text after parsing emotion tags")
+
+    out_path = Path(out_wav_path)
+
+    if keep_parts_dir is None:
+        tmp_ctx = tempfile.TemporaryDirectory(prefix="tts_windows_")
+        parts_dir = Path(tmp_ctx.name)
+    else:
+        tmp_ctx = None
+        parts_dir = Path(keep_parts_dir)
+        parts_dir.mkdir(parents=True, exist_ok=True)
+
+    wav_parts: list[Path] = []
+    try:
+        for i, seg in enumerate(segments, start=1):
+            part_path = parts_dir / f"{out_path.stem}.part{i:03d}.wav"
+            windows_tts_to_wav(
+                text=seg.text,
+                out_wav_path=part_path,
+                voice=voice,
+                rate=rate,
+                volume=volume,
+                sample_rate_hz=sample_rate_hz,
+            )
+            wav_parts.append(part_path)
+        concat_wavs(wav_parts, out_path)
+        return out_path
+    finally:
+        if tmp_ctx is not None:
+            tmp_ctx.cleanup()
+
+
 def _main() -> int:
     parser = argparse.ArgumentParser(description="Generate a TTS .wav via GPT-SoVITS api_v2.py (/tts).")
+    parser.add_argument(
+        "--tts",
+        default=os.environ.get("TTS_BACKEND", "gpt-sovits"),
+        choices=["gpt-sovits", "windows"],
+        help="TTS backend: gpt-sovits (default) or windows (SAPI).",
+    )
     parser.add_argument("--api-base", default=os.environ.get("GPT_SOVITS_API_BASE", "http://127.0.0.1:9880"))
     parser.add_argument("--container-ref-base", default=os.environ.get("GPT_SOVITS_CONTAINER_REF_BASE", "/workspace/Ref"))
     parser.add_argument("--text-lang", default=os.environ.get("GPT_SOVITS_TEXT_LANG", "ko-KR"))
@@ -310,6 +464,17 @@ def _main() -> int:
     parser.add_argument("--streaming-mode", action="store_true", help="Enable streaming_mode=true (default false).")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for ref selection.")
     parser.add_argument("--keep-parts-dir", default="", help="If set, keep generated wav parts in this directory.")
+    parser.add_argument("--windows-voice", default=os.environ.get("WINDOWS_TTS_VOICE", ""), help="SAPI voice name.")
+    parser.add_argument("--windows-rate", type=int, default=int(os.environ.get("WINDOWS_TTS_RATE", "0")))
+    parser.add_argument("--windows-volume", type=int, default=int(os.environ.get("WINDOWS_TTS_VOLUME", "100")))
+    parser.add_argument(
+        "--windows-sample-rate",
+        "--windows-format",
+        dest="windows_sample_rate",
+        type=int,
+        default=int(os.environ.get("WINDOWS_TTS_SAMPLE_RATE", "16000")),
+        help="Output WAV sample rate in Hz (16-bit mono PCM).",
+    )
     args = parser.parse_args()
 
     text = args.text
@@ -318,35 +483,56 @@ def _main() -> int:
     if not text.strip():
         raise SystemExit("Empty text. Provide --text or --text-file.")
 
-    if args.character:
-        generate_character_tts_wav(
-            character_config_path=args.character,
-            text=text,
-            out_wav_path=args.out,
-            api_base=args.api_base,
-            text_lang=args.text_lang,
-            prompt_lang=(args.prompt_lang or None),
-            media_type="wav",
-            streaming_mode=bool(args.streaming_mode),
-            timeout_s=args.timeout_s,
-            seed=args.seed,
-            keep_parts_dir=(args.keep_parts_dir or None),
-        )
+    if args.tts == "windows":
+        if args.character:
+            generate_windows_tts_wav(
+                text=text,
+                out_wav_path=args.out,
+                voice=args.windows_voice,
+                rate=args.windows_rate,
+                volume=args.windows_volume,
+                sample_rate_hz=args.windows_sample_rate,
+                keep_parts_dir=(args.keep_parts_dir or None),
+            )
+        else:
+            windows_tts_to_wav(
+                text=text,
+                out_wav_path=args.out,
+                voice=args.windows_voice,
+                rate=args.windows_rate,
+                volume=args.windows_volume,
+                sample_rate_hz=args.windows_sample_rate,
+            )
     else:
-        if not args.ref_audio_path:
-            raise SystemExit("--ref-audio-path is required when --character is not used.")
-        gpt_sovits_tts_to_wav(
-            text=text,
-            ref_audio_path=args.ref_audio_path,
-            out_wav_path=args.out,
-            api_base=args.api_base,
-            container_ref_base=args.container_ref_base,
-            text_lang=args.text_lang,
-            prompt_lang=(args.prompt_lang or None),
-            prompt_text=args.prompt_text,
-            streaming_mode=bool(args.streaming_mode),
-            timeout_s=args.timeout_s,
-        )
+        if args.character:
+            generate_character_tts_wav(
+                character_config_path=args.character,
+                text=text,
+                out_wav_path=args.out,
+                api_base=args.api_base,
+                text_lang=args.text_lang,
+                prompt_lang=(args.prompt_lang or None),
+                media_type="wav",
+                streaming_mode=bool(args.streaming_mode),
+                timeout_s=args.timeout_s,
+                seed=args.seed,
+                keep_parts_dir=(args.keep_parts_dir or None),
+            )
+        else:
+            if not args.ref_audio_path:
+                raise SystemExit("--ref-audio-path is required when --character is not used.")
+            gpt_sovits_tts_to_wav(
+                text=text,
+                ref_audio_path=args.ref_audio_path,
+                out_wav_path=args.out,
+                api_base=args.api_base,
+                container_ref_base=args.container_ref_base,
+                text_lang=args.text_lang,
+                prompt_lang=(args.prompt_lang or None),
+                prompt_text=args.prompt_text,
+                streaming_mode=bool(args.streaming_mode),
+                timeout_s=args.timeout_s,
+            )
     return 0
 
 

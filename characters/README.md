@@ -28,3 +28,8 @@
 
 실행은 `scripts/gpt_sovits_tts.py`의 `--character` 모드를 사용하세요.
 
+## SoVITS 없는 환경(Windows TTS fallback)
+
+SoVITS 서버가 없는 환경에서는 `--tts windows`로 Windows 내장 TTS(SAPI)를 사용해 같은 방식으로 `.wav`를 생성할 수 있습니다.
+
+- `--character`를 함께 쓰면 감정 태그 분절은 유지되지만, `defaultRefs`/`emotionRefs`와 `*.txt` 프롬프트는 사용하지 않습니다.
