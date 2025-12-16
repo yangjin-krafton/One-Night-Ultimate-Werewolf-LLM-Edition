@@ -1,0 +1,38 @@
+{
+  "characterId": "Wolf",
+  "localRefBase": "./",
+  "containerRefBase": "/workspace/Ref/Wolf",
+  "defaultRefs": [
+    "refs/normal.wav"
+  ],
+  "emotionRefs": {
+    "happy": [
+      "refs/happy_01.wav",
+      "refs/happy_02.wav"
+    ],
+    "sad": [
+      "refs/sad_01.wav"
+    ],
+    "angry": [
+      "refs/angry_01.wav"
+    ],
+    "fearful": [
+      "refs/fearful_01.wav"
+    ],
+    "surprised": [
+      "refs/surprised_01.wav"
+    ]
+  },
+  "tagAliases": {
+    "기쁨": "happy",
+    "신남": "happy",
+    "슬픔": "sad",
+    "화남": "angry",
+    "분노": "angry",
+    "공포": "fearful",
+    "놀람": "surprised",
+    "기본": "default",
+    "normal": "default"
+  }
+}
+
