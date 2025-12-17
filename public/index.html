@@ -19,16 +19,28 @@
 
       <main class="main">
         <section class="join" id="join">
-          <div class="panel">
-            <h1 class="title">한밤의 늑대인간</h1>
-            <p class="subtitle">사내망 테스트용 · 같은 PC에서 여러 창도 가능</p>
-            <label class="field">
-              <span>닉네임</span>
-              <input id="nameInput" maxlength="20" placeholder="예: 철수" autocomplete="off" />
-            </label>
-            <button class="btn btn--primary" id="joinBtn">입장</button>
-            <div class="hint">
-              개발용: <code>?debugClientId=U1&amp;debugName=Alice</code>
+          <div class="landing">
+            <div class="landing__content">
+              <div class="landing__visual">
+                <div class="landing__moon"></div>
+                <div class="landing__fog"></div>
+              </div>
+              <h1 class="landing__title">
+                <span class="font-serif">한밤의</span><br />
+                <span class="font-serif">늑대인간</span>
+              </h1>
+              <p class="landing__subtitle">LLM Edition</p>
+            </div>
+
+            <div class="landing__action">
+              <div class="landing__input-group">
+                <input id="nameInput" class="landing__input" maxlength="10" placeholder="당신의 이름은?" autocomplete="off" />
+                <div class="landing__input-border"></div>
+              </div>
+              <button class="landing__btn" id="joinBtn">입장하기</button>
+              <div class="landing__hint">
+                Debug: <code>?debugClientId=U1&amp;debugName=Alice</code>
+              </div>
             </div>
           </div>
         </section>
@@ -43,6 +55,14 @@
           </div>
         </section>
       </main>
+
+      <div class="nightOverlay hidden" id="nightOverlay" aria-live="polite">
+        <div class="nightOverlay__panel">
+          <div class="nightOverlay__title" id="nightTitle">NIGHT</div>
+          <div class="nightOverlay__role" id="nightRole"></div>
+          <div class="nightOverlay__hint" id="nightHint"></div>
+        </div>
+      </div>
 
       <div class="modal hidden" id="scenarioModal" role="dialog" aria-modal="true">
         <div class="modal__backdrop" id="scenarioBackdrop"></div>
@@ -75,9 +95,10 @@
           </div>
         </div>
       </div>
+
+      <div id="transitionLayer" class="transition-layer"></div>
     </div>
 
     <script src="/app.js"></script>
   </body>
 </html>
-

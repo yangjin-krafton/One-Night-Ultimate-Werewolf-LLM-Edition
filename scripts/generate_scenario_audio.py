@@ -41,22 +41,54 @@ def _iter_clips_from_variant(narration: dict[str, Any]) -> Iterable[tuple[str, s
     Yield tuples: (section_key, speakerId, text)
     section_key is stable and used for clipId/path.
     """
-    for idx, clip in enumerate(narration.get("openingClips") or [], start=1):
+    def _coerce_clip_list(v: Any, *, default_speaker_id: str) -> list[dict[str, Any]]:
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [{"speakerId": default_speaker_id, "text": v}]
+        if isinstance(v, dict):
+            # Single clip object.
+            if "text" in v or "speakerId" in v:
+                return [v]
+            return []
+        if isinstance(v, list):
+            out: list[dict[str, Any]] = []
+            for item in v:
+                if isinstance(item, str):
+                    out.append({"speakerId": default_speaker_id, "text": item})
+                elif isinstance(item, dict):
+                    out.append(item)
+            return out
+        return []
+
+    for idx, clip in enumerate(_coerce_clip_list(narration.get("openingClips"), default_speaker_id="Narrator"), start=1):
         yield (f"opening/{idx:03d}", str(clip.get("speakerId") or "Narrator"), str(clip.get("text") or ""))
 
     role_clips = narration.get("roleClips") or {}
     for role_key in sorted(role_clips.keys()):
         role_obj = role_clips.get(role_key) or {}
-        for part in ("before", "during", "after"):
-            clips = role_obj.get(part) or []
-            for idx, clip in enumerate(clips, start=1):
-                yield (
-                    f"role/{role_key}/{part}/{idx:03d}",
-                    str(clip.get("speakerId") or "Narrator"),
-                    str(clip.get("text") or ""),
-                )
+        # Legacy format: role -> { before/during/after: [ {speakerId,text}, ... ] }
+        if any(k in role_obj for k in ("before", "during", "after")):
+            for part in ("before", "during", "after"):
+                clips = _coerce_clip_list(role_obj.get(part), default_speaker_id=str(role_key))
+                for idx, clip in enumerate(clips, start=1):
+                    yield (
+                        f"role/{role_key}/{part}/{idx:03d}",
+                        str(clip.get("speakerId") or "Narrator"),
+                        str(clip.get("text") or ""),
+                    )
+            continue
 
-    for idx, clip in enumerate(narration.get("nightOutroClips") or [], start=1):
+        # Compact format: role -> clip or [clip, ...] (no parts). Keep paths stable by mapping to /during/.
+        clips = _coerce_clip_list(role_obj, default_speaker_id=str(role_key))
+        for idx, clip in enumerate(clips, start=1):
+            yield (
+                f"role/{role_key}/during/{idx:03d}",
+                str(clip.get("speakerId") or "Narrator"),
+                str(clip.get("text") or ""),
+            )
+
+    for idx, clip in enumerate(_coerce_clip_list(narration.get("nightOutroClips"), default_speaker_id="Narrator"), start=1):
         yield (f"outro/{idx:03d}", str(clip.get("speakerId") or "Narrator"), str(clip.get("text") or ""))
 
 
@@ -64,36 +96,114 @@ def build_jobs(
     *,
     scenario_json_path: Path,
     out_base: Path,
+    variant_mode: str = "all",
+    best_fit_player_count: int | None = None,
 ) -> list[ClipJob]:
     raw = json.loads(scenario_json_path.read_text(encoding="utf-8"))
     jobs: list[ClipJob] = []
 
-    for scenario in raw.get("scenarios") or []:
+    def iter_scenarios(raw_obj: dict[str, Any]) -> list[dict[str, Any]]:
+        # Support two formats:
+        #  1) runtime/legacy: { scenarios: [ {scenarioId, episodes:[{variantByPlayerCount:{...}}]} ] }
+        #  2) compact tts-only: { scenarioId, playerCount, episodes: [...]|{...} }
+        if isinstance(raw_obj.get("scenarios"), list):
+            return [s for s in (raw_obj.get("scenarios") or []) if isinstance(s, dict)]
+        if raw_obj.get("scenarioId"):
+            return [raw_obj]
+        return []
+
+    def iter_episodes(scenario_obj: dict[str, Any]) -> list[dict[str, Any]]:
+        eps = scenario_obj.get("episodes")
+        if isinstance(eps, list):
+            return [e for e in eps if isinstance(e, dict)]
+        if isinstance(eps, dict):
+            out: list[dict[str, Any]] = []
+            for k, v in eps.items():
+                if isinstance(v, dict):
+                    out.append({"episodeId": str(k), **v})
+            return out
+        return []
+
+    def select_variant_keys(variants: dict[str, Any]) -> list[str]:
+        keys = [str(k) for k in (variants or {}).keys() if str(k).isdigit()]
+        keys.sort(key=lambda x: int(x))
+        if not keys:
+            return []
+        if variant_mode == "all":
+            return keys
+        if variant_mode == "max-only":
+            return [keys[-1]]
+        if variant_mode == "best-fit":
+            if not best_fit_player_count or best_fit_player_count <= 0:
+                raise ValueError("--variant-mode best-fit requires --best-fit-player-count > 0")
+            for k in keys:
+                if int(k) >= int(best_fit_player_count):
+                    return [k]
+            return [keys[-1]]
+        raise ValueError(f"Unknown variant_mode={variant_mode}")
+
+    for scenario in iter_scenarios(raw):
         scenario_id = str(scenario.get("scenarioId") or "").strip() or scenario_json_path.stem
-        for episode in scenario.get("episodes") or []:
+        for episode in iter_episodes(scenario):
             episode_id = str(episode.get("episodeId") or "").strip() or "episode"
-            variants = episode.get("variantByPlayerCount") or {}
-            for player_count in sorted(variants.keys(), key=lambda x: int(x) if str(x).isdigit() else 9999):
-                variant = variants.get(player_count) or {}
-                narration = (variant.get("narration") or {}) if isinstance(variant, dict) else {}
-                for section_key, speaker_id, text in _iter_clips_from_variant(narration):
-                    if not text.strip():
-                        continue
-                    clip_id = f"{scenario_id}/{episode_id}/p{player_count}/{section_key}"
-                    out_dir = out_base / scenario_id / episode_id / f"p{player_count}" / section_key
-                    out_wav = out_dir / "voice.wav"
-                    url = f"/assets/voices/{scenario_id}/{episode_id}/p{player_count}/{section_key}/voice.wav".replace(
-                        "\\", "/"
-                    )
-                    jobs.append(
-                        ClipJob(
-                            clip_id=clip_id,
-                            speaker_id=speaker_id,
-                            text=text,
-                            out_wav_path=out_wav,
-                            url_path=url,
+            variants = episode.get("variantByPlayerCount")
+            if isinstance(variants, dict):
+                # Runtime/legacy format (variants keyed by player count)
+                for player_key in select_variant_keys(variants):
+                    variant = variants.get(player_key) or {}
+                    narration = (variant.get("narration") or {}) if isinstance(variant, dict) else {}
+                    for section_key, speaker_id, text in _iter_clips_from_variant(narration):
+                        if not text.strip():
+                            continue
+                        clip_id = f"{scenario_id}/{episode_id}/p{player_key}/{section_key}"
+                        out_dir = out_base / scenario_id / episode_id / f"p{player_key}" / section_key
+                        out_wav = out_dir / "voice.wav"
+                        url = (
+                            f"/assets/voices/{scenario_id}/{episode_id}/p{player_key}/{section_key}/voice.wav".replace("\\", "/")
                         )
+                        jobs.append(
+                            ClipJob(
+                                clip_id=clip_id,
+                                speaker_id=speaker_id,
+                                text=text,
+                                out_wav_path=out_wav,
+                                url_path=url,
+                            )
+                        )
+                continue
+
+            # Compact tts-only format (single variant)
+            player_key = str(
+                scenario.get("playerCount")
+                or scenario.get("variantPlayerCount")
+                or scenario.get("maxPlayerCount")
+                or episode.get("playerCount")
+                or episode.get("variantPlayerCount")
+                or episode.get("maxPlayerCount")
+                or ""
+            ).strip()
+            if not player_key.isdigit():
+                raise ValueError(
+                    f"Compact TTS JSON requires playerCount (number) at scenario or episode level: {scenario_json_path}"
+                )
+
+            narration = (episode.get("narration") or {}) if isinstance(episode.get("narration"), dict) else dict(episode)
+            for section_key, speaker_id, text in _iter_clips_from_variant(narration):
+                if not text.strip():
+                    continue
+                clip_id = f"{scenario_id}/{episode_id}/p{player_key}/{section_key}"
+                out_dir = out_base / scenario_id / episode_id / f"p{player_key}" / section_key
+                out_wav = out_dir / "voice.wav"
+                url = f"/assets/voices/{scenario_id}/{episode_id}/p{player_key}/{section_key}/voice.wav".replace("\\", "/")
+                jobs.append(
+                    ClipJob(
+                        clip_id=clip_id,
+                        speaker_id=speaker_id,
+                        text=text,
+                        out_wav_path=out_wav,
+                        url_path=url,
                     )
+                )
 
     return jobs
 
@@ -169,7 +279,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--scenario",
-        default=str(ROOT / "scenarios" / "ghost_survey_club.json"),
+        default=str(ROOT / "scenarios_tts" / "ghost_survey_club.tts.json"),
         help="Scenario JSON path.",
     )
     parser.add_argument(
@@ -214,6 +324,18 @@ def main() -> int:
     parser.add_argument("--windows-sample-rate", type=int, default=int(os.environ.get("WINDOWS_TTS_SAMPLE_RATE", "16000")))
     parser.add_argument("--limit", type=int, default=0, help="If set, generate only first N clips.")
     parser.add_argument("--dry-run", action="store_true", help="Print planned outputs without generating.")
+    parser.add_argument(
+        "--variant-mode",
+        choices=["all", "max-only", "best-fit"],
+        default="all",
+        help="Which episode variants to generate: all (default), max-only, or best-fit.",
+    )
+    parser.add_argument(
+        "--best-fit-player-count",
+        type=int,
+        default=0,
+        help="Used when --variant-mode best-fit: pick the smallest variant >= this count (else max).",
+    )
     args = parser.parse_args()
 
     scenario_path = Path(args.scenario)
@@ -221,7 +343,12 @@ def main() -> int:
     characters_dir = Path(args.characters_dir)
     character_resolver = CharacterConfigResolver(characters_dir)
 
-    jobs = build_jobs(scenario_json_path=scenario_path, out_base=out_base)
+    jobs = build_jobs(
+        scenario_json_path=scenario_path,
+        out_base=out_base,
+        variant_mode=str(args.variant_mode),
+        best_fit_player_count=(int(args.best_fit_player_count) if int(args.best_fit_player_count) > 0 else None),
+    )
     if args.limit and args.limit > 0:
         jobs = jobs[: args.limit]
 

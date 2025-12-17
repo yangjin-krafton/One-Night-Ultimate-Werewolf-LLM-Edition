@@ -100,7 +100,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--scenario",
-        default=str(ROOT / "scenarios" / "ghost_survey_club.json"),
+        default=str(ROOT / "scenarios_tts" / "ghost_survey_club.tts.json"),
         help="Scenario JSON path.",
     )
     parser.add_argument(
@@ -120,13 +120,30 @@ def main() -> int:
         help="What to do when a clip wav is missing: fail (default) or skip.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Print planned outputs without writing.")
+    parser.add_argument(
+        "--variant-mode",
+        choices=["all", "max-only", "best-fit"],
+        default="all",
+        help="Which episode variants to process: all (default), max-only, or best-fit.",
+    )
+    parser.add_argument(
+        "--best-fit-player-count",
+        type=int,
+        default=0,
+        help="Used when --variant-mode best-fit: pick the smallest variant >= this count (else max).",
+    )
     args = parser.parse_args()
 
     scenario_path = Path(args.scenario)
     voices_base = Path(args.voices_base)
 
     gen_mod = _load_module(ROOT / "scripts" / "generate_scenario_audio.py", "one_night_generate_scenario_audio")
-    jobs = gen_mod.build_jobs(scenario_json_path=scenario_path, out_base=voices_base)
+    jobs = gen_mod.build_jobs(
+        scenario_json_path=scenario_path,
+        out_base=voices_base,
+        variant_mode=str(args.variant_mode),
+        best_fit_player_count=(int(args.best_fit_player_count) if int(args.best_fit_player_count) > 0 else None),
+    )
 
     grouped = _iter_wav_paths_in_order(jobs)
     if not grouped:
@@ -134,7 +151,10 @@ def main() -> int:
 
     # Determine output locations and run concat.
     raw = json.loads(scenario_path.read_text(encoding="utf-8"))
-    scenario_ids = [str(s.get("scenarioId") or "").strip() for s in (raw.get("scenarios") or [])]
+    if isinstance(raw.get("scenarios"), list):
+        scenario_ids = [str(s.get("scenarioId") or "").strip() for s in (raw.get("scenarios") or [])]
+    else:
+        scenario_ids = [str(raw.get("scenarioId") or "").strip()] if raw.get("scenarioId") else []
     print(f"[info] scenario={scenario_path} scenarioIds={scenario_ids or [scenario_path.stem]}")
     print(f"[info] voices_base={voices_base} episode_variants={len(grouped)}")
 
@@ -176,4 +196,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

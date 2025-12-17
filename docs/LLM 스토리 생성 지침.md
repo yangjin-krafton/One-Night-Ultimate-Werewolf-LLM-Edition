@@ -128,6 +128,46 @@
 
 ---
 
+## 0.2.1 TTS 전용 JSON (compact schema v2)
+
+이 레포는 **런타임(게임 진행) JSON**과 **TTS(대사) JSON**을 분리할 수 있습니다.
+
+- 런타임 JSON: `scenarios/*.json` (역할 덱/순서/카운트 등 “진행” 중심, 대사 생략 가능)
+- TTS JSON: `scenarios_tts/*.json` (**대사(text)만** 최대한 간단히 관리)
+
+TTS 전용 JSON은 아래처럼 “한 시나리오 + 한 playerCount + 에피소드별 대사”만 담는 **compact v2** 포맷을 권장합니다.
+
+```json
+{
+  "schemaVersion": 2,
+  "scenarioId": "haunted_school_survey",
+  "playerCount": 5,
+  "episodes": {
+    "ep1": {
+      "openingClips": "[fearful]…오프닝 한 줄 대사…",
+      "roleClips": {
+        "werewolf": "[default]…늑대 대사 한 줄…",
+        "seer": "[surprised]…예언자 대사 한 줄…"
+      },
+      "nightOutroClips": "…밤 종료 한 줄 대사…"
+    }
+  }
+}
+```
+
+규칙:
+- `playerCount`: 생성될 `voice.wav` 경로의 `pN` 값을 의미합니다(예: `p5`).
+- `episodes`: 키는 `episodeId` 문자열(예: `"ep1"`)을 권장합니다.
+- `openingClips` / `nightOutroClips`: 문자열 1개(권장) 또는 문자열 배열.
+- `roleClips`: `{ "<roleId>": "<text>" }` 형태(권장) 또는 `{ "<roleId>": ["<text1>", "<text2>"] }`.
+  - TTS 전용 JSON에는 `roleDeck`, `roleWakeOrder`, `variantByPlayerCount` 같은 “게임 진행용 필드”를 넣지 않습니다.
+  - 어떤 보이스(캐릭터)로 생성할지는 **roleId 이름 자체**를 speakerId로 사용합니다(예: `werewolf`, `seer`).
+- 감정 태그:
+  - `[happy]`, `{기쁨}` 같은 태그를 문장 중간에 섞어도 됩니다.
+  - GPT-SoVITS/Windows TTS 모두 `scripts/gpt_sovits_tts.py`에서 태그를 구간 분절 처리합니다(태그는 텍스트에서 제거되고, 구간별로 TTS를 합성/병합).
+
+---
+
 ## 1) 게임 한줄 요약
 
 - 플레이어 수만큼 역할카드를 나눠 갖고, **추가 3장은 중앙(센터 카드)**에 둔다.

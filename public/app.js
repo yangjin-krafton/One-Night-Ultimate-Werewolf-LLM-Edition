@@ -24,6 +24,11 @@ const voteGridEl = qs("#voteGrid");
 const voteBackdrop = qs("#voteBackdrop");
 const voteClose = qs("#voteClose");
 
+const nightOverlay = qs("#nightOverlay");
+const nightTitle = qs("#nightTitle");
+const nightRole = qs("#nightRole");
+const nightHint = qs("#nightHint");
+
 const url = new URL(window.location.href);
 const debugClientId = url.searchParams.get("debugClientId") || "";
 const debugName = url.searchParams.get("debugName") || "";
@@ -69,6 +74,9 @@ const state = {
   scenarioState: null,
   tickTimer: null,
   lastNarrationKey: "",
+  myRoleId: "",
+  nightStep: null,
+  lastNightStepId: 0,
   bgm: createBgmEngine(),
   narration: createNarrationEngine(),
 };
@@ -129,11 +137,13 @@ function renderTimer() {
 function showJoin() {
   joinEl.classList.remove("hidden");
   roomEl.classList.add("hidden");
+  qs(".topbar").classList.add("hidden");
 }
 
 function showRoom() {
   joinEl.classList.add("hidden");
   roomEl.classList.remove("hidden");
+  qs(".topbar").classList.remove("hidden");
 }
 
 function openModal(el) {
@@ -179,7 +189,7 @@ function render() {
 
     const name = document.createElement("div");
     name.className = "name";
-    name.textContent = p.name;
+    name.textContent = p.name + (p.clientId === state.clientId && state.myRoleId ? ` · ${state.myRoleId}` : "");
 
     const bar = document.createElement("div");
     bar.className = "card__bar";
@@ -191,6 +201,68 @@ function render() {
     card.appendChild(bar);
     gridEl.appendChild(card);
   }
+
+  renderNightOverlay();
+}
+
+function renderNightOverlay() {
+  const phase = state.room?.phase || "WAIT";
+  const step = state.nightStep;
+  if (phase !== "NIGHT" || !step) {
+    nightOverlay.classList.add("hidden");
+    return;
+  }
+
+  nightOverlay.classList.remove("hidden");
+  const roleId = state.myRoleId || "";
+  const kind = step.kind || "";
+  const activeRole = step.roleId || "";
+
+  const stepLabel = `${String(step.stepIndex || 0)}/${String(step.stepCount || 0)}`;
+  nightTitle.textContent = `NIGHT · ${stepLabel}`;
+
+  nightRole.textContent = roleId ? `내 역할: ${roleId}` : "내 역할: (미정)";
+
+  if (kind === "role") {
+    if (roleId && roleId === activeRole) {
+      nightHint.textContent = `${activeRole} 차례입니다. 눈을 뜨고 행동하세요.`;
+    } else {
+      nightHint.textContent = `${activeRole} 차례입니다. 눈을 감고 기다리세요.`;
+    }
+  } else if (kind === "opening") {
+    nightHint.textContent = "모두 눈을 감고 밤을 시작합니다.";
+  } else if (kind === "outro") {
+    nightHint.textContent = "밤이 끝났습니다. 모두 눈을 뜨세요.";
+  } else {
+    nightHint.textContent = "밤 진행 중...";
+  }
+}
+
+async function playNightStepAsHost(step) {
+  const stepId = Number(step?.stepId || 0);
+  if (!stepId) return;
+  if (state.lastNightStepId === stepId) return;
+  state.lastNightStepId = stepId;
+
+  const scenarioId = step?.scenarioId;
+  const episodeId = step?.episodeId;
+  const variantPlayerCount = step?.variantPlayerCount;
+  const sectionKey = step?.sectionKey;
+  if (!scenarioId || !episodeId || !variantPlayerCount || !sectionKey) {
+    send({ type: "night_step_done", data: { stepId } });
+    return;
+  }
+
+  await ensureAudioUnlocked();
+  const url = buildVoiceUrl({ scenarioId, episodeId, playerCount: variantPlayerCount, sectionKey });
+  const ok = await urlExists(url);
+  if (ok) {
+    await state.narration.playList([url]);
+  } else {
+    await new Promise((r) => setTimeout(r, 500));
+  }
+
+  send({ type: "night_step_done", data: { stepId } });
 }
 
 async function fetchScenarios() {
@@ -245,7 +317,8 @@ function connect() {
 
   ws.addEventListener("open", () => {
     setConn(true);
-    send({ type: "join", data: { clientId: state.clientId, name: state.name || "Player" } });
+    // Auto-join removed to show Landing Page every time
+    // send({ type: "join", data: { clientId: state.clientId, name: state.name || "Player" } });
   });
   ws.addEventListener("close", () => {
     setConn(false);
@@ -294,7 +367,17 @@ function handleMsg(msg) {
   if (msg.type === "phase_changed") {
     setPhase(msg.data?.phase || "WAIT", msg.data?.phaseEndsAtMs ?? null);
     render();
-    if (isHost()) maybeAutoNarrate();
+    return;
+  }
+  if (msg.type === "role_assignment") {
+    state.myRoleId = msg.data?.roleId || "";
+    render();
+    return;
+  }
+  if (msg.type === "night_step") {
+    state.nightStep = msg.data || null;
+    render();
+    if (isHost()) playNightStepAsHost(state.nightStep).catch(() => {});
     return;
   }
   if (msg.type === "vote_result_public") {
@@ -311,14 +394,41 @@ function escapeHtml(s) {
 }
 
 function maybeAutoNarrate() {
-  if (state.room?.phase !== "NIGHT") return;
-  const scenarioId = state.room?.selectedScenarioId;
-  if (!scenarioId) return;
-  playEpisodeStartNarration(scenarioId).catch((e) => console.warn(e));
+  // Deprecated: NIGHT is driven by server night_step events.
 }
 
 function pad3(n) {
   return String(n).padStart(3, "0");
+}
+
+function parseNumericVariantKeys(variantByPlayerCount) {
+  const items = [];
+  for (const k of Object.keys(variantByPlayerCount || {})) {
+    if (!/^\d+$/.test(String(k))) continue;
+    const n = Number.parseInt(String(k), 10);
+    if (!Number.isFinite(n)) continue;
+    items.push({ key: String(k), n });
+  }
+  items.sort((a, b) => a.n - b.n);
+  return items;
+}
+
+function selectVariantForPlayerCount(episode, playerCount) {
+  const variantByPlayerCount = episode?.variantByPlayerCount || {};
+  const keys = parseNumericVariantKeys(variantByPlayerCount);
+  if (!keys.length) return { variant: null, variantPlayerCount: null };
+  for (const it of keys) {
+    if (it.n >= playerCount) return { variant: variantByPlayerCount[it.key] || null, variantPlayerCount: it.n };
+  }
+  const last = keys[keys.length - 1];
+  return { variant: variantByPlayerCount[last.key] || null, variantPlayerCount: last.n };
+}
+
+function effectiveRoleDeckForPlayerCount(variant, playerCount) {
+  const deck = variant?.roleDeck || [];
+  const need = Math.max(0, Number(playerCount) + 3);
+  if (!need || !Array.isArray(deck)) return [];
+  return deck.slice(0, Math.min(deck.length, need));
 }
 
 function buildVoiceUrl({ scenarioId, episodeId, playerCount, sectionKey }) {
@@ -328,31 +438,45 @@ function buildVoiceUrl({ scenarioId, episodeId, playerCount, sectionKey }) {
 function buildEpisodeStartPlaylist(scenario, episode, playerCount) {
   const scenarioId = scenario?.scenarioId;
   const episodeId = episode?.episodeId;
-  const variant = (episode?.variantByPlayerCount || {})[String(playerCount)] || null;
-  if (!scenarioId || !episodeId || !variant) return [];
+  const sel = selectVariantForPlayerCount(episode, playerCount);
+  const variant = sel.variant;
+  const variantPlayerCount = sel.variantPlayerCount;
+  if (!scenarioId || !episodeId || !variant || !variantPlayerCount) return [];
   const narration = variant?.narration || {};
 
   const urls = [];
-  const opening = narration.openingClips || [];
-  for (let i = 0; i < opening.length; i++) {
-    urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount, sectionKey: `opening/${pad3(i + 1)}` }));
+  const openingCount = Array.isArray(narration.openingClips)
+    ? narration.openingClips.length
+    : Math.max(0, Number.parseInt(String(narration.openingClipCount || 0), 10) || 0);
+  for (let i = 0; i < openingCount; i++) {
+    urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount: variantPlayerCount, sectionKey: `opening/${pad3(i + 1)}` }));
   }
 
-  const roleWakeOrder = variant.roleWakeOrder || [];
+  const roleDeck = effectiveRoleDeckForPlayerCount(variant, playerCount);
+  const rolesInDeck = new Set(roleDeck);
+  const roleWakeOrder = (variant.roleWakeOrder || []).filter((r) => (rolesInDeck.size ? rolesInDeck.has(r) : true));
   const roleClips = narration.roleClips || {};
+  const roleClipCounts = narration.roleClipCounts || {};
   for (const roleId of roleWakeOrder) {
     const r = roleClips[roleId] || {};
+    const rc = roleClipCounts[roleId] || {};
     for (const part of ["before", "during", "after"]) {
-      const clips = r[part] || [];
-      for (let i = 0; i < clips.length; i++) {
-        urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount, sectionKey: `role/${roleId}/${part}/${pad3(i + 1)}` }));
+      const partCount = Array.isArray(r[part])
+        ? r[part].length
+        : Math.max(0, Number.parseInt(String(rc[part] || 0), 10) || 0);
+      for (let i = 0; i < partCount; i++) {
+        urls.push(
+          buildVoiceUrl({ scenarioId, episodeId, playerCount: variantPlayerCount, sectionKey: `role/${roleId}/${part}/${pad3(i + 1)}` })
+        );
       }
     }
   }
 
-  const outro = narration.nightOutroClips || [];
-  for (let i = 0; i < outro.length; i++) {
-    urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount, sectionKey: `outro/${pad3(i + 1)}` }));
+  const outroCount = Array.isArray(narration.nightOutroClips)
+    ? narration.nightOutroClips.length
+    : Math.max(0, Number.parseInt(String(narration.nightOutroClipCount || 0), 10) || 0);
+  for (let i = 0; i < outroCount; i++) {
+    urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount: variantPlayerCount, sectionKey: `outro/${pad3(i + 1)}` }));
   }
 
   return urls;
@@ -385,7 +509,8 @@ async function playEpisodeStartNarration(scenarioId) {
 
   await ensureAudioUnlocked();
 
-  const variant = (ep?.variantByPlayerCount || {})[String(playersCount)] || null;
+  const sel = selectVariantForPlayerCount(ep, playersCount);
+  const variant = sel.variant;
   const bgmCfg = variant?.narration?.bgm || ep?.bgm || scenario?.bgm || null;
 
   const playlist = buildEpisodeStartPlaylist(scenario, ep, playersCount);
@@ -557,12 +682,43 @@ async function init() {
   renderScenarioList();
   connect();
 
-  joinBtn.addEventListener("click", () => {
+  joinBtn.addEventListener("click", async () => {
     const name = (nameInput.value || "").trim() || "Player";
     state.name = name;
     setSavedName(name);
+
+    const joinSection = qs("#join");
+    const landingEl = qs(".landing");
+    const transitionLayer = qs("#transitionLayer");
+
+    // 1. Start Animation: Moon expands & Text fades
+    joinSection.classList.add("exiting-mode");
+    landingEl.classList.add("exiting");
+    
+    // Optional: Darken background slightly before moon fills
+    if (transitionLayer) {
+      setTimeout(() => transitionLayer.classList.add("active"), 800);
+    }
+
+    // 2. Wait for moon to fill screen (1.5s)
+    await new Promise((r) => setTimeout(r, 1500));
+
+    // 3. Connect & Switch Room (Behind the overlay)
     send({ type: "join", data: { clientId: state.clientId, name } });
-    showRoom();
+    
+    // Manually show room elements without hiding joinSection yet
+    roomEl.classList.remove("hidden");
+    qs(".topbar").classList.remove("hidden");
+
+    // 4. Fade out the overlay (Moon/Landing) to reveal Room
+    joinSection.classList.add("fade-out");
+    if (transitionLayer) transitionLayer.classList.remove("active");
+
+    // 5. Cleanup after fade
+    await new Promise((r) => setTimeout(r, 800));
+    joinSection.classList.add("hidden");
+    joinSection.classList.remove("exiting-mode", "fade-out");
+    landingEl.classList.remove("exiting");
   });
   nameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") joinBtn.click();

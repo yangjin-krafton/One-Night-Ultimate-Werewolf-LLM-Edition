@@ -23,6 +23,91 @@
 
 ---
 
+## 1.3 현재 구현 상태
+
+> 현재 레포에는 실제 서버/클라이언트 코드가 구현되어 있음. Python FastAPI 서버 + 정적 HTML/JS 클라이언트로 MVP 버전 완성.  
+> 목표: **스마트폰 브라우저에서 접속 → 대기 그리드 → 호스트 시나리오 선택 → 게임 시작 → 페이즈 진행(밤/낮/투표/결과)**까지 "동작하는 최소 버전" 완성됨.
+
+### 완료된 기능 요약
+
+- [x] **서버 구축 및 단순화**: Python FastAPI + WebSocket으로 단일 프로세스 서버 구현, 단일 방 메모리 상태 유지
+- [x] **프로젝트 구조**: `server/` (FastAPI), `public/` (정적 파일), `scenarios/` (JSON), `requirements.txt` 및 실행 스크립트
+- [x] **서버 상태 모델**: RoomState, Player 클래스, 페이즈 관리, WebSocket 이벤트 처리
+- [x] **게임 로직**: 시나리오 로딩, 플레이어 수에 따른 변형 선택, 페이즈 전환 타이머, 투표 처리
+- [x] **클라이언트 구조**: 정적 HTML/JS, WebSocket 연결, UI 렌더링, 게임 진행 UI
+- [x] **오디오 시스템**: 호스트 TTS/나레이션 재생, BGM 랜덤 오프셋 및 페이드 인/아웃
+- [x] **UI/UX 디자인**: CSS 변수, 페이즈별 그라데이션, 카드 그리드, 모달, 모바일 최적화
+
+### 미완료된 기능
+
+- [ ] 역할별 밤 행동 UI (MVP 범위 외)
+- [ ] 고급 게임 모드 (다중 방, 로그인 등)
+- [ ] 추가 시나리오 및 음성 파일
+
+### 현재 코드 구현 상황 검토
+
+#### 서버 (server/main.py)
+- [x] FastAPI 앱 초기화 및 WebSocket 엔드포인트 설정
+- [x] 정적 파일 서빙 (`public/` 디렉토리)
+- [x] 시나리오 로딩 및 API 제공 (`/api/scenarios`)
+- [x] 게임 상태 관리 (RoomState, Player)
+- [x] WebSocket 메시지 핸들링 (join, scenario_select, start_game, submit_vote 등)
+- [x] 페이즈 타이머 및 자동 전환 로직
+- [x] 디버그 모드 지원 (환경 변수로 활성화)
+
+#### 클라이언트 (public/)
+- [x] HTML 구조 (index.html): 입장 폼, 룸 그리드, 모달 등
+- [x] JavaScript 로직 (app.js): WebSocket 연결, UI 업데이트, 오디오 엔진
+- [x] CSS 스타일링 (styles.css): 디자인 토큰, 그라데이션, 반응형 레이아웃
+- [x] 오디오 엔진: BGM 플레이어 (Web Audio API), 나레이션 플레이어
+- [x] 시나리오 선택 모달 및 투표 UI 구현
+
+#### 시나리오 및 리소스
+- [x] 시나리오 JSON 파일 (scenarios/ghost_survey_club.json 등)
+- [x] TTS 스크립트 및 오디오 생성 도구 (scripts/ 디렉토리)
+- [x] 음성 파일 경로 규칙 구현 (public/assets/voices/)
+
+#### 실행 및 배포
+- [x] 개발 실행 스크립트 (run_dev.ps1)
+- [x] Python 의존성 (requirements.txt)
+- [x] Docker 이미지 (image.Dockerfile)
+
+---
+
+## 1.4 실행 방법
+
+### 개발 서버 실행
+프로젝트 루트에서 PowerShell을 열고 다음 명령어로 서버를 실행하세요:
+
+```powershell
+# 개발 모드 (자동 리로드)
+.\run_dev.ps1
+```
+
+또는 수동으로:
+
+```bash
+# Python 환경 활성화 (필요 시)
+python -m venv venv
+venv\Scripts\activate  # Windows
+# pip install -r requirements.txt
+
+# 서버 실행
+python -m uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+서버가 시작되면 `http://localhost:8000`에서 클라이언트에 접속할 수 있습니다. 스마트폰에서는 서버 PC의 IP 주소 (예: `http://192.168.1.100:8000`)로 접속하세요.
+
+### 프로덕션 배포
+Docker를 사용한 배포:
+
+```bash
+docker build -f image.Dockerfile -t werewolf-server .
+docker run -p 8000:8000 werewolf-server
+```
+
+---
+
 ## 2. 타깃 환경 및 제약
 
 ### 2.1 서버 환경
@@ -52,7 +137,7 @@
 
 ---
 
-## 3. 룰 및 게임 디자인
+## 4. 룰 및 게임 디자인
 
 기본 게임 규칙/역할/진행 순서(확장판 포함)는 아래 문서로 통합했습니다.
 
@@ -60,22 +145,44 @@
 
 ---
 
-## 4. 핵심 UX/플로우 설계
+## 5. 핵심 UI/UX 설계 (리뉴얼)
 
 > 테스트 프로젝트(초기 버전)는 **동시 여러 방을 만들지 않고**, 접속한 모든 유저가 **하나의 방에서 함께 진행**합니다.
+> 모바일 세로 모드(Portrait)를 기본으로 설계하며, 몰입감을 해치지 않는 미니멀한 UI를 지향합니다.
 
-### 4.1 입장/호스트
+### 5.1 접속 화면 (Landing Page)
+
+**"미스터리한 초대장" 컨셉**
+- **레이아웃**: 모바일 세로 화면에 최적화된 단일 컬럼 스택 구조.
+- **Visual**:
+  - **배경**: 깊은 밤하늘 그라데이션 (CSS `linear-gradient`) + 은은하게 흐르는 별/안개 애니메이션.
+  - **타이틀**: 화면 상단 1/3 지점에 "한밤의 늑대인간" 로고 배치. (세리프 폰트, 은은한 광채).
+  - **아이콘**: 중앙에 늑대 실루엣 또는 달 아이콘을 배치하여 분위기 조성 (숨쉬기 애니메이션).
+- **Input Form**:
+  - **닉네임 입력**: 화면 중앙~하단부. 투명한 배경에 밑줄(`border-bottom`) 스타일로 미니멀하게 처리.
+    - Placeholder: "당신의 이름은?"
+    - Focus 시: 밑줄 색상이 강조색(보라/파랑)으로 변경되며 부드러운 발광 효과.
+  - **입장 버튼**: 화면 최하단 또는 입력창 바로 아래.
+    - Full-width(꽉 찬 너비) 버튼보다는, 둥근 모서리의 플로팅 버튼 스타일 권장.
+    - 텍스트: "입장하기" 또는 "게임 시작".
+    - Interaction: 터치 시 햅틱 피드백(진동) 및 버튼이 눌리는 깊이감 표현.
+- **UX 디테일**:
+  - **자동 저장**: 마지막으로 사용한 닉네임을 로컬 스토리지에서 불러와 자동 입력.
+  - **키보드 대응**: 입력창 터치 시 가상 키보드가 UI를 가리지 않도록 `viewport` 높이 대응 (Android/iOS).
+  - **트랜지션**: 입장 버튼 클릭 시, 화면이 어두워지며(Fade-out) 대기실(Grid) 화면으로 부드럽게 전환.
+
+### 5.2 입장 로직 및 호스트 권한 (구 4.1)
 
 - 웹에 접속해 **가장 먼저 들어온 참가자가 호스트**가 됩니다.
 - 호스트 기기에서 **나레이션(TTS) 재생**을 담당하며, 그 외 UI/권한은 다른 유저와 동일합니다.
 
-### 4.2 대기 화면(그리드 카드 UI)
+### 5.3 대기 화면(그리드 카드 UI) (구 4.2)
 
 - 모든 유저의 화면은 “카드 그리드”이며, 각 카드는 **숫자 + 배경색**만 표시합니다.
 - 유저 컬러는 **입장 순서대로** 순차 배정되고, 그리드는 **빈 칸을 앞에서부터 채우는 방식**입니다.
 - 유저가 페이지를 닫으면 즉시 방에서 나간 것으로 처리하고, 뒤에 있던 유저가 **앞 칸으로 당겨집니다**.
 
-### 4.3 시나리오 선택/게임 시작
+### 5.4 시나리오 선택/게임 시작 (구 4.3)
 
 - 호스트(1번 유저) 화면 하단에만 **[시나리오 선택]** 버튼이 활성화됩니다.
 - 호스트는 미리 준비된 **시나리오 라이브러리**에서 “현재 유저 수에 맞는 시나리오”를 선택합니다.
@@ -83,7 +190,7 @@
 - 시나리오 선택 후, **선택한 인원 수와 실제 입장 인원이 정확히 일치**하면 `[시나리오 선택]` 옆에 **[게임 시작]** 버튼이 활성화됩니다.
 - 호스트가 [게임 시작]을 누르면, 미리 준비된 TTS가 재생되며 게임 진행이 시작됩니다.
 
-### 4.4 에피소드(라운드) 기반 구성
+### 5.5 에피소드(라운드) 기반 구성 (구 4.4)
 
 - 하나의 큰 사건(시나리오)을 **여러 에피소드(라운드)**로 나눠 진행합니다.
 - 각 에피소드마다 **서로 다른 역할(캐릭터 카드) 조합**으로 1판 게임을 진행합니다.
@@ -91,7 +198,7 @@
 - 3판 결과(예: 시민 승리 횟수/투표 결과 등)에 따라 **결말(엔딩)**이 분기될 수 있습니다(단일/멀티 엔딩).
 - 목표: 연속 플레이를 통해 사건의 정체가 **조금씩 드러나는 느낌**을 주어 몰입도를 올립니다(LLM은 큰 사건의 흐름을 만들고, 회차별 단서를 배치).
 
-### 4.5 1판(에피소드) 진행 방식(핸드폰 중심)
+### 5.6 1판(에피소드) 진행 방식(핸드폰 중심) (구 4.5)
 
 1. **시작 연출**
    - 호스트가 [게임 시작]을 누르면, 모든 사람 화면이 “자신의 숫자+배경색”으로 통일됩니다.
@@ -116,18 +223,18 @@
    - 유저가 화면을 터치하면 자신의 폰에서 **최종 역할(카드 앞면)**을 공개합니다.
    - 이후 **{다음 라운드} 준비** 버튼이 활성화됩니다.
 
-### 4.6 3라운드 종료/엔딩
+### 5.7 3라운드 종료/엔딩 (구 4.6)
 
 - 총 3라운드를 진행합니다.
 - 3라운드가 끝나면 `{다음 라운드}` 버튼이 **(엔딩 확인)** 버튼으로 대체됩니다.
 - 백엔드에서 3판의 투표/승패 결과를 반영해, 모든 사람에게 **500자 이내의 짧은 소설 엔딩**을 공개합니다.
 - 이후 `{나가기}` 버튼을 활성화하여 대기 화면(초기 상태)로 돌아갈 수 있게 합니다.
 
-### 4.7 게임 중 신규 접속자 처리
+### 5.8 게임 중 신규 접속자 처리 (구 4.7)
 
 - 게임 진행 중 새로운 유저가 접속하면, “게임 진행 중” 안내와 함께 **대기 화면만 표시**합니다(진행 중인 판에는 합류 불가).
 
-### 4.8 서버 통신/동작(권장: 서버 권위 모델)
+### 5.9 서버 통신/동작(권장: 서버 권위 모델) (구 4.8)
 
 이 프로젝트는 “어느 디바이스가 서버 역할을 하느냐”를 혼동하지 않도록, **서버(PC 1대 권장)가 모든 최종 상태를 권위 있게 관리**하고, **호스트(첫 입장자)는 트리거/나레이션 재생**만 담당하는 모델을 권장합니다.
 
@@ -164,7 +271,7 @@
 
 ---
 
-## 8. 시스템 아키텍처 개요
+## 9. 시스템 아키텍처 개요
 
 ### 8.1 구성
 
@@ -208,107 +315,78 @@
 
 ---
 
-## 9. TTS 오디오(.wav) 생성 (사전 생성)
+## 10. TTS 오디오(.wav) 생성 (사전 생성)
 
-게임에서 로딩할 오디오 파일 경로(예: `voice.wav`)는 그대로 두고, `scripts/gpt_sovits_tts.py`에서 TTS 백엔드를 선택해 생성할 수 있습니다.
+게임에서 사용하는 오디오 파일(`voice.wav`)을 `scripts/`의 스크립트로 생성. 주요 백엔드: GPT-SoVITS (고품질) 또는 Windows 내장 TTS (간단).
 
-### 9.1 GPT-SoVITS 사용(기본값)
+### 주요 스크립트 명령어 샘플
 
-- 캐릭터 설정(`characters/<id>/character.json`)을 쓰는 경우(감정 태그 분절 + ref/prompt 기반):
-  - `python scripts/gpt_sovits_tts.py --tts gpt-sovits --character characters/_template/character.json --text-file <대사.txt> --out <voice.wav>`
-  - `python scripts/gpt_sovits_tts.py --tts gpt-sovits --character characters/Narrator/teamasterliusu.json --text-file scenarios\ghost_survey_club.json`
-    - `--out`을 생략하면 기본값으로 `./out/tts/<name>.wav`에 저장됩니다.
-    - ref 오디오/프롬프트가 repo 밖(예: `D:\\GPT_SoVIT\\refs\\...`)에 있으면 `--character-local-ref-base`(호스트 경로)와 `--character-container-ref-base`(SoVITS 컨테이너/서버에서 보이는 마운트 경로)로 오버라이드할 수 있습니다.
-- `--character` 없이 단일 ref로 호출하는 경우:
-  - `python scripts/gpt_sovits_tts.py --tts gpt-sovits --ref-audio-path /workspace/Ref/Wolf/refs/normal.wav --text "안녕하세요" --out <voice.wav>`
+#### GPT-SoVITS 사용 (캐릭터 기반)
+```bash
+# 캐릭터 설정으로 감정 태그 분절 + ref/prompt 적용
+python scripts/gpt_sovits_tts.py --tts gpt-sovits --character characters/Thema_01/Narrator.json --text "[default]안녕하세요" --out out/tts/narrator.wav
 
-### 9.2 Windows 내장 TTS 사용(SoVITS 없는 환경용)
+# 단일 ref로 간단 호출
+python scripts/gpt_sovits_tts.py --tts gpt-sovits --ref-audio-path /workspace/Ref/Wolf/refs/normal.wav --text "안녕하세요" --out voice.wav
+```
 
-- SoVITS/API 없이 Windows SAPI로 바로 `.wav` 생성:
-  - `python scripts/gpt_sovits_tts.py --tts windows --text-file <대사.txt> --out <voice.wav>`
-- 감정 태그 분절은 유지하고 싶으면 `--character`만 같이 사용(레퍼런스/프롬프트는 사용하지 않음):
-  - `python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/character.json --text-file <대사.txt> --out <voice.wav>`
-  - python scripts\generate_scenario_audio.py --scenario scenarios\ghost_survey_club.json --tts windows
+#### Windows 내장 TTS 사용 (SoVITS 없음)
+```bash
+# 기본 Windows SAPI로 생성
+python scripts/gpt_sovits_tts.py --tts windows --text-file 대사.txt --out voice.wav
 
-Windows 음성/속도/볼륨/샘플레이트는 옵션으로 조절할 수 있습니다: `--windows-voice`, `--windows-rate`, `--windows-volume`, `--windows-sample-rate` (또는 `--windows-format` 별칭).
+# 캐릭터 설정으로 감정 태그만 적용 (ref 사용 안 함)
+python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/character.json --text-file 대사.txt --out voice.wav
+```
 
-### 9.3 시나리오(JSON)에서 voice.wav 일괄 생성
+#### 시나리오 JSON에서 일괄 생성
+```bash
+# TTS용 JSON은 runtime용(roleDeck/wakeOrder)과 분리하고, 대사(text)만 관리해도 됩니다(compact schema v2).
+# 감정 태그([happy]/{기쁨} 등)는 GPT-SoVITS/Windows TTS 모두 `scripts/gpt_sovits_tts.py`에서 분절 처리됩니다.
+# 예) {"schemaVersion":2,"scenarioId":"...","playerCount":5,"episodes":{"ep1":{"openingClips":"...","roleClips":{"werewolf":"..."},"nightOutroClips":"..."}}}
+#
+# SoVITS로 시나리오 클립별 voice.wav 생성 (Docker 마운트 오버라이드)
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace"
 
-시나리오(`scenarios/*.json`)의 내레이션 클립을 읽어서 `public/assets/voices/.../voice.wav`를 일괄 생성합니다.
+# 최대 인원 변형만 생성
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --variant-mode max-only --tts gpt-sovits --characters-dir characters/Thema_01
+```
 
-- 테마 캐릭터 폴더 예시(평면 구조): `characters/Thema_01/Narrator.json`
-- 실행 예시(SoVITS, Docker 마운트 경로 오버라이드 포함):
-  - `python scripts\\generate_scenario_audio.py --scenario scenarios\\ghost_survey_club.json --tts gpt-sovits --characters-dir characters\\Thema_01 --character-local-ref-base "D:\\GPT_SoVIT" --character-container-ref-base "/workspace"`
+#### 캐릭터 ref 파일 점검 및 수정
+```bash
+# ref 오디오 존재/길이(3~10초) 점검
+python scripts/check_character_refs.py --characters-dir characters/Thema_01 --local-ref-base "D:\GPT_SoVIT\refs"
 
-참고 오디오/프롬프트 파일 존재 여부(및 ref 길이 3~10초) 사전 점검:
-- `python scripts\\check_character_refs.py --characters-dir characters\\Thema_01 --local-ref-base "D:\\GPT_SoVIT\\refs"`
-  - 자동 수정(문제 ref 삭제, 실제 파일을 변경함): `--fix` (미리보기: `--fix --fix-dry-run`)
+# 자동 수정 (문제 ref 삭제)
+python scripts/check_character_refs.py --characters-dir characters/Thema_01 --local-ref-base "D:\GPT_SoVIT\refs" --fix
+```
 
-에피소드 미리듣기용 단일 wav 생성(클립별 `voice.wav`를 에피소드 단위로 이어붙임):
-- `python scripts\\concat_episode_wavs.py --scenario scenarios\\ghost_survey_club.json --voices-base public\\assets\\voices`
+#### 에피소드 wav 연결 (미리듣기용)
+```bash
+# 클립별 voice.wav를 에피소드 단위로 이어붙임
+python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club.tts.json --voices-base public/assets/voices
 
-실행(미리보기): 
-- `python scripts\\concat_episode_wavs.py --scenario scenarios\\ghost_survey_club.json --voices-base public\\assets\\voices --dry-run`
-누락 클립이 있어도 진행: `--missing skip`
+# 미리보기 모드
+python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club.tts.json --voices-base public/assets/voices --dry-run
+```
 
-### 9.4 초보자용 “복붙” 실행 템플릿 (Windows PowerShell)
+#### Genshin 음성 샘플 다운로드 (옵션)
+```bash
+python scripts/download_genshin_voice_sample.py --query "Paimon" --language "Korean" --character "paimon" --in-game-contains "VO_paimon" --all --out-dir out/genshin-voice --layout in_game_path
+```
 
-아래 템플릿은 “SoVITS는 Docker로 실행 중이고, 호스트의 `D:\GPT_SoVIT`를 컨테이너의 `/workspace`로 마운트”한 전형적인 구성을 기준으로 합니다.
-
-#### (권장) 1) 환경변수 한 번 설정 → 2) 매번 짧게 실행
-
-1) PowerShell에서 환경변수(현재 터미널 세션에만 적용):
-
+### 환경변수 설정 (PowerShell, 권장)
 ```powershell
-Set-Location D:\Workspace\One-Night-Ultimate-Werewolf-LLM-Edition
-
 $env:GPT_SOVITS_API_BASE = "http://127.0.0.1:9880"
 $env:GPT_SOVITS_CHARACTER_LOCAL_REF_BASE = "D:\GPT_SoVIT"
 $env:GPT_SOVITS_CHARACTER_CONTAINER_REF_BASE = "/workspace"
-$env:GPT_SOVITS_MAX_REF_ATTEMPTS = "12"   # ref 길이(3~10s) 문제 시 자동 재시도 횟수
+$env:GPT_SOVITS_MAX_REF_ATTEMPTS = "12"
 $env:GPT_SOVITS_REF_MIN_S = "3"
 $env:GPT_SOVITS_REF_MAX_S = "10"
 ```
 
-2-A) 시나리오 JSON을 클립별 `voice.wav`로 일괄 생성(테마 폴더 사용):
-
-```powershell
-python scripts\generate_scenario_audio.py `
-  --scenario scenarios\ghost_survey_club.json `
-  --tts gpt-sovits `
-  --characters-dir characters\Thema_01 `
-  --on-error windows
-```
-
-2-B) 특정 문장만 빠르게 단일 wav 생성(디버깅/샘플용):
-
-```powershell
-python scripts\gpt_sovits_tts.py `
-  --tts gpt-sovits `
-  --character characters\Thema_01\Narrator.json `
-  --text "테스트"
-```
-
-#### (원라인) 환경변수 없이 한 번에 실행
-
-```powershell
-python scripts\generate_scenario_audio.py --scenario scenarios\ghost_survey_club.json --tts gpt-sovits --characters-dir characters\Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace"
-```
-
-#### 자주 하는 실수 체크리스트
-
-- `speakerId`(시나리오) ↔ 캐릭터 파일명(테마 폴더)이 일치해야 합니다. 예: `Narrator` → `characters\Thema_01\Narrator.json`
-- 컨테이너 마운트 경로에 따라 `--character-container-ref-base` 값이 달라집니다(예: `/workspace`, `/workspace/refs` 등).
-- SoVITS 서버가 다른 PC/포트라면 `GPT_SOVITS_API_BASE`를 해당 주소로 변경하세요.
-- 특정 캐릭터 ref가 3~10초 규칙에 걸려 SoVITS가 400을 반환하면 `--on-error windows`(또는 `--on-error skip`)로 전체 배치가 멈추지 않게 할 수 있습니다.
-
--  python3 scripts/download_genshin_voice_sample.py --query "Paimon" --language "Korean" --character "paimon" --in-game-contains "VO_paimon" --all --out-dir out/genshin-voice --layout in_game_path
-
-
-- python scripts\\check_character_refs.py --characters-dir characters\\genshin --local-ref-base "D:\\GPT_SoVIT" --fix
-
-- python scripts\generate_scenario_audio.py `
-  --scenario scenarios\ghost_survey_club.json `
-  --tts gpt-sovits `
-  --characters-dir characters\Thema_01 `
-  --character-local-ref-base "D:\GPT_SoVIT\refs"
+### 체크리스트 요약
+- `speakerId` ↔ 캐릭터 파일명 일치 (예: `Narrator` → `characters/Thema_01/Narrator.json`)
+- 컨테이너 마운트 경로 확인 (`/workspace` 등)
+- SoVITS 서버 포트 변경 시 `GPT_SOVITS_API_BASE` 조정
+- ref 길이 문제 시 `--on-error windows`로 대체 TTS 사용
