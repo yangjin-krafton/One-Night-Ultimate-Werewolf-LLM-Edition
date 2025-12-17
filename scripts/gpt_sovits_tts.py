@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode, urljoin
 from urllib.request import Request, urlopen
+from urllib.error import HTTPError
+from urllib.parse import quote
 
 
 @dataclass(frozen=True)
@@ -33,14 +35,31 @@ class TextSegment:
     text: str
 
 
+_REF_DURATION_ERROR_RE = re.compile(r"outside the\\s+(\\d+)-(\\d+)\\s+second range", re.IGNORECASE)
+_REF_NOT_EXISTS_RE = re.compile(r"\\bnot\\s+exist(s)?\\b", re.IGNORECASE)
+
+
 def _normalize_ref_path(ref_audio_path: str, container_ref_base: str) -> str:
     if not ref_audio_path:
         return ""
     ref_audio_path = ref_audio_path.replace("\\", "/")
     if ref_audio_path.startswith(("http://", "https://")):
         return ref_audio_path
-    if ref_audio_path.startswith("/"):
+
+    # Absolute paths:
+    # - POSIX: /...
+    # - UNC: //server/share/...
+    # - Windows drive: D:/...
+    if ref_audio_path.startswith("/") or re.match(r"^[A-Za-z]:/", ref_audio_path):
         return ref_audio_path
+
+    # If base ends with ".../refs" and the ref also starts with "refs/",
+    # avoid generating ".../refs/refs/...".
+    if (container_ref_base or "").replace("\\", "/").rstrip("/").lower().endswith("/refs") and ref_audio_path.lower().startswith("refs/"):
+        ref_audio_path = ref_audio_path[5:]
+    if (container_ref_base or "").replace("\\", "/").rstrip("/").lower().endswith("/ref") and ref_audio_path.lower().startswith("ref/"):
+        ref_audio_path = ref_audio_path[4:]
+
     base = (container_ref_base or "").replace("\\", "/").rstrip("/")
     return f"{base}/{ref_audio_path.lstrip('/')}" if base else ref_audio_path
 
@@ -88,6 +107,17 @@ def load_character_config(path: str | os.PathLike[str]) -> CharacterConfig:
     cfg_path = Path(path)
     raw = json.loads(cfg_path.read_text(encoding="utf-8"))
 
+    def _coerce_refs_field(value: object, field_name: str) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, list):
+            if any(not isinstance(x, str) for x in value):
+                raise ValueError(f"{field_name} must be a string or an array of strings")
+            return value
+        raise ValueError(f"{field_name} must be a string or an array of strings")
+
     character_id = (raw.get("characterId") or raw.get("character_id") or cfg_path.parent.name).strip()
     if not character_id:
         raise ValueError("characterId is required")
@@ -101,12 +131,18 @@ def load_character_config(path: str | os.PathLike[str]) -> CharacterConfig:
     if not container_ref_base:
         container_ref_base = f"/workspace/Ref/{character_id}"
 
-    default_refs = raw.get("defaultRefs") or raw.get("default_refs") or []
+    default_refs_raw: object | None
+    if "defaultRefs" in raw:
+        default_refs_raw = raw.get("defaultRefs")
+    elif "default_refs" in raw:
+        default_refs_raw = raw.get("default_refs")
+    else:
+        default_refs_raw = None
+
+    default_refs = _coerce_refs_field(default_refs_raw, "defaultRefs")
     emotion_refs = raw.get("emotionRefs") or raw.get("emotion_refs") or {}
     tag_aliases = raw.get("tagAliases") or raw.get("tag_aliases") or {}
 
-    if not isinstance(default_refs, list) or any(not isinstance(x, str) for x in default_refs):
-        raise ValueError("defaultRefs must be an array of strings")
     if not isinstance(emotion_refs, dict) or any(not isinstance(v, list) for v in emotion_refs.values()):
         raise ValueError("emotionRefs must be an object of arrays")
     if not isinstance(tag_aliases, dict):
@@ -149,15 +185,52 @@ def _choose_ref_for_emotion(config: CharacterConfig, emotion: str, rng: random.R
     return rng.choice(candidates)
 
 
-def _read_prompt_text_for_ref(local_ref_base: Path, ref_audio_path: str) -> str:
-    ref_audio_path = ref_audio_path.replace("\\", "/")
+def _resolve_local_ref_audio_path(local_ref_base: Path, ref_audio_path: str) -> Path:
+    ref_audio_path = (ref_audio_path or "").replace("\\", "/")
+    base_norm = str(local_ref_base).replace("\\", "/").rstrip("/").lower()
+    if base_norm.endswith("/refs") and ref_audio_path.lower().startswith("refs/"):
+        ref_audio_path = ref_audio_path[5:]
+    if base_norm.endswith("/ref") and ref_audio_path.lower().startswith("ref/"):
+        ref_audio_path = ref_audio_path[4:]
+
     local_audio = Path(ref_audio_path)
-    if not local_audio.is_absolute():
-        local_audio = (local_ref_base / ref_audio_path).resolve()
+    if local_audio.is_absolute():
+        return local_audio
+
+    local_audio = (local_ref_base / ref_audio_path).resolve()
+    if local_audio.exists():
+        return local_audio
+
+    # If the ref omits the leading "refs/" prefix, also try resolving under
+    # "<base>/refs/<path>" (and "<base>/ref/<path>").
+    if ref_audio_path and not ref_audio_path.lower().startswith(("refs/", "ref/")):
+        for prefix in ("refs", "ref"):
+            candidate = (local_ref_base / prefix / ref_audio_path).resolve()
+            if candidate.exists():
+                return candidate
+
+    return local_audio
+
+
+def _read_prompt_text_for_ref(local_ref_base: Path, ref_audio_path: str) -> str:
+    local_audio = _resolve_local_ref_audio_path(local_ref_base, ref_audio_path)
     prompt_path = local_audio.with_suffix(".txt")
     if not prompt_path.exists():
         raise FileNotFoundError(f"Missing prompt txt for ref: {prompt_path}")
     return prompt_path.read_text(encoding="utf-8").strip()
+
+
+def _wav_duration_seconds(path: Path) -> float | None:
+    if path.suffix.lower() != ".wav":
+        return None
+    try:
+        with wave.open(str(path), "rb") as w:
+            fr = w.getframerate() or 0
+            if fr <= 0:
+                return None
+            return float(w.getnframes()) / float(fr)
+    except Exception:
+        return None
 
 
 def concat_wavs(wav_paths: list[Path], out_wav_path: Path) -> Path:
@@ -204,6 +277,9 @@ def generate_character_tts_wav(
     character_config_path: str | os.PathLike[str],
     text: str,
     out_wav_path: str | os.PathLike[str],
+    character_local_ref_base: str | os.PathLike[str] | None = None,
+    character_container_ref_base: str | None = None,
+    default_prompt_text: str = "",
     api_base: str = "http://127.0.0.1:9880",
     text_lang: str = "ko-KR",
     prompt_lang: Optional[str] = None,
@@ -211,14 +287,39 @@ def generate_character_tts_wav(
     streaming_mode: bool = False,
     timeout_s: int = 120,
     seed: Optional[int] = None,
+    max_ref_attempts: int = 8,
     keep_parts_dir: str | os.PathLike[str] | None = None,
 ) -> Path:
     config = load_character_config(character_config_path)
+
+    if character_local_ref_base:
+        base = Path(character_local_ref_base).expanduser()
+        config = CharacterConfig(
+            character_id=config.character_id,
+            local_ref_base=base,
+            container_ref_base=config.container_ref_base,
+            default_refs=config.default_refs,
+            emotion_refs=config.emotion_refs,
+            tag_aliases=config.tag_aliases,
+        )
+    if character_container_ref_base:
+        config = CharacterConfig(
+            character_id=config.character_id,
+            local_ref_base=config.local_ref_base,
+            container_ref_base=str(character_container_ref_base),
+            default_refs=config.default_refs,
+            emotion_refs=config.emotion_refs,
+            tag_aliases=config.tag_aliases,
+        )
     rng = random.Random(seed)
 
     segments = split_text_by_emotion_tags(text)
     if not segments:
         raise ValueError("Empty text after parsing emotion tags")
+
+    min_ref_s = float(os.environ.get("GPT_SOVITS_REF_MIN_S", "3"))
+    max_ref_s = float(os.environ.get("GPT_SOVITS_REF_MAX_S", "10"))
+    max_ref_attempts = int(os.environ.get("GPT_SOVITS_MAX_REF_ATTEMPTS", str(int(max_ref_attempts or 8))))
 
     out_path = Path(out_wav_path)
 
@@ -233,23 +334,87 @@ def generate_character_tts_wav(
     wav_parts: list[Path] = []
     try:
         for i, seg in enumerate(segments, start=1):
-            chosen_ref = _choose_ref_for_emotion(config, seg.emotion, rng)
-            prompt_text = _read_prompt_text_for_ref(config.local_ref_base, chosen_ref)
-            part_path = parts_dir / f"{out_path.stem}.part{i:03d}.{media_type}"
-            gpt_sovits_tts_to_wav(
-                text=seg.text,
-                ref_audio_path=chosen_ref,
-                out_wav_path=part_path,
-                api_base=api_base,
-                container_ref_base=config.container_ref_base,
-                text_lang=text_lang,
-                prompt_lang=prompt_lang,
-                prompt_text=prompt_text,
-                media_type=media_type,
-                streaming_mode=streaming_mode,
-                timeout_s=timeout_s,
-            )
-            wav_parts.append(part_path)
+            emotion_key = _normalize_tag(seg.emotion) or "default"
+            emotion_key = config.tag_aliases.get(emotion_key, emotion_key)
+            candidates = (config.emotion_refs.get(emotion_key) or []) or config.default_refs
+            if not candidates:
+                raise ValueError(f"No refs available (emotion={emotion_key})")
+
+            remaining = [c for c in candidates if str(c).strip()]
+            last_err: Exception | None = None
+
+            attempts = min(int(max_ref_attempts), len(remaining)) if remaining else 0
+            if attempts <= 0:
+                attempts = 1
+
+            generated_part: Path | None = None
+            for attempt in range(1, attempts + 1):
+                chosen_ref = rng.choice(remaining) if remaining else _choose_ref_for_emotion(config, emotion_key, rng)
+
+                local_audio = _resolve_local_ref_audio_path(config.local_ref_base, chosen_ref)
+                dur = _wav_duration_seconds(local_audio) if local_audio.exists() else None
+                if dur is not None and (dur < min_ref_s or dur > max_ref_s):
+                    print(
+                        f"[warn] Skipping ref outside {min_ref_s:.0f}-{max_ref_s:.0f}s: {chosen_ref} "
+                        f"(duration={dur:.2f}s, local={local_audio})"
+                    )
+                    if chosen_ref in remaining and len(remaining) > 1:
+                        remaining.remove(chosen_ref)
+                        continue
+
+                try:
+                    try:
+                        prompt_text = _read_prompt_text_for_ref(config.local_ref_base, chosen_ref)
+                    except FileNotFoundError:
+                        prompt_text = (default_prompt_text or "").strip()
+                        if prompt_text:
+                            print(
+                                f"[warn] Missing prompt txt for ref: {chosen_ref} "
+                                f"(base={config.local_ref_base}). Falling back to --prompt-text."
+                            )
+                        else:
+                            print(
+                                f"[warn] Missing prompt txt for ref: {chosen_ref} "
+                                f"(base={config.local_ref_base}). Continuing without prompt_text."
+                            )
+
+                    part_path = parts_dir / f"{out_path.stem}.part{i:03d}.{media_type}"
+                    gpt_sovits_tts_to_wav(
+                        text=seg.text,
+                        ref_audio_path=chosen_ref,
+                        out_wav_path=part_path,
+                        api_base=api_base,
+                        container_ref_base=config.container_ref_base,
+                        text_lang=text_lang,
+                        prompt_lang=prompt_lang,
+                        prompt_text=prompt_text,
+                        media_type=media_type,
+                        streaming_mode=streaming_mode,
+                        timeout_s=timeout_s,
+                    )
+                    generated_part = part_path
+                    break
+                except RuntimeError as e:
+                    last_err = e
+                    msg = str(e)
+                    if _REF_DURATION_ERROR_RE.search(msg) or "Reference audio is outside" in msg:
+                        print(f"[warn] Ref rejected by SoVITS (duration). retry {attempt}/{attempts}: {chosen_ref}")
+                        if chosen_ref in remaining and len(remaining) > 1:
+                            remaining.remove(chosen_ref)
+                            continue
+                    if _REF_NOT_EXISTS_RE.search(msg):
+                        print(f"[warn] Ref rejected by SoVITS (missing file). retry {attempt}/{attempts}: {chosen_ref}")
+                        if chosen_ref in remaining and len(remaining) > 1:
+                            remaining.remove(chosen_ref)
+                            continue
+                    raise
+            else:
+                if last_err is not None:
+                    raise last_err
+                raise RuntimeError("Failed to generate TTS after ref retries")
+            if generated_part is None:
+                raise RuntimeError("Failed to generate TTS part (no output path)")
+            wav_parts.append(generated_part)
 
         if media_type != "wav":
             raise ValueError("Only media_type=wav is supported for concatenation")
@@ -285,10 +450,21 @@ def gpt_sovits_tts_to_wav(
     if not resolved_ref:
         raise ValueError("ref_audio_path is empty")
 
+    def _normalize_sovits_lang(lang: str) -> str:
+        lang = (lang or "").strip()
+        if not lang:
+            return lang
+        if lang.lower() == "auto":
+            return "auto"
+        # Common Windows/BCP47 style codes (e.g., ko-KR) often need to be "ko" for GPT-SoVITS.
+        if "-" in lang:
+            return lang.split("-", 1)[0].strip().lower()
+        return lang
+
     params = {
         "text": text or "",
-        "text_lang": text_lang,
-        "prompt_lang": prompt_lang or text_lang,
+        "text_lang": _normalize_sovits_lang(text_lang),
+        "prompt_lang": _normalize_sovits_lang(prompt_lang or text_lang),
         "ref_audio_path": resolved_ref,
         "media_type": media_type,
         "streaming_mode": "true" if streaming_mode else "false",
@@ -296,15 +472,29 @@ def gpt_sovits_tts_to_wav(
     if prompt_text.strip():
         params["prompt_text"] = prompt_text.strip()
 
-    tts_url = urljoin(api_base, "tts") + "?" + urlencode(params, safe="/:")
+    # Use %20 for spaces (not '+') to match stricter servers.
+    tts_url = urljoin(api_base, "tts") + "?" + urlencode(params, safe="/:", quote_via=quote)
     req = Request(tts_url, method="GET")
 
     out_path = Path(out_wav_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    with urlopen(req, timeout=timeout_s) as resp:
-        if getattr(resp, "status", 200) >= 400:
-            raise RuntimeError(f"HTTP {resp.status}")
-        audio_bytes = resp.read()
+    try:
+        with urlopen(req, timeout=timeout_s) as resp:
+            if getattr(resp, "status", 200) >= 400:
+                raise RuntimeError(f"HTTP {resp.status}")
+            audio_bytes = resp.read()
+    except HTTPError as e:
+        body = ""
+        try:
+            body = (e.read() or b"").decode("utf-8", errors="replace")
+        except Exception:
+            body = "<failed to read error body>"
+        raise RuntimeError(
+            "GPT-SoVITS /tts request failed.\n"
+            f"HTTP {e.code} {e.reason}\n"
+            f"url={tts_url}\n"
+            f"body={body[:2000]}"
+        ) from e
     out_path.write_bytes(audio_bytes)
     return out_path
 
@@ -457,9 +647,26 @@ def _main() -> int:
     parser.add_argument("--prompt-text", default=os.environ.get("GPT_SOVITS_PROMPT_TEXT", ""))
     parser.add_argument("--ref-audio-path", default="", help="Path as seen by the GPT-SoVITS server/container.")
     parser.add_argument("--character", default="", help="Character config json path. Enables emotion-tag splitting.")
+    parser.add_argument(
+        "--character-local-ref-base",
+        default=os.environ.get("GPT_SOVITS_CHARACTER_LOCAL_REF_BASE", ""),
+        help="Override character config localRefBase for reading prompt .txt on the host.",
+    )
+    parser.add_argument(
+        "--character-container-ref-base",
+        default=os.environ.get("GPT_SOVITS_CHARACTER_CONTAINER_REF_BASE", ""),
+        help="Override character config containerRefBase used to build ref_audio_path for the GPT-SoVITS server.",
+    )
     parser.add_argument("--text", default="")
     parser.add_argument("--text-file", default="", help="Read text from a UTF-8 file (overrides --text).")
-    parser.add_argument("--out", required=True, help="Output .wav path.")
+    parser.add_argument(
+        "--out",
+        default="",
+        help=(
+            "Output .wav path. If omitted, writes to ./out/tts/<name>.wav "
+            "(derived from --text-file/--character)."
+        ),
+    )
     parser.add_argument("--timeout-s", type=int, default=120)
     parser.add_argument("--streaming-mode", action="store_true", help="Enable streaming_mode=true (default false).")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for ref selection.")
@@ -478,14 +685,41 @@ def _main() -> int:
     args = parser.parse_args()
 
     text = args.text
+    text_file_path: Path | None = None
     if args.text_file:
-        text = Path(args.text_file).read_text(encoding="utf-8")
+        text_file_path = Path(args.text_file)
+        text = text_file_path.read_text(encoding="utf-8")
     if not text.strip():
         raise SystemExit("Empty text. Provide --text or --text-file.")
 
+    if not args.out:
+        out_dir = Path("out") / "tts"
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        suffix = "text"
+        if text_file_path is not None:
+            suffix = text_file_path.stem or "text"
+
+        prefix = ""
+        if args.character:
+            try:
+                prefix = load_character_config(args.character).character_id
+            except Exception:
+                prefix = Path(args.character).stem or "character"
+
+        filename = f"{prefix}_{suffix}.wav" if prefix else f"{suffix}.wav"
+        args.out = str(out_dir / filename)
+        print(f"[info] --out not provided; defaulting to: {args.out}")
+
+    if text_file_path is not None and text_file_path.suffix.lower() == ".json":
+        print(
+            "[warn] --text-file looks like JSON. If you meant 'generate per-clip voice.wav' assets, "
+            "use: python scripts/generate_scenario_audio.py --scenario <file.json>",
+        )
+
     if args.tts == "windows":
         if args.character:
-            generate_windows_tts_wav(
+            out_path = generate_windows_tts_wav(
                 text=text,
                 out_wav_path=args.out,
                 voice=args.windows_voice,
@@ -495,7 +729,7 @@ def _main() -> int:
                 keep_parts_dir=(args.keep_parts_dir or None),
             )
         else:
-            windows_tts_to_wav(
+            out_path = windows_tts_to_wav(
                 text=text,
                 out_wav_path=args.out,
                 voice=args.windows_voice,
@@ -505,10 +739,13 @@ def _main() -> int:
             )
     else:
         if args.character:
-            generate_character_tts_wav(
+            out_path = generate_character_tts_wav(
                 character_config_path=args.character,
                 text=text,
                 out_wav_path=args.out,
+                character_local_ref_base=(args.character_local_ref_base or None),
+                character_container_ref_base=(args.character_container_ref_base or None),
+                default_prompt_text=args.prompt_text,
                 api_base=args.api_base,
                 text_lang=args.text_lang,
                 prompt_lang=(args.prompt_lang or None),
@@ -521,7 +758,7 @@ def _main() -> int:
         else:
             if not args.ref_audio_path:
                 raise SystemExit("--ref-audio-path is required when --character is not used.")
-            gpt_sovits_tts_to_wav(
+            out_path = gpt_sovits_tts_to_wav(
                 text=text,
                 ref_audio_path=args.ref_audio_path,
                 out_wav_path=args.out,
@@ -533,6 +770,8 @@ def _main() -> int:
                 streaming_mode=bool(args.streaming_mode),
                 timeout_s=args.timeout_s,
             )
+
+    print(f"[done] wrote: {out_path}")
     return 0
 
 

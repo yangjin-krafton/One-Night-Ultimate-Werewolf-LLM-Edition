@@ -216,6 +216,9 @@
 
 - 캐릭터 설정(`characters/<id>/character.json`)을 쓰는 경우(감정 태그 분절 + ref/prompt 기반):
   - `python scripts/gpt_sovits_tts.py --tts gpt-sovits --character characters/_template/character.json --text-file <대사.txt> --out <voice.wav>`
+  - `python scripts/gpt_sovits_tts.py --tts gpt-sovits --character characters/Narrator/teamasterliusu.json --text-file scenarios\ghost_survey_club.json`
+    - `--out`을 생략하면 기본값으로 `./out/tts/<name>.wav`에 저장됩니다.
+    - ref 오디오/프롬프트가 repo 밖(예: `D:\\GPT_SoVIT\\refs\\...`)에 있으면 `--character-local-ref-base`(호스트 경로)와 `--character-container-ref-base`(SoVITS 컨테이너/서버에서 보이는 마운트 경로)로 오버라이드할 수 있습니다.
 - `--character` 없이 단일 ref로 호출하는 경우:
   - `python scripts/gpt_sovits_tts.py --tts gpt-sovits --ref-audio-path /workspace/Ref/Wolf/refs/normal.wav --text "안녕하세요" --out <voice.wav>`
 
@@ -228,3 +231,64 @@
   - python scripts\generate_scenario_audio.py --scenario scenarios\ghost_survey_club.json --tts windows
 
 Windows 음성/속도/볼륨/샘플레이트는 옵션으로 조절할 수 있습니다: `--windows-voice`, `--windows-rate`, `--windows-volume`, `--windows-sample-rate` (또는 `--windows-format` 별칭).
+
+### 9.3 시나리오(JSON)에서 voice.wav 일괄 생성
+
+시나리오(`scenarios/*.json`)의 내레이션 클립을 읽어서 `public/assets/voices/.../voice.wav`를 일괄 생성합니다.
+
+- 테마 캐릭터 폴더 예시(평면 구조): `characters/Thema_01/Narrator.json`
+- 실행 예시(SoVITS, Docker 마운트 경로 오버라이드 포함):
+  - `python scripts/generate_scenario_audio.py --scenario scenarios\\ghost_survey_club.json --tts gpt-sovits --characters-dir characters\\Thema_01 --character-local-ref-base \"D:\\GPT_SoVIT\" --character-container-ref-base \"/workspace\"`
+
+### 9.4 초보자용 “복붙” 실행 템플릿 (Windows PowerShell)
+
+아래 템플릿은 “SoVITS는 Docker로 실행 중이고, 호스트의 `D:\GPT_SoVIT`를 컨테이너의 `/workspace`로 마운트”한 전형적인 구성을 기준으로 합니다.
+
+#### (권장) 1) 환경변수 한 번 설정 → 2) 매번 짧게 실행
+
+1) PowerShell에서 환경변수(현재 터미널 세션에만 적용):
+
+```powershell
+Set-Location D:\Workspace\One-Night-Ultimate-Werewolf-LLM-Edition
+
+$env:GPT_SOVITS_API_BASE = "http://127.0.0.1:9880"
+$env:GPT_SOVITS_CHARACTER_LOCAL_REF_BASE = "D:\GPT_SoVIT"
+$env:GPT_SOVITS_CHARACTER_CONTAINER_REF_BASE = "/workspace"
+$env:GPT_SOVITS_MAX_REF_ATTEMPTS = "12"   # ref 길이(3~10s) 문제 시 자동 재시도 횟수
+$env:GPT_SOVITS_REF_MIN_S = "3"
+$env:GPT_SOVITS_REF_MAX_S = "10"
+```
+
+2-A) 시나리오 JSON을 클립별 `voice.wav`로 일괄 생성(테마 폴더 사용):
+
+```powershell
+python scripts\generate_scenario_audio.py `
+  --scenario scenarios\ghost_survey_club.json `
+  --tts gpt-sovits `
+  --characters-dir characters\Thema_01 `
+  --on-error windows
+```
+
+2-B) 특정 문장만 빠르게 단일 wav 생성(디버깅/샘플용):
+
+```powershell
+python scripts\gpt_sovits_tts.py `
+  --tts gpt-sovits `
+  --character characters\Thema_01\Narrator.json `
+  --text "테스트"
+```
+
+#### (원라인) 환경변수 없이 한 번에 실행
+
+```powershell
+python scripts\generate_scenario_audio.py --scenario scenarios\ghost_survey_club.json --tts gpt-sovits --characters-dir characters\Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace"
+```
+
+#### 자주 하는 실수 체크리스트
+
+- `speakerId`(시나리오) ↔ 캐릭터 파일명(테마 폴더)이 일치해야 합니다. 예: `Narrator` → `characters\Thema_01\Narrator.json`
+- 컨테이너 마운트 경로에 따라 `--character-container-ref-base` 값이 달라집니다(예: `/workspace`, `/workspace/refs` 등).
+- SoVITS 서버가 다른 PC/포트라면 `GPT_SOVITS_API_BASE`를 해당 주소로 변경하세요.
+- 특정 캐릭터 ref가 3~10초 규칙에 걸려 SoVITS가 400을 반환하면 `--on-error windows`(또는 `--on-error skip`)로 전체 배치가 멈추지 않게 할 수 있습니다.
+
+-  python3 scripts/download_genshin_voice_sample.py --query "Paimon" --language "Korean" --character "paimon" --in-game-contains "VO_paimon" --all --out-dir out/genshin-voice --layout in_game_path

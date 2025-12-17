@@ -15,9 +15,11 @@
   - 기본값: `character.json`이 있는 폴더
 - `containerRefBase`: (옵션) GPT-SoVITS 컨테이너 내부에서 보이는 ref base 경로
   - 기본값: `/workspace/Ref/<characterId>`
-- `defaultRefs`: 기본(정상) 참고 오디오 리스트 (배열)
+- `defaultRefs`: 기본(정상) 참고 오디오 리스트 (문자열 1개 또는 배열)
 - `emotionRefs`: 감정별 참고 오디오 리스트 맵 (배열)
 - `tagAliases`: 텍스트의 태그를 감정 키로 정규화하는 별칭 맵
+
+참고 오디오 경로는 `/` 또는 `\\` 모두 사용 가능하며, `refs/...`처럼 쓰던 경로는 `genshin-voice/...`처럼 앞의 `refs/`를 생략해도 동작합니다.
 
 ## 태그 문법
 

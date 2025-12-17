@@ -1,0 +1,37 @@
+{
+  "characterId": "dottore",
+  "localRefBase": "./",
+  "containerRefBase": "/workspace/refs",
+  "defaultRefs": [
+  "genshin-voice/Korean/VO_AQ/VO_dottore/vo_LLZAQ003_17_dottore_04.wav"
+  ],
+  "emotionRefs": {
+    "happy": [
+      "genshin-voice/Korean/VO_AQ/VO_dottore/vo_XMAQ304_11_dottore_60.wav"
+    ],
+    "sad": [
+      "genshin-voice/Korean/VO_AQ/VO_dottore/vo_LLZAQ003_17_dottore_04.wav"
+    ],
+    "angry": [
+      "genshin-voice/Korean/VO_AQ/VO_dottore/vo_XMAQ304_11_dottore_58.wav"
+    ],
+    "fearful": [
+      "genshin-voice/Korean/VO_AQ/VO_dottore/vo_LLZAQ003_17_dottore_02.wav"
+    ],
+    "surprised": [
+      "genshin-voice/Korean/VO_AQ/VO_dottore/vo_XMAQ304_11_dottore_56.wav"
+    ]
+  },
+  "tagAliases": {
+    "기쁨": "happy",
+    "신남": "happy",
+    "슬픔": "sad",
+    "화남": "angry",
+    "분노": "angry",
+    "공포": "fearful",
+    "놀람": "surprised",
+    "기본": "default",
+    "normal": "default"
+  }
+}
+
