@@ -3,8 +3,8 @@
   "localRefBase": "./",
   "containerRefBase": "/workspace/refs",
   "defaultRefs": [
-  "genshin-voice/Korean/VO_AQ/VO_venti/vo_MDAQ043_4_venti_10.wav",
-  "genshin-voice/Korean/VO_AQ/VO_venti/vo_MDAQ064_1_venti_03.wav"
+    "genshin-voice/Korean/VO_AQ/VO_venti/vo_MDAQ043_4_venti_10.wav",
+    "genshin-voice/Korean/VO_AQ/VO_venti/vo_MDAQ064_1_venti_03.wav"
   ],
   "emotionRefs": {
     "happy": [
@@ -15,8 +15,7 @@
     ],
     "sad": [
       "genshin-voice/Korean/VO_AQ/VO_venti/vo_MDAQ064_3_venti_09.wav",
-      "genshin-voice/Korean/VO_AQ/VO_venti/vo_MDAQ077_4_venti_08.wav",
-      "genshin-voice/Korean/VO_freetalk/VO_venti/vo_dialog_MDAQ067b_venti_04.wav"
+      "genshin-voice/Korean/VO_AQ/VO_venti/vo_MDAQ077_4_venti_08.wav"
     ],
     "angry": [
       "genshin-voice/Korean/VO_AQ/VO_venti/vo_MDAQ043_4_venti_21.wav",
@@ -27,8 +26,7 @@
       "genshin-voice/Korean/VO_freetalk/VO_venti/vo_dialog_MDAQ077_venti_02c_2.wav"
     ],
     "surprised": [
-      "genshin-voice/Korean/VO_EQ/VO_venti/vo_TBMB001_1_venti_13.wav",
-      "genshin-voice/Korean/VO_freetalk/VO_venti/vo_dialog_MDAQ067b_venti_04.wav"
+      "genshin-voice/Korean/VO_EQ/VO_venti/vo_TBMB001_1_venti_13.wav"
     ]
   },
   "tagAliases": {
@@ -43,4 +41,3 @@
     "normal": "default"
   }
 }
-

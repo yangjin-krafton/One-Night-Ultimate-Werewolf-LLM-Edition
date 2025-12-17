@@ -37,6 +37,7 @@ class TextSegment:
 
 _REF_DURATION_ERROR_RE = re.compile(r"outside the\\s+(\\d+)-(\\d+)\\s+second range", re.IGNORECASE)
 _REF_NOT_EXISTS_RE = re.compile(r"\\bnot\\s+exist(s)?\\b", re.IGNORECASE)
+_FAST_LANGDETECT_ERROR_RE = re.compile(r"fast-langdetect|Cache directory not found", re.IGNORECASE)
 
 
 def _normalize_ref_path(ref_audio_path: str, container_ref_base: str) -> str:
@@ -379,19 +380,40 @@ def generate_character_tts_wav(
                             )
 
                     part_path = parts_dir / f"{out_path.stem}.part{i:03d}.{media_type}"
-                    gpt_sovits_tts_to_wav(
-                        text=seg.text,
-                        ref_audio_path=chosen_ref,
-                        out_wav_path=part_path,
-                        api_base=api_base,
-                        container_ref_base=config.container_ref_base,
-                        text_lang=text_lang,
-                        prompt_lang=prompt_lang,
-                        prompt_text=prompt_text,
-                        media_type=media_type,
-                        streaming_mode=streaming_mode,
-                        timeout_s=timeout_s,
-                    )
+                    try:
+                        gpt_sovits_tts_to_wav(
+                            text=seg.text,
+                            ref_audio_path=chosen_ref,
+                            out_wav_path=part_path,
+                            api_base=api_base,
+                            container_ref_base=config.container_ref_base,
+                            text_lang=text_lang,
+                            prompt_lang=prompt_lang,
+                            prompt_text=prompt_text,
+                            media_type=media_type,
+                            streaming_mode=streaming_mode,
+                            timeout_s=timeout_s,
+                        )
+                    except RuntimeError as e:
+                        # Some GPT-SoVITS setups fail when fast-langdetect models/cache aren't present.
+                        # If that happens and we sent prompt_text, retry once without it so batch jobs continue.
+                        if prompt_text.strip() and _FAST_LANGDETECT_ERROR_RE.search(str(e)):
+                            print("[warn] SoVITS fast-langdetect error; retrying without prompt_text.")
+                            gpt_sovits_tts_to_wav(
+                                text=seg.text,
+                                ref_audio_path=chosen_ref,
+                                out_wav_path=part_path,
+                                api_base=api_base,
+                                container_ref_base=config.container_ref_base,
+                                text_lang=text_lang,
+                                prompt_lang=prompt_lang,
+                                prompt_text="",
+                                media_type=media_type,
+                                streaming_mode=streaming_mode,
+                                timeout_s=timeout_s,
+                            )
+                        else:
+                            raise
                     generated_part = part_path
                     break
                 except RuntimeError as e:

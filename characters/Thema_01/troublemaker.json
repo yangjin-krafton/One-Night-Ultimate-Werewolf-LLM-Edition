@@ -3,14 +3,9 @@
   "localRefBase": "./",
   "containerRefBase": "/workspace/refs",
   "defaultRefs": [
-  "genshin-voice/Korean/VO_Anecdote/VO_paimon/vo_anecdote_part1_31_paimon_17b.wav",
-  "genshin-voice/Korean/VO_Anecdote/VO_paimon/another.wav",
-  "genshin-voice/Korean/VO_AQ/VO_paimon/vo_DQAQ004_1_paimon_01.wav"
+    "genshin-voice/Korean/VO_AQ/VO_paimon/vo_DQAQ004_1_paimon_01.wav"
   ],
   "emotionRefs": {
-    "happy": [
-      "genshin-voice/Korean/VO_AQ/VO_paimon/vo_DQAQ001_3_paimon_02.wav"
-    ],
     "sad": [
       "genshin-voice/Korean/VO_AQ/VO_paimon/vo_DQAQ002_3_paimon_03.wav",
       "genshin-voice/Korean/VO_AQ/VO_paimon/vo_DQAQ101_7_paimon_01.wav",
@@ -45,4 +40,3 @@
     "normal": "default"
   }
 }
-

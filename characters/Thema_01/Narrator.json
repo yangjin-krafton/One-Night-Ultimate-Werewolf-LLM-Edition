@@ -3,10 +3,10 @@
   "localRefBase": "./",
   "containerRefBase": "/workspace/refs",
   "defaultRefs": [
-  "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ002_7_lynette_04.wav",
-  "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ003_18_lynette_01.wav",
-  "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ003_18_lynette_03.wav",
-  "genshin-voice/Korean/VO_COOP/VO_lynette/vo_LNTCOP001_1918506_lynette_16.wav"
+    "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ002_7_lynette_04.wav",
+    "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ003_18_lynette_01.wav",
+    "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ003_18_lynette_03.wav",
+    "genshin-voice/Korean/VO_COOP/VO_lynette/vo_LNTCOP001_1918506_lynette_16.wav"
   ],
   "emotionRefs": {
     "happy": [
@@ -28,8 +28,7 @@
     ],
     "surprised": [
       "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ002_7_lynette_02.wav",
-      "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ003_31_lynette_04.wav",
-      "genshin-voice/Korean/VO_LQ/VO_lynette/vo_LNLQ003_1_lynette_03.wav"
+      "genshin-voice/Korean/VO_AQ/VO_lynette/vo_FDAQ003_31_lynette_04.wav"
     ]
   },
   "tagAliases": {
@@ -44,4 +43,3 @@
     "normal": "default"
   }
 }
-

@@ -3,11 +3,11 @@
   "localRefBase": "./",
   "containerRefBase": "/workspace/refs",
   "defaultRefs": [
-  "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1905803_kaveh_15.wav",
-  "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1905803_kaveh_49.wav",
-  "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1905803_kaveh_51.wav",
-  "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1907103_kaveh_06.wav",
-  "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1907104_kaveh_19.wav"
+    "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1905803_kaveh_15.wav",
+    "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1905803_kaveh_49.wav",
+    "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1905803_kaveh_51.wav",
+    "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1907103_kaveh_06.wav",
+    "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1907104_kaveh_19.wav"
   ],
   "emotionRefs": {
     "happy": [
@@ -22,7 +22,6 @@
     ],
     "angry": [
       "genshin-voice/Korean/VO_AQ/VO_kaveh/vo_XMAQ305_6_kaveh_11.wav",
-      "genshin-voice/Korean/VO_AQ/VO_kaveh/vo_XMAQ305_6_kaveh_13.wav",
       "genshin-voice/Korean/VO_COOP/VO_kaveh/vo_KVCOP001_1905803_kaveh_09.wav",
       "genshin-voice/Korean/VO_freetalk/VO_kaveh/vo_dialog_AHLQ003_kaveh_08.wav"
     ],
@@ -47,4 +46,3 @@
     "normal": "default"
   }
 }
-

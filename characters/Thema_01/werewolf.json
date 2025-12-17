@@ -3,7 +3,7 @@
   "localRefBase": "./",
   "containerRefBase": "/workspace/refs",
   "defaultRefs": [
-  "genshin-voice/Korean/VO_AQ/VO_dottore/vo_LLZAQ003_17_dottore_04.wav"
+    "genshin-voice/Korean/VO_AQ/VO_dottore/vo_LLZAQ003_17_dottore_04.wav"
   ],
   "emotionRefs": {
     "happy": [
@@ -17,9 +17,6 @@
     ],
     "fearful": [
       "genshin-voice/Korean/VO_AQ/VO_dottore/vo_LLZAQ003_17_dottore_02.wav"
-    ],
-    "surprised": [
-      "genshin-voice/Korean/VO_AQ/VO_dottore/vo_XMAQ304_11_dottore_56.wav"
     ]
   },
   "tagAliases": {
@@ -34,4 +31,3 @@
     "normal": "default"
   }
 }
-
