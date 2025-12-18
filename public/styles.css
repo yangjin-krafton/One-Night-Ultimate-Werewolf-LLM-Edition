@@ -685,6 +685,39 @@ code{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font
   flex-direction: column;
   justify-content: center;
 }
+
+/* Profile-only mode: hide any role hints and make the profile card fill ~90% of the screen. */
+.nightOverlay--profileOnly .nightOverlay__title,
+.nightOverlay--profileOnly .nightOverlay__role,
+.nightOverlay--profileOnly .nightOverlay__hint{
+  display:none;
+}
+.nightOverlay--profileOnly .nightOverlay__body{margin-top: 0}
+.nightOverlay--profileOnly .profileCardLarge{
+  aspect-ratio: 16 / 9;
+  width: min(calc(var(--app-width, 100vw) * 0.96), calc(var(--app-height, 100vh) * 0.90 * 16 / 9));
+  max-height: calc(var(--app-height, 100vh) * 0.90);
+  height: auto;
+}
+.nightOverlay--profileOnly .profileCardLarge{padding: clamp(14px, 2.2vh, 28px)}
+.nightOverlay--profileOnly .profileCardLarge__seat{
+  font-size: clamp(64px, 10vw, 132px);
+  text-shadow: 0 0 22px color-mix(in srgb, var(--p-color) 85%, transparent);
+}
+.nightOverlay--profileOnly .profileCardLarge__badge{
+  font-size: clamp(16px, 2.6vw, 26px);
+  padding: 10px 16px;
+  border-radius: 999px;
+}
+.nightOverlay--profileOnly .profileCardLarge__avatar{
+  font-size: clamp(96px, 12vw, 160px);
+  margin-top: clamp(8px, 1.6vh, 18px);
+}
+.nightOverlay--profileOnly .profileCardLarge__name{
+  font-size: clamp(28px, 4.8vw, 56px);
+  margin-top: clamp(8px, 1.6vh, 18px);
+  letter-spacing: .02em;
+}
 .nightOverlay--fullscreen .profileCardLarge__avatar{font-size: 86px}
 .nightOverlay--fullscreen .profileCardLarge__seat{font-size: 46px}
 .nightOverlay--fullscreen .profileCardLarge__name{font-size: 18px}

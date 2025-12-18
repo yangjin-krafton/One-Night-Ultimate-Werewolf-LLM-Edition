@@ -577,11 +577,19 @@ function renderNightOverlay() {
   const activeSeats = Array.isArray(step.activeSeats) ? step.activeSeats.map((n) => Number(n)) : [];
   const isActor = !!state.mySeat && activeSeats.includes(Number(state.mySeat)) && !state.isSpectator;
   nightOverlay.classList.toggle("nightOverlay--fullscreen", !isActor);
+  nightOverlay.classList.toggle("nightOverlay--profileOnly", !isActor);
 
   const stepLabel = `${String(step.stepIndex || 0)}/${String(step.stepCount || 0)}`;
   nightTitle.textContent = `NIGHT · ${stepLabel}`;
-
-  nightRole.textContent = state.isSpectator ? "관전 중" : state.myRoleId ? `내 역할: ${getRoleDisplayName(state.myRoleId)}` : "내 역할: (미정)";
+  if (!isActor) {
+    nightRole.textContent = state.isSpectator ? "관전 중" : "";
+  } else {
+    nightRole.textContent = state.isSpectator
+      ? "관전 중"
+      : state.myRoleId
+          ? `내 역할: ${getRoleDisplayName(state.myRoleId)}`
+          : "내 역할: (미정)";
+  }
 
   // Reset containers
   nightActive.innerHTML = "";
@@ -609,7 +617,7 @@ function renderNightOverlay() {
   };
 
   const me = (state.room?.players || []).find((p) => p.clientId === state.clientId) || null;
-  const myCard = me ? buildLargeCard(me, "EYES CLOSED") : null;
+  const myCard = me ? buildLargeCard(me, "눈 감아요") : null;
 
   if (kind === "opening") {
     nightHint.textContent = "모두 눈을 감고 휴대폰을 내려놓으세요.";
