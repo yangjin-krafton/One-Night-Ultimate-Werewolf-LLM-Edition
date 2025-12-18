@@ -98,6 +98,35 @@ python -m uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 
 서버가 시작되면 `http://localhost:8000`에서 클라이언트에 접속할 수 있습니다. 스마트폰에서는 서버 PC의 IP 주소 (예: `http://192.168.1.100:8000`)로 접속하세요.
 
+### UI Debug (Chrome Console)
+빠르게 밤 UI/UX를 확인하려면 개발 모드에서 `gameDebug` 콘솔 커맨드를 사용할 수 있습니다.
+
+Prereq:
+- `.\run_dev.ps1`로 실행 (환경변수 `DEBUG_COMMANDS=1` 설정됨)
+- 브라우저에서 방에 먼저 입장(Join)해서 seat이 배정된 상태여야 함
+
+Chrome DevTools Console 예시:
+```js
+// 역할 확인 화면 (눈 감기 전/후)
+gameDebug.ui.roleCheck({ eyesClosed: false })
+gameDebug.ui.roleCheck({ eyesClosed: true })
+
+// 밤 액션 UI 바로 보기 (내 폰이 '행동자'로 표시됨)
+gameDebug.ui.nightAction('seer')
+gameDebug.ui.nightAction('robber')
+gameDebug.ui.nightAction('troublemaker')
+gameDebug.ui.nightAction('drunk')
+gameDebug.ui.nightAction('werewolf') // (테스트용) 센터 확인 가능 플래그 포함
+
+// 밤: 대기/오프닝/아웃트로 미리보기
+gameDebug.ui.nightWait()
+gameDebug.ui.nightOpening()
+gameDebug.ui.nightOutro()
+
+// 오버레이 닫기
+gameDebug.ui.clear()
+```
+
 ### 프로덕션 배포
 Docker를 사용한 배포:
 

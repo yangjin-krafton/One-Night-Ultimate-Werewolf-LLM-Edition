@@ -199,6 +199,7 @@ const state = {
   room: null,
   scenarios: [],
   scenarioById: {},
+  scenarioTtsByKey: {},
   scenarioState: null,
   tickTimer: null,
   lastNarrationKey: "",
@@ -216,6 +217,7 @@ const state = {
 };
 
 const scenarioDetailInflight = new Set();
+const scenarioTtsInflight = new Set();
 
 const episodePickerState = {
   scenarioId: "",
@@ -260,7 +262,61 @@ function setPhase(phase, endsAtMs) {
   if (state.tickTimer) clearInterval(state.tickTimer);
   state.tickTimer = setInterval(renderTimer, 200);
   renderTimer();
+  syncWakeLock().catch(() => {});
 }
+
+let wakeLockSentinel = null;
+
+function shouldKeepScreenAwake(phase) {
+  return ["ROLE", "NIGHT", "DEBATE", "VOTE", "RESULT", "REVEAL"].includes(String(phase || "").toUpperCase());
+}
+
+async function requestWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  if (document.visibilityState !== "visible") return;
+  if (wakeLockSentinel) return;
+  try {
+    // Screen Wake Lock API (supported on Chromium/Android).
+    wakeLockSentinel = await navigator.wakeLock.request("screen");
+    wakeLockSentinel.addEventListener(
+      "release",
+      () => {
+        wakeLockSentinel = null;
+      },
+      { once: true }
+    );
+  } catch {
+    wakeLockSentinel = null;
+  }
+}
+
+async function releaseWakeLock() {
+  try {
+    if (wakeLockSentinel) await wakeLockSentinel.release();
+  } catch {
+    // ignore
+  } finally {
+    wakeLockSentinel = null;
+  }
+}
+
+async function syncWakeLock() {
+  const phase = state.room?.phase || "WAIT";
+  if (!shouldKeepScreenAwake(phase)) {
+    await releaseWakeLock();
+    return;
+  }
+  await requestWakeLock();
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    syncWakeLock().catch(() => {});
+  } else {
+    releaseWakeLock().catch(() => {});
+  }
+});
+window.addEventListener("pagehide", () => releaseWakeLock().catch(() => {}));
 
 function renderTimer() {
   const ends = state.room?.phaseEndsAtMs;
@@ -342,8 +398,7 @@ function render() {
     if (p.isHost) card.classList.add("card--host");
     if (p.connected) card.classList.add("card--connected");
     
-    // Inject personal neon color
-    card.style.setProperty("--player-color", p.color || "#888");
+    applyPlayerPalette(card, p.color || "#888");
 
     // Check if voted
     if (state.room?.votes?.[p.clientId]) {
@@ -566,6 +621,8 @@ function renderNightOverlay() {
   const step = state.nightStep;
   if (phase !== "NIGHT" || !step) {
     nightOverlay.classList.add("hidden");
+    nightOverlay.style.removeProperty("--panel-color");
+    nightOverlay.classList.remove("nightOverlay--actorBg");
     return;
   }
 
@@ -578,6 +635,7 @@ function renderNightOverlay() {
   const isActor = !!state.mySeat && activeSeats.includes(Number(state.mySeat)) && !state.isSpectator;
   nightOverlay.classList.toggle("nightOverlay--fullscreen", !isActor);
   nightOverlay.classList.toggle("nightOverlay--profileOnly", !isActor);
+  nightOverlay.classList.toggle("nightOverlay--actorBg", isActor);
 
   const stepLabel = `${String(step.stepIndex || 0)}/${String(step.stepCount || 0)}`;
   nightTitle.textContent = `NIGHT · ${stepLabel}`;
@@ -604,12 +662,10 @@ function renderNightOverlay() {
   const buildLargeCard = (p, badgeText) => {
     const el = document.createElement("div");
     el.className = "profileCardLarge";
-    el.style.setProperty("--p-color", p?.color || "#888");
+    applyPlayerPalette(el, p?.color || "#888");
     el.innerHTML = `
-      <div class="profileCardLarge__top">
-        <div class="profileCardLarge__seat">${escapeHtml(String(p?.seat ?? ""))}</div>
-        <div class="profileCardLarge__badge">${escapeHtml(badgeText || "")}</div>
-      </div>
+      <div class="profileCardLarge__badge">${escapeHtml(badgeText || "")}</div>
+      <div class="profileCardLarge__seat">${escapeHtml(String(p?.seat ?? ""))}</div>
       <div class="profileCardLarge__avatar">${escapeHtml(p?.avatar || "👤")}</div>
       <div class="profileCardLarge__name">${escapeHtml(p?.name || "")}</div>
     `;
@@ -617,6 +673,8 @@ function renderNightOverlay() {
   };
 
   const me = (state.room?.players || []).find((p) => p.clientId === state.clientId) || null;
+  applyPlayerPalette(nightOverlay, me?.color || "#888");
+  nightOverlay.style.setProperty("--panel-color", me?.color || "#888");
   const myCard = me ? buildLargeCard(me, "눈 감아요") : null;
 
   if (kind === "opening") {
@@ -646,6 +704,11 @@ function renderNightOverlay() {
   // Actor device: show interaction UI (and keep brightness the same).
   nightHint.textContent = `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`;
 
+  if (myCard) {
+    myCard.classList.add("profileCardLarge--actorBg");
+    nightActive.appendChild(myCard);
+  }
+
   // Private hint payloads (server-sent).
   const priv = state.nightPrivate?.payload || null;
   if (priv) {
@@ -667,9 +730,13 @@ function renderNightOverlay() {
     row.className = "nightAction__row";
     for (const p of players) {
       const b = document.createElement("button");
-      b.className = "nightChoice";
-      b.textContent = `${p.seat}`;
-      b.style.setProperty("--p-color", p.color || "#888");
+      b.className = "nightChoice nightChoiceCard";
+      b.innerHTML = `
+        <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+        <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "?‘¤")}</div>
+        <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
+      `;
+      applyPlayerPalette(b, p.color || "#888");
       if (selectedSeats.includes(Number(p.seat))) b.classList.add("nightChoice--selected");
       b.addEventListener("click", () => {
         const seat = Number(p.seat);
@@ -690,8 +757,13 @@ function renderNightOverlay() {
     row.className = "nightAction__row";
     for (const idx of [0, 1, 2]) {
       const b = document.createElement("button");
-      b.className = "nightChoice";
-      b.textContent = `센터 ${idx + 1}`;
+      b.className = "nightChoice nightChoiceCard nightChoiceCard--center";
+      b.innerHTML = `
+        <div class="nightChoiceCard__seat">C${idx + 1}</div>
+        <div class="nightChoiceCard__avatar">🂠</div>
+        <div class="nightChoiceCard__name">중앙 카드 ${idx + 1}</div>
+      `;
+      applyPlayerPalette(b, me?.color || "#888");
       if (selected.includes(idx)) b.classList.add("nightChoice--selected");
       b.addEventListener("click", () => {
         let next = [...selected];
@@ -815,6 +887,7 @@ function renderRoleOverlay() {
   }
   roleOverlay.classList.remove("hidden");
   roleOverlay.classList.toggle("nightOverlay--fullscreen", true);
+  roleOverlay.classList.toggle("nightOverlay--profileOnly", !!state.roleReady);
   roleTitle.textContent = "ROLE · 역할 확인";
 
   if (state.isSpectator) {
@@ -836,12 +909,10 @@ function renderRoleOverlay() {
   if (me) {
     const card = document.createElement("div");
     card.className = "profileCardLarge";
-    card.style.setProperty("--p-color", me.color || "#888");
+    applyPlayerPalette(card, me.color || "#888");
     card.innerHTML = `
-      <div class="profileCardLarge__top">
-        <div class="profileCardLarge__seat">${escapeHtml(String(me.seat || ""))}</div>
-        <div class="profileCardLarge__badge">${state.roleReady ? "EYES CLOSED" : "READY?"}</div>
-      </div>
+      <div class="profileCardLarge__badge">${state.roleReady ? "EYES CLOSED" : "READY?"}</div>
+      <div class="profileCardLarge__seat">${escapeHtml(String(me.seat || ""))}</div>
       <div class="profileCardLarge__avatar">${escapeHtml(me.avatar || "👤")}</div>
       <div class="profileCardLarge__name">${escapeHtml(me.name || "")}</div>
     `;
@@ -870,7 +941,12 @@ async function playNightStepAsHost(step) {
   if (ok) {
     await state.narration.playList([url]);
   } else {
-    await new Promise((r) => setTimeout(r, 500));
+    const t = await getNarrationTextForSection({ scenarioId, episodeId, variantPlayerCount, sectionKey });
+    if (t) {
+      await speakWithBrowserTts(t, { interrupt: true });
+    } else {
+      await new Promise((r) => setTimeout(r, 500));
+    }
   }
 
   send({ type: "night_step_done", data: { stepId } });
@@ -904,6 +980,29 @@ async function ensureScenarioDetailLoaded(scenarioId) {
     return null;
   } finally {
     scenarioDetailInflight.delete(sid);
+  }
+}
+
+async function ensureScenarioTtsLoaded(scenarioId, playerCount) {
+  const sid = String(scenarioId || "").trim();
+  const pc = Number.parseInt(String(playerCount || ""), 10);
+  if (!sid || !Number.isFinite(pc)) return null;
+  const key = `${sid}:p${pc}`;
+  const cached = state.scenarioTtsByKey?.[key];
+  if (cached) return cached;
+  if (scenarioTtsInflight.has(key)) return null;
+
+  scenarioTtsInflight.add(key);
+  try {
+    const res = await fetch(`/api/scenarios/${encodeURIComponent(sid)}/tts?playerCount=${encodeURIComponent(String(pc))}`);
+    if (!res.ok) return null;
+    const tts = await res.json();
+    state.scenarioTtsByKey[key] = tts;
+    return tts;
+  } catch {
+    return null;
+  } finally {
+    scenarioTtsInflight.delete(key);
   }
 }
 
@@ -1087,6 +1186,119 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 }
 
+function clamp01(x) {
+  return Math.max(0, Math.min(1, Number(x) || 0));
+}
+
+function parseHexColor(hex) {
+  const s = String(hex || "").trim();
+  const m = /^#?([0-9a-f]{6})$/i.exec(s);
+  if (!m) return null;
+  const n = Number.parseInt(m[1], 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function rgbToHsl({ r, g, b }) {
+  const rr = (r || 0) / 255;
+  const gg = (g || 0) / 255;
+  const bb = (b || 0) / 255;
+  const max = Math.max(rr, gg, bb);
+  const min = Math.min(rr, gg, bb);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  switch (max) {
+    case rr:
+      h = (gg - bb) / d + (gg < bb ? 6 : 0);
+      break;
+    case gg:
+      h = (bb - rr) / d + 2;
+      break;
+    default:
+      h = (rr - gg) / d + 4;
+      break;
+  }
+  h /= 6;
+  return { h, s, l };
+}
+
+function hslToRgb({ h, s, l }) {
+  const hh = ((Number(h) || 0) % 1 + 1) % 1;
+  const ss = clamp01(s);
+  const ll = clamp01(l);
+  if (ss === 0) {
+    const v = Math.round(ll * 255);
+    return { r: v, g: v, b: v };
+  }
+  const q = ll < 0.5 ? ll * (1 + ss) : ll + ss - ll * ss;
+  const p = 2 * ll - q;
+  const hue2rgb = (pp, qq, tt) => {
+    let t = tt;
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return pp + (qq - pp) * 6 * t;
+    if (t < 1 / 2) return qq;
+    if (t < 2 / 3) return pp + (qq - pp) * (2 / 3 - t) * 6;
+    return pp;
+  };
+  const r = hue2rgb(p, q, hh + 1 / 3);
+  const g = hue2rgb(p, q, hh);
+  const b = hue2rgb(p, q, hh - 1 / 3);
+  return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+}
+
+function rgbToHex({ r, g, b }) {
+  const to2 = (n) => String(Math.max(0, Math.min(255, n | 0)).toString(16)).padStart(2, "0");
+  return `#${to2(r)}${to2(g)}${to2(b)}`.toUpperCase();
+}
+
+function rgba({ r, g, b }, a) {
+  const rr = Math.max(0, Math.min(255, r | 0));
+  const gg = Math.max(0, Math.min(255, g | 0));
+  const bb = Math.max(0, Math.min(255, b | 0));
+  const aa = Math.max(0, Math.min(1, Number(a) || 0));
+  return `rgba(${rr},${gg},${bb},${aa})`;
+}
+
+function derivePlayerPalette(baseHex) {
+  const baseRgb = parseHexColor(baseHex) || { r: 136, g: 136, b: 136 };
+  const { h, s, l } = rgbToHsl(baseRgb);
+
+  const c1 = rgbToHex(baseRgb);
+  const c2 = rgbToHex(hslToRgb({ h: h + 0.11, s: clamp01(Math.max(s, 0.55)), l: clamp01(l + 0.06) }));
+  const c3 = rgbToHex(hslToRgb({ h: h + 0.52, s: clamp01(Math.max(s, 0.55)), l: clamp01(l - 0.02) }));
+
+  const rgb2 = parseHexColor(c2) || baseRgb;
+  const rgb3 = parseHexColor(c3) || baseRgb;
+
+  return {
+    c1,
+    c2,
+    c3,
+    g1: rgba(baseRgb, 0.28),
+    g2: rgba(rgb2, 0.18),
+    g3: rgba(rgb3, 0.16),
+  };
+}
+
+function applyPlayerPalette(el, baseHex) {
+  if (!el) return;
+  const p = derivePlayerPalette(baseHex);
+  el.style.setProperty("--p-color", p.c1);
+  el.style.setProperty("--p-color-2", p.c2);
+  el.style.setProperty("--p-color-3", p.c3);
+  el.style.setProperty("--p-grad-1", p.g1);
+  el.style.setProperty("--p-grad-2", p.g2);
+  el.style.setProperty("--p-grad-3", p.g3);
+
+  // Back-compat variables used elsewhere in CSS.
+  el.style.setProperty("--player-color", p.c1);
+  el.style.setProperty("--player-color-2", p.c2);
+  el.style.setProperty("--player-color-3", p.c3);
+}
+
 function syncHostEndButton() {
   const visible = !!state.room && isHost();
   hostEndBtn.classList.toggle("hidden", !visible);
@@ -1215,7 +1427,13 @@ async function playEpisodeStartNarration(scenarioId) {
   const playlist = buildEpisodeStartPlaylist(scenario, ep, playersCount);
   const canUseWav = playlist.length ? await urlExists(playlist[0]) : false;
   if (!canUseWav) {
-    const clips = (((variant || {}).narration || {}).openingClips || []).map((c) => c.text).filter(Boolean);
+    let clips = (((variant || {}).narration || {}).openingClips || []).map((c) => c.text).filter(Boolean);
+    if (!clips.length) {
+      const tts = await ensureScenarioTtsLoaded(scenarioId, sel.variantPlayerCount || playersCount);
+      const epTts = tts?.episodes?.[episodeId] || null;
+      const t = String(epTts?.openingClips || "").trim();
+      if (t) clips = [t];
+    }
     if (!clips.length) return;
     await state.bgm.start(bgmCfg);
     try {
@@ -1235,16 +1453,102 @@ async function playEpisodeStartNarration(scenarioId) {
 }
 
 function speak(text) {
+  return speakWithBrowserTts(text, { interrupt: true });
+}
+
+function speakWithBrowserTts(text, { interrupt = true } = {}) {
   return new Promise((resolve) => {
     if (!("speechSynthesis" in window)) return resolve();
-    const u = new SpeechSynthesisUtterance(String(text).replace(/\[[^\]]+\]|\{[^}]+\}/g, ""));
+    const cleaned = String(text || "").replace(/\[[^\]]+\]|\{[^}]+\}/g, "").trim();
+    if (!cleaned) return resolve();
+
+    const u = new SpeechSynthesisUtterance(cleaned);
     u.lang = "ko-KR";
     u.rate = 1.05;
     u.onend = () => resolve();
     u.onerror = () => resolve();
-    speechSynthesis.cancel();
+    if (interrupt) speechSynthesis.cancel();
     speechSynthesis.speak(u);
   });
+}
+
+async function getNarrationTextForSection({ scenarioId, episodeId, variantPlayerCount, sectionKey }) {
+  const sid = String(scenarioId || "").trim();
+  const eid = String(episodeId || "").trim();
+  const vpc = Number.parseInt(String(variantPlayerCount || ""), 10);
+  const sk = String(sectionKey || "").trim();
+  if (!sid || !eid || !Number.isFinite(vpc) || !sk) return "";
+
+  const scenario = (await ensureScenarioDetailLoaded(sid)) || state.scenarioById?.[sid] || null;
+  const episodes = Array.isArray(scenario?.episodes) ? scenario.episodes : [];
+  const episode = episodes.find((e) => String(e?.episodeId || "").trim() === eid) || episodes[0] || null;
+  const variantByPlayerCount = episode?.variantByPlayerCount || {};
+  const variant = variantByPlayerCount[String(vpc)] || variantByPlayerCount[vpc] || null;
+  const narration = variant?.narration || {};
+
+  const idxFromPad3 = (s) => {
+    const n = Number.parseInt(String(s || ""), 10);
+    if (!Number.isFinite(n) || n <= 0) return -1;
+    return n - 1;
+  };
+
+  const parts = sk.split("/").filter(Boolean);
+  if (!parts.length) return "";
+
+  const pickClipText = (val, idx = -1) => {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    if (Array.isArray(val)) {
+      const clip = val[idx] ?? val[0];
+      if (typeof clip === "string") return clip;
+      if (clip && typeof clip === "object") return String(clip.text || "");
+      return "";
+    }
+    if (typeof val === "object") return String(val.text || "");
+    return "";
+  };
+
+  const kind = parts[0];
+  const idx = parts.length >= 2 ? idxFromPad3(parts[parts.length - 1]) : -1;
+
+  if (kind === "opening" && parts.length >= 2) {
+    const fromScenario = pickClipText(narration.openingClips, idx);
+    if (fromScenario) return fromScenario;
+
+    const tts = await ensureScenarioTtsLoaded(sid, vpc);
+    const epTts = tts?.episodes?.[eid] || null;
+    return pickClipText(epTts?.openingClips, idx);
+  }
+
+  if (kind === "outro" && parts.length >= 2) {
+    const fromScenario = pickClipText(narration.nightOutroClips, idx);
+    if (fromScenario) return fromScenario;
+
+    const tts = await ensureScenarioTtsLoaded(sid, vpc);
+    const epTts = tts?.episodes?.[eid] || null;
+    return pickClipText(epTts?.nightOutroClips, idx);
+  }
+
+  if (kind === "role" && parts.length >= 4) {
+    const roleId = String(parts[1] || "").trim();
+    const part = String(parts[2] || "").trim();
+
+    const roleClips = narration.roleClips || {};
+    const fromScenario = pickClipText(roleClips?.[roleId]?.[part], idx);
+    if (fromScenario) return fromScenario;
+
+    const tts = await ensureScenarioTtsLoaded(sid, vpc);
+    const epTts = tts?.episodes?.[eid] || null;
+    const roleVal = epTts?.roleClips?.[roleId];
+    if (roleVal && typeof roleVal === "object" && !Array.isArray(roleVal)) {
+      const partVal = roleVal?.[part] || roleVal?.during || roleVal?.before || roleVal?.after;
+      const fromTtsParts = pickClipText(partVal, idx);
+      if (fromTtsParts) return fromTtsParts;
+    }
+    return pickClipText(roleVal, idx);
+  }
+
+  return "";
 }
 
 function createBgmEngine() {
@@ -1484,6 +1788,87 @@ async function init() {
 
 function initDebugApi() {
   if (!state.debugEnabled) return;
+  const ensureJoined = () => {
+    if (!state.room) throw new Error("Join a room first (click Join).");
+  };
+  const ensureMySeat = () => {
+    ensureJoined();
+    const me = (state.room?.players || []).find((p) => p.clientId === state.clientId) || null;
+    const seat = Number(me?.seat || state.mySeat || 0);
+    if (!seat) throw new Error("No seat assigned yet; wait for room_snapshot.");
+    state.mySeat = seat;
+    return seat;
+  };
+
+  const previewNightStep = ({ kind = "role", roleId = "seer", active = true } = {}) => {
+    ensureJoined();
+    const mySeat = ensureMySeat();
+    const scenarioId = state.room?.selectedScenarioId || state.scenarioState?.selectedScenarioId || state.scenarios?.[0]?.scenarioId || "";
+    const episodeId = state.room?.selectedEpisodeId || state.scenarioState?.selectedEpisodeId || "ep1";
+    const pc =
+      Number(state.scenarioState?.playerCount) ||
+      (state.room?.players || []).filter((p) => p.connected && !p.isSpectator).length ||
+      5;
+
+    state.room.phase = "NIGHT";
+    state.room.phaseEndsAtMs = Date.now() + 60_000;
+    setPhase("NIGHT", state.room.phaseEndsAtMs);
+
+    state.nightUi = null;
+    state.nightResult = null;
+    state.nightPrivate = null;
+
+    const stepKind = String(kind || "role");
+    const rid = stepKind === "role" ? String(roleId || "") : "";
+    const sectionKey =
+      stepKind === "opening"
+        ? "opening/001"
+        : stepKind === "outro"
+          ? "outro/001"
+          : `role/${rid || "seer"}/during/001`;
+
+    state.nightStep = {
+      stepId: Math.floor(Date.now() / 1000),
+      kind: stepKind,
+      roleId: rid,
+      activeSeats: active ? [mySeat] : [],
+      requiresAction: stepKind === "role",
+      sectionKey,
+      scenarioId,
+      episodeId,
+      variantPlayerCount: pc,
+      stepIndex: 1,
+      stepCount: 1,
+      stepEndsAtMs: Date.now() + 60_000,
+    };
+
+    if (rid === "werewolf") {
+      state.nightPrivate = { payload: { canPeekCenter: true } };
+    }
+
+    renderNightOverlay();
+  };
+
+  const previewRoleCheck = ({ eyesClosed = false } = {}) => {
+    ensureJoined();
+    state.roleReady = !!eyesClosed;
+    state.room.phase = "ROLE";
+    state.room.phaseEndsAtMs = Date.now() + 90_000;
+    setPhase("ROLE", state.room.phaseEndsAtMs);
+    renderRoleOverlay();
+  };
+
+  const clearOverlays = () => {
+    ensureJoined();
+    state.nightStep = null;
+    state.nightPrivate = null;
+    state.nightResult = null;
+    state.nightUi = null;
+    state.roleReady = false;
+    renderRoleOverlay();
+    renderNightOverlay();
+  };
+
   const api = {
     listScenarios: () => state.scenarios,
     selectScenario: (scenarioId) => send({ type: "scenario_select", data: { scenarioId } }),
@@ -1497,6 +1882,14 @@ function initDebugApi() {
     setBgm: ({ on = true, volume = 0.22, fadeInMs = 800, fadeOutMs = 1200 } = {}) =>
       state.bgm.set(on, { volume, fadeInMs, fadeOutMs }),
     playClipUrl: async (url) => state.narration.playList([url]),
+    ui: {
+      roleCheck: (opts) => previewRoleCheck(opts),
+      nightAction: (roleId = "seer", opts = {}) => previewNightStep({ ...(opts || {}), kind: "role", roleId, active: true }),
+      nightWait: () => previewNightStep({ kind: "role", roleId: "seer", active: false }),
+      nightOpening: () => previewNightStep({ kind: "opening", active: false }),
+      nightOutro: () => previewNightStep({ kind: "outro", active: false }),
+      clear: () => clearOverlays(),
+    },
   };
   window.gameDebug = api;
   console.log("[debug] gameDebug enabled", api);

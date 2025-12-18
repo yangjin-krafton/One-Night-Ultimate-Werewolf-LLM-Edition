@@ -24,16 +24,16 @@
         10
       ],
       "roleAliases": {
-        "werewolf": "숨어든 악령",
-        "seer": "심령 연구원",
-        "robber": "도굴꾼",
-        "troublemaker": "폴터가이스트",
-        "insomniac": "불면증 환자",
-        "drunk": "겁쟁이",
-        "mason": "동아리 선배",
-        "villager": "신입 부원",
-        "hunter": "퇴마사",
-        "tanner": "관심종자"
+        "werewolf": "팔목에 늑대 문신 있는 학생",
+        "seer": "‘점쟁이’ 별명 붙은 학생",
+        "robber": "가방에 ‘도둑고양이’ 키링 달린 학생",
+        "troublemaker": "교복에 낙서 스티커 붙인 학생",
+        "insomniac": "눈 밑 다크서클 짙은 야자반 학생",
+        "drunk": "호주머니에서 소독약 냄새 나는 학생",
+        "mason": "서로 같은 반지를 낀 학생들",
+        "villager": "평범한 학생",
+        "hunter": "퇴마사 학생",
+        "tanner": "관심종자 학생"
       },
       "episodes": [
         {

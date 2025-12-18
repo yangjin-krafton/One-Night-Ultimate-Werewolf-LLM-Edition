@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import colorsys
 import asyncio
 import json
 import os
@@ -16,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIOS_DIR = ROOT / "scenarios"
+SCENARIOS_TTS_DIR = ROOT / "scenarios_tts"
 PUBLIC_DIR = ROOT / "public"
 
 
@@ -28,16 +30,27 @@ PHASE_RESULT = "RESULT"
 PHASE_REVEAL = "REVEAL"
 PHASE_ENDING = "ENDING"
 
+NIGHT_HOST_ACK_TIMEOUT_MS = 180_000
+NIGHT_ACTION_WINDOW_MS = 1_000
+
 
 COLOR_PALETTE = [
-    "#6EE7FF",
-    "#A78BFA",
-    "#34D399",
-    "#FBBF24",
-    "#F87171",
-    "#60A5FA",
-    "#F472B6",
-    "#22C55E",
+    # Prefer distinct, high-contrast colors for up to ~15 players.
+    "#E6194B",  # Red
+    "#3CB44B",  # Green
+    "#FFE119",  # Yellow
+    "#4363D8",  # Blue
+    "#F58231",  # Orange
+    "#911EB4",  # Purple
+    "#42D4F4",  # Cyan
+    "#F032E6",  # Magenta
+    "#BFEF45",  # Lime
+    "#FABED4",  # Pink
+    "#469990",  # Teal
+    "#DCBEFF",  # Lavender
+    "#FF6F61",  # Coral
+    "#FFD700",  # Gold
+    "#00FA9A",  # Medium Spring Green
 ]
 
 
@@ -51,7 +64,18 @@ def _safe_name(name: str) -> str:
 
 
 def _generate_seat_color(seat_index: int) -> str:
-    return COLOR_PALETTE[(seat_index - 1) % len(COLOR_PALETTE)]
+    if seat_index <= 0:
+        return "#888"
+    if seat_index <= len(COLOR_PALETTE):
+        return COLOR_PALETTE[seat_index - 1]
+
+    # Fallback for unusually large rooms: generate a deterministic vivid color.
+    # Use golden-angle spacing for hue distribution.
+    hue = ((seat_index - 1) * 0.618033988749895) % 1.0
+    lightness = 0.62
+    saturation = 0.78
+    r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+    return f"#{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
 
 
 def load_scenarios() -> dict[str, dict[str, Any]]:
@@ -69,6 +93,54 @@ def load_scenarios() -> dict[str, dict[str, Any]]:
             if sid:
                 scenarios[sid] = s
     return scenarios
+
+
+def load_scenario_tts(scenario: dict[str, Any] | None, player_count: int | None = None) -> dict[str, Any] | None:
+    """
+    Load the corresponding *.tts.json for a runtime scenario.
+
+    Priority:
+      1) Exact match by (scenarioId, playerCount) if player_count is provided and scenarios_tts exists
+      2) scenario["ttsSource"] if present and readable
+    """
+    if not scenario:
+        return None
+
+    scenario_id = str(scenario.get("scenarioId") or "").strip()
+    if player_count is not None and scenario_id and SCENARIOS_TTS_DIR.exists():
+        try:
+            wanted = int(player_count)
+        except Exception:
+            wanted = None
+        if wanted is not None:
+            for p in sorted(SCENARIOS_TTS_DIR.glob("*.tts.json")):
+                try:
+                    raw = json.loads(p.read_text(encoding="utf-8"))
+                except Exception:
+                    continue
+                if str(raw.get("scenarioId") or "").strip() != scenario_id:
+                    continue
+                try:
+                    pc = int(raw.get("playerCount") or 0)
+                except Exception:
+                    pc = 0
+                if pc == wanted:
+                    return raw if isinstance(raw, dict) else None
+
+    src = scenario.get("ttsSource")
+    if isinstance(src, str) and src.strip():
+        try:
+            p = (ROOT / src.strip()).resolve()
+            if ROOT not in p.parents:
+                return None
+            if not p.exists():
+                return None
+            raw = json.loads(p.read_text(encoding="utf-8"))
+            return raw if isinstance(raw, dict) else None
+        except Exception:
+            return None
+
+    return None
 
 
 def select_variant_for_player_count(episode: dict[str, Any] | None, player_count: int) -> dict[str, Any] | None:
@@ -477,8 +549,8 @@ class GameServer:
         item = self._room.night_queue[self._room.night_index]
         self._room.night_step_id += 1
         step_id = self._room.night_step_id
-        # Fallback timeout if host doesn't ack.
-        self._room.night_step_ends_at_ms = _now_ms() + 12_000
+        # Fallback timeout if host doesn't ack (prevents deadlock).
+        self._room.night_step_ends_at_ms = _now_ms() + NIGHT_HOST_ACK_TIMEOUT_MS
         self._room.night_waiting_host_step_id = step_id
         self._room.night_waiting_actor_ids.clear()
         self._room.night_done_actor_ids.clear()
@@ -534,6 +606,11 @@ class GameServer:
             },
         }
         await self.broadcast(payload)
+        try:
+            if self._night_task is not None:
+                self._night_task.cancel()
+        except Exception:
+            pass
         self._night_task = asyncio.create_task(self._night_step_timer(step_id, self._room.night_step_ends_at_ms))
 
     async def _night_step_timer(self, step_id: int, ends_at_ms: int | None) -> None:
@@ -577,7 +654,23 @@ class GameServer:
             # Host ack for the currently broadcast step.
             if self._room.night_waiting_host_step_id == int(step_id):
                 self._room.night_waiting_host_step_id = None
-            await self._maybe_advance_night_locked(reason="ack")
+
+            # From this point on, the host narration is done.
+            # Do NOT advance immediately based on actor completion; use a fixed action window
+            # so the night pacing stays consistent and doesn't reveal who acted.
+            if self._room.night_waiting_actor_ids:
+                self._room.night_step_ends_at_ms = _now_ms() + NIGHT_ACTION_WINDOW_MS
+                try:
+                    if self._night_task is not None:
+                        self._night_task.cancel()
+                except Exception:
+                    pass
+                self._night_task = asyncio.create_task(self._night_step_timer(step_id, self._room.night_step_ends_at_ms))
+                return
+
+            # No interactive action expected: advance immediately after narration finishes.
+            self._room.night_step_ends_at_ms = None
+            await self._advance_night_locked(reason="ack")
 
     async def handle_night_action(self, client_id: str, step_id: int, action: dict[str, Any]) -> None:
         async with self._lock:
@@ -586,6 +679,8 @@ class GameServer:
             if int(step_id) != int(self._room.night_step_id):
                 return
             if client_id not in self._room.night_waiting_actor_ids:
+                return
+            if client_id in self._room.night_done_actor_ids:
                 return
             role_id = (self._room.night_waiting_role_id or "").strip()
             if not role_id:
@@ -675,7 +770,7 @@ class GameServer:
                     )
 
             self._room.night_done_actor_ids.add(client_id)
-            await self._maybe_advance_night_locked(reason="action")
+            # Intentionally do not advance the night here; host narration pacing drives progression.
 
     def scenario_list(self) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
@@ -1105,6 +1200,17 @@ def api_scenario(scenario_id: str) -> JSONResponse:
     if not s:
         return JSONResponse({"error": "not_found"}, status_code=404)
     return JSONResponse(s)
+
+
+@app.get("/api/scenarios/{scenario_id}/tts")
+def api_scenario_tts(scenario_id: str, playerCount: int | None = None) -> JSONResponse:
+    s = game.scenario_get(scenario_id)
+    if not s:
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    tts = load_scenario_tts(s, playerCount)
+    if not tts:
+        return JSONResponse({"error": "tts_not_found"}, status_code=404)
+    return JSONResponse(tts)
 
 
 @app.websocket("/ws")
