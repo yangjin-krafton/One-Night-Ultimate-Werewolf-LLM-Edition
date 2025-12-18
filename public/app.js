@@ -55,6 +55,9 @@ const phaseLabel = qs("#phaseLabel");
 const scenarioLabel = qs("#scenarioLabel");
 const timerEl = qs("#timer");
 const hostEndBtn = qs("#hostEndBtn");
+const roleStripEl = qs("#roleStrip");
+const infoDeckEl = qs("#infoDeck");
+const deckIndicatorsEl = qs("#deckIndicators");
 
 const scenarioModal = qs("#scenarioModal");
 const scenarioListEl = qs("#scenarioList");
@@ -69,6 +72,21 @@ const voteModal = qs("#voteModal");
 const voteGridEl = qs("#voteGrid");
 const voteBackdrop = qs("#voteBackdrop");
 const voteClose = qs("#voteClose");
+
+const voteResultModal = qs("#voteResultModal");
+const voteResultWinnersEl = qs("#voteResultWinners");
+const voteResultGridEl = qs("#voteResultGrid");
+const voteResultTitleEl = qs("#voteResultTitle");
+const voteResultSubtitleEl = qs("#voteResultSubtitle");
+const voteResultBackdrop = qs("#voteResultBackdrop");
+const voteResultClose = qs("#voteResultClose");
+
+const lobbyNoticeModal = qs("#lobbyNoticeModal");
+const lobbyNoticeBackdrop = qs("#lobbyNoticeBackdrop");
+const lobbyNoticeClose = qs("#lobbyNoticeClose");
+const lobbyNoticeTitleEl = qs("#lobbyNoticeTitle");
+const lobbyNoticeSubtitleEl = qs("#lobbyNoticeSubtitle");
+const lobbyNoticeBodyEl = qs("#lobbyNoticeBody");
 
 const nightOverlay = qs("#nightOverlay");
 const nightTitle = qs("#nightTitle");
@@ -212,6 +230,9 @@ const state = {
   nightUi: null,
   roleReady: false,
   lastNightStepId: 0,
+  voteResultPublic: null,
+  lobbyNotice: null,
+  lastLobbyNoticeKey: "",
   bgm: createBgmEngine(),
   narration: createNarrationEngine(),
 };
@@ -256,6 +277,7 @@ function isHost() {
 function setPhase(phase, endsAtMs) {
   phaseLabel.textContent = phase || "WAIT";
   setBgGradient(phase || "WAIT");
+  document.body.dataset.phase = phase || "WAIT";
   state.room = state.room || {};
   state.room.phase = phase;
   state.room.phaseEndsAtMs = endsAtMs ?? null;
@@ -350,6 +372,111 @@ function closeModal(el) {
   el.classList.add("hidden");
 }
 
+function closeVoteResult() {
+  state.voteResultPublic = null;
+  if (voteResultWinnersEl) voteResultWinnersEl.innerHTML = "";
+  if (voteResultGridEl) voteResultGridEl.innerHTML = "";
+  if (voteResultSubtitleEl) voteResultSubtitleEl.textContent = "";
+  if (voteResultTitleEl) voteResultTitleEl.textContent = "투표 결과";
+  if (voteResultModal) closeModal(voteResultModal);
+}
+
+function closeLobbyNotice() {
+  state.lobbyNotice = null;
+  if (lobbyNoticeTitleEl) lobbyNoticeTitleEl.textContent = "";
+  if (lobbyNoticeSubtitleEl) lobbyNoticeSubtitleEl.textContent = "";
+  if (lobbyNoticeBodyEl) lobbyNoticeBodyEl.innerHTML = "";
+  if (lobbyNoticeModal) closeModal(lobbyNoticeModal);
+}
+
+function renderLobbyNotice() {
+  if (!lobbyNoticeModal || !lobbyNoticeBodyEl || !lobbyNoticeTitleEl || !lobbyNoticeSubtitleEl) return;
+  const n = state.lobbyNotice;
+  if (!n) return;
+
+  const kind = String(n.kind || "");
+  if (kind === "episode_advanced") {
+    lobbyNoticeTitleEl.textContent = "다음 에피소드로 이동";
+    lobbyNoticeSubtitleEl.textContent = `${String(n.scenarioId || "")} · ${String(n.fromEpisodeId || "")} → ${String(n.toEpisodeId || "")}`;
+    lobbyNoticeBodyEl.innerHTML = `
+      <div class="hint">로비로 돌아왔습니다. 다음 에피소드를 시작할 수 있어요.</div>
+    `;
+  } else if (kind === "scenario_ended") {
+    lobbyNoticeTitleEl.textContent = "시나리오 종료";
+    lobbyNoticeSubtitleEl.textContent = String(n.title || n.scenarioId || "");
+    lobbyNoticeBodyEl.innerHTML = `
+      <div class="hint">모든 에피소드가 끝났습니다. 다른 시나리오를 선택해 주세요.</div>
+    `;
+  } else {
+    lobbyNoticeTitleEl.textContent = "알림";
+    lobbyNoticeSubtitleEl.textContent = "";
+    lobbyNoticeBodyEl.innerHTML = `<div class="hint">${escapeHtml(JSON.stringify(n))}</div>`;
+  }
+
+  openModal(lobbyNoticeModal);
+}
+
+function renderVoteResult() {
+  if (!voteResultModal || !voteResultWinnersEl || !voteResultGridEl) return;
+  const data = state.voteResultPublic;
+  if (!data) return;
+
+  const players = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
+  const bySeat = new Map(players.map((p) => [Number(p.seat), p]));
+
+  const countsRaw = data.counts || {};
+  const counts = {};
+  for (const [k, v] of Object.entries(countsRaw)) {
+    const seat = Number.parseInt(String(k), 10);
+    const c = Number.parseInt(String(v), 10);
+    if (!Number.isFinite(seat) || !Number.isFinite(c)) continue;
+    counts[seat] = c;
+  }
+
+  const items = Object.entries(counts).map(([seat, c]) => [Number(seat), Number(c)]);
+  items.sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+  const maxCount = items.length ? items[0][1] : 0;
+  const winners = items.filter(([, c]) => c === maxCount && maxCount > 0).map(([seat]) => seat);
+
+  if (voteResultTitleEl) voteResultTitleEl.textContent = "투표 결과";
+  if (voteResultSubtitleEl) {
+    if (!items.length) voteResultSubtitleEl.textContent = "투표 데이터가 없습니다.";
+    else if (winners.length > 1) voteResultSubtitleEl.textContent = `동률: ${winners.map((s) => `#${s}`).join(", ")} (각 ${maxCount}표)`;
+    else voteResultSubtitleEl.textContent = `최다 득표: #${winners[0]} (${maxCount}표)`;
+  }
+
+  const buildResultCard = ({ seat, count, isWinner }) => {
+    const p = bySeat.get(Number(seat)) || null;
+    const el = document.createElement("div");
+    el.className = "voteResultCard" + (isWinner ? " voteResultCard--winner" : "");
+    applyPlayerPalette(el, p?.color || "#888");
+    el.innerHTML = `
+      <div class="voteResultCard__count">${escapeHtml(String(count))}</div>
+      <div class="voteResultCard__seat">${escapeHtml(String(seat))}</div>
+      <div class="voteResultCard__avatar">${escapeHtml(p?.avatar || "👤")}</div>
+      <div class="voteResultCard__name">${escapeHtml(p?.name || "")}</div>
+    `;
+    return el;
+  };
+
+  voteResultWinnersEl.innerHTML = "";
+  if (winners.length) {
+    for (const seat of winners) {
+      const c = counts[seat] || 0;
+      voteResultWinnersEl.appendChild(buildResultCard({ seat, count: c, isWinner: true }));
+    }
+  }
+
+  voteResultGridEl.innerHTML = "";
+  for (const p of players.sort((a, b) => Number(a.seat) - Number(b.seat))) {
+    const seat = Number(p.seat);
+    const c = counts[seat] || 0;
+    voteResultGridEl.appendChild(buildResultCard({ seat, count: c, isWinner: winners.includes(seat) }));
+  }
+
+  openModal(voteResultModal);
+}
+
 function render() {
   const room = state.room;
   if (!room) return;
@@ -387,7 +514,11 @@ function render() {
     startBtn.classList.add("hidden");
   }
 
-  voteBtn.classList.toggle("hidden", phase !== "VOTE" || state.isSpectator);
+  const canVotePhase = phase === "DEBATE" || phase === "VOTE";
+  voteBtn.classList.toggle("hidden", !canVotePhase || state.isSpectator);
+  const iVoted = !!state.room?.votes?.[state.clientId];
+  voteBtn.disabled = !canVotePhase || iVoted || state.isSpectator;
+  voteBtn.textContent = iVoted ? "투표 완료" : "투표";
 
   const players = room.players || [];
   gridEl.innerHTML = "";
@@ -457,8 +588,89 @@ function render() {
   }
 
   renderInfoDeck();
+  renderDebateRoleStrip();
   renderRoleOverlay();
   renderNightOverlay();
+}
+
+function renderDebateRoleStrip() {
+  if (!roleStripEl || !infoDeckEl || !deckIndicatorsEl) return;
+  const phase = state.room?.phase || "WAIT";
+  if (phase !== "DEBATE") {
+    roleStripEl.classList.add("hidden");
+    roleStripEl.innerHTML = "";
+    infoDeckEl.classList.remove("hidden");
+    deckIndicatorsEl.classList.remove("hidden");
+    return;
+  }
+
+  // Debate UI: replace swiper with a horizontal role card strip.
+  infoDeckEl.classList.add("hidden");
+  deckIndicatorsEl.classList.add("hidden");
+  roleStripEl.classList.remove("hidden");
+
+  const sid = state.room?.selectedScenarioId;
+  if (!sid) {
+    roleStripEl.innerHTML = "";
+    return;
+  }
+
+  const scenario = state.scenarioById?.[sid] || null;
+  if (!scenario?.episodes) {
+    roleStripEl.innerHTML = `<div class="hint">역할 카드 불러오는 중...</div>`;
+    if (!scenarioDetailInflight.has(sid)) ensureScenarioDetailLoaded(sid).then(() => renderDebateRoleStrip());
+    return;
+  }
+
+  const playersCount = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator).length || 0;
+  const episodeId = state.room?.selectedEpisodeId || scenario?.episodes?.[0]?.episodeId || "ep1";
+  const ep = (scenario.episodes || []).find((e) => String(e?.episodeId || "") === String(episodeId)) || (scenario.episodes || [])[0] || null;
+  const sel = selectVariantForPlayerCount(ep, playersCount);
+  const variant = sel.variant;
+  if (!variant) {
+    roleStripEl.innerHTML = `<div class="hint">역할 카드 정보가 없습니다.</div>`;
+    return;
+  }
+
+  const deck = effectiveRoleDeckForPlayerCount(variant, playersCount);
+  const counts = {};
+  for (const r of deck) counts[r] = (counts[r] || 0) + 1;
+
+  const wolfTeam = new Set(["werewolf", "alpha_wolf", "mystic_wolf", "dream_wolf", "minion"]);
+  const roles = Object.keys(counts);
+  roles.sort((a, b) => {
+    const aw = wolfTeam.has(a) ? 0 : 1;
+    const bw = wolfTeam.has(b) ? 0 : 1;
+    if (aw !== bw) return aw - bw;
+    if (a === "tanner") return -1;
+    if (b === "tanner") return 1;
+    return a.localeCompare(b);
+  });
+
+  const cacheKey = `${sid}:${episodeId}:${playersCount}:${roles.join(",")}`;
+  if (roleStripEl.dataset.cacheKey === cacheKey) return;
+  roleStripEl.dataset.cacheKey = cacheKey;
+
+  const scroller = document.createElement("div");
+  scroller.className = "roleStrip__scroller";
+
+  for (const roleId of roles) {
+    const def = ROLE_DEFINITIONS[roleId] || { icon: "🃏", name: roleId, desc: "" };
+    const displayName = getRoleDisplayName(roleId);
+    const c = counts[roleId] || 0;
+
+    const card = document.createElement("div");
+    card.className = "roleCard";
+    card.innerHTML = `
+      <div class="roleCard__icon">${escapeHtml(def.icon || "🃏")}</div>
+      <div class="roleCard__name">${escapeHtml(displayName)}</div>
+      <div class="roleCard__count">${escapeHtml(String(c))}장</div>
+    `;
+    scroller.appendChild(card);
+  }
+
+  roleStripEl.innerHTML = "";
+  roleStripEl.appendChild(scroller);
 }
 
 function renderInfoDeck() {
@@ -1075,9 +1287,13 @@ function renderVoteGrid() {
   const players = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
   for (const p of players) {
     const b = document.createElement("button");
-    b.className = "btn voteBtn";
-    b.textContent = `${p.seat}`;
-    b.style.backgroundImage = `linear-gradient(135deg, ${p.color} 0%, rgba(255,255,255,.12) 65%, rgba(255,255,255,.05) 100%)`;
+    b.className = "voteChoiceCard";
+    applyPlayerPalette(b, p.color || "#888");
+    b.innerHTML = `
+      <div class="voteChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+      <div class="voteChoiceCard__avatar">${escapeHtml(p.avatar || "👤")}</div>
+      <div class="voteChoiceCard__name">${escapeHtml(p.name || "")}</div>
+    `;
     b.addEventListener("click", () => {
       send({ type: "submit_vote", data: { targetSeat: p.seat } });
       closeModal(voteModal);
@@ -1128,6 +1344,7 @@ function handleMsg(msg) {
     showRoom();
     render();
     setPhase(state.room.phase || "WAIT", state.room.phaseEndsAtMs);
+    if ((state.room.phase || "") === "WAIT" && state.lobbyNotice) renderLobbyNotice();
     return;
   }
   if (msg.type === "host_changed") {
@@ -1143,6 +1360,8 @@ function handleMsg(msg) {
   }
   if (msg.type === "phase_changed") {
     setPhase(msg.data?.phase || "WAIT", msg.data?.phaseEndsAtMs ?? null);
+    if ((msg.data?.phase || "") !== "RESULT") closeVoteResult();
+    if ((msg.data?.phase || "") !== "WAIT") closeLobbyNotice();
     render();
     return;
   }
@@ -1174,7 +1393,19 @@ function handleMsg(msg) {
     return;
   }
   if (msg.type === "vote_result_public") {
-    console.log("vote_result_public", msg.data);
+    state.voteResultPublic = msg.data || null;
+    renderVoteResult();
+    return;
+  }
+  if (msg.type === "lobby_notice") {
+    const data = msg.data || null;
+    if (!data) return;
+    const key = JSON.stringify(data);
+    if (state.lastLobbyNoticeKey === key) return;
+    state.lastLobbyNoticeKey = key;
+    state.lobbyNotice = data;
+    // Only show this once we are back in lobby.
+    if ((state.room?.phase || "") === "WAIT") renderLobbyNotice();
     return;
   }
   if (msg.type === "ending_text") {
@@ -1764,6 +1995,12 @@ async function init() {
   });
   voteBackdrop.addEventListener("click", () => closeModal(voteModal));
   voteClose.addEventListener("click", () => closeModal(voteModal));
+
+  if (voteResultBackdrop) voteResultBackdrop.addEventListener("click", () => closeVoteResult());
+  if (voteResultClose) voteResultClose.addEventListener("click", () => closeVoteResult());
+
+  if (lobbyNoticeBackdrop) lobbyNoticeBackdrop.addEventListener("click", () => closeLobbyNotice());
+  if (lobbyNoticeClose) lobbyNoticeClose.addEventListener("click", () => closeLobbyNotice());
 
   hostEndBtn.addEventListener("click", () => {
     if (!isHost()) return;

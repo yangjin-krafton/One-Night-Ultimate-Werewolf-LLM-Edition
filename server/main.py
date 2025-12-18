@@ -300,6 +300,8 @@ class RoomState:
         return sum(1 for p in self.players if p.ws is not None and not p.is_spectator)
 
     def snapshot(self) -> dict[str, Any]:
+        # Never reveal vote targets in room snapshots. Clients only need to know "has voted" for UI.
+        vote_status = {cid: True for cid in self.votes.keys()}
         return {
             "players": [
                 {
@@ -319,7 +321,7 @@ class RoomState:
             "selectedEpisodeId": self.selected_episode_id,
             "phase": self.phase,
             "phaseEndsAtMs": self.phase_ends_at_ms,
-            "votes": dict(self.votes),
+            "votes": vote_status,
         }
 
 
@@ -400,6 +402,7 @@ class GameServer:
                 self._room.votes.clear()
                 if self._room.advance_episode_on_return:
                     scenario = self._scenarios.get(self._room.selected_scenario_id or "")
+                    prev = self._room.selected_episode_id
                     nxt = next_episode_id(scenario, self._room.selected_episode_id)
                     if nxt:
                         self._room.selected_episode_id = nxt
@@ -415,6 +418,29 @@ class GameServer:
                                     "canStart": can_start,
                                     "playerCount": self._room.connected_player_count(),
                                     "totalConnected": self._room.connected_count(),
+                                },
+                            }
+                        )
+                        await self.broadcast(
+                            {
+                                "type": "lobby_notice",
+                                "data": {
+                                    "kind": "episode_advanced",
+                                    "scenarioId": self._room.selected_scenario_id,
+                                    "fromEpisodeId": prev,
+                                    "toEpisodeId": nxt,
+                                },
+                            }
+                        )
+                    else:
+                        await self.broadcast(
+                            {
+                                "type": "lobby_notice",
+                                "data": {
+                                    "kind": "scenario_ended",
+                                    "scenarioId": self._room.selected_scenario_id,
+                                    "episodeId": prev,
+                                    "title": (scenario or {}).get("title") or self._room.selected_scenario_id or "",
                                 },
                             }
                         )
@@ -1080,7 +1106,7 @@ class GameServer:
 
     async def handle_submit_vote(self, client_id: str, target_seat: int) -> None:
         async with self._lock:
-            if self._room.phase not in (PHASE_VOTE,):
+            if self._room.phase not in (PHASE_VOTE, PHASE_DEBATE):
                 return
             connected_ids = {p.client_id for p in self._room.players if p.ws is not None and not p.is_spectator}
             if client_id not in connected_ids:
