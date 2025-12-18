@@ -1,0 +1,210 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "LLM",
+  "scenarioType": "runtime",
+  "ttsSource": "scenarios_tts/basic_werewolf_tutorial.tts.json",
+  "scenarios": [
+    {
+      "scenarioId": "basic_werewolf_tutorial",
+      "title": "초보자용 기본 한밤의 늑대인간",
+      "tags": [
+        "tutorial",
+        "classic",
+        "werewolf",
+        "fog_village"
+      ],
+      "recommendedPlayerCounts": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "episodes": [
+        {
+          "episodeId": "ep1",
+          "title": "EP1: 안개마을의 첫 밤",
+          "variantByPlayerCount": {
+            "10": {
+              "roleDeck": [
+                "werewolf",
+                "seer",
+                "robber",
+                "villager",
+                "villager",
+                "villager",
+                "werewolf",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "minion",
+                "mason",
+                "mason"
+              ],
+              "roleWakeOrder": [
+                "werewolf",
+                "minion",
+                "mason",
+                "seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "minion": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "mason": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "seer": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "robber": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "troublemaker": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "drunk": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "insomniac": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "episodeId": "ep2",
+          "title": "EP2: 안개 속 진술",
+          "variantByPlayerCount": {
+            "10": {
+              "roleDeck": [
+                "werewolf",
+                "seer",
+                "robber",
+                "villager",
+                "villager",
+                "villager",
+                "werewolf",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "minion",
+                "mason",
+                "mason"
+              ],
+              "roleWakeOrder": [
+                "werewolf",
+                "minion",
+                "mason",
+                "seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "minion": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "mason": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "seer": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "robber": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "troublemaker": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "drunk": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "insomniac": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

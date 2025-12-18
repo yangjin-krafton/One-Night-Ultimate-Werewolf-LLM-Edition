@@ -40,12 +40,42 @@ _REF_NOT_EXISTS_RE = re.compile(r"\\bnot\\s+exist(s)?\\b", re.IGNORECASE)
 _FAST_LANGDETECT_ERROR_RE = re.compile(r"fast-langdetect|Cache directory not found", re.IGNORECASE)
 
 
-def _normalize_ref_path(ref_audio_path: str, container_ref_base: str) -> str:
+def _map_container_to_local_path(
+    ref_audio_path: str, *, container_ref_base: str, local_ref_base: Path | None
+) -> str:
+    """
+    If refs are stored as container paths (e.g. /workspace/...),
+    but the GPT-SoVITS server runs on the host, rewrite to a host path.
+    """
+    if not ref_audio_path or local_ref_base is None:
+        return ref_audio_path
+
+    ref_norm = ref_audio_path.replace("\\", "/")
+    base_norm = (container_ref_base or "").replace("\\", "/").rstrip("/")
+    if not base_norm:
+        return ref_audio_path
+
+    if not ref_norm.startswith("/"):
+        return ref_audio_path
+    if not ref_norm.lower().startswith(base_norm.lower() + "/") and ref_norm.lower() != base_norm.lower():
+        return ref_audio_path
+
+    suffix = ref_norm[len(base_norm) :].lstrip("/")
+    return str((local_ref_base / suffix).resolve())
+
+
+def _normalize_ref_path(
+    ref_audio_path: str, *, container_ref_base: str, local_ref_base: Path | None = None
+) -> str:
     if not ref_audio_path:
         return ""
     ref_audio_path = ref_audio_path.replace("\\", "/")
     if ref_audio_path.startswith(("http://", "https://")):
         return ref_audio_path
+
+    ref_audio_path = _map_container_to_local_path(
+        ref_audio_path, container_ref_base=container_ref_base, local_ref_base=local_ref_base
+    ).replace("\\", "/")
 
     # Absolute paths:
     # - POSIX: /...
@@ -186,13 +216,19 @@ def _choose_ref_for_emotion(config: CharacterConfig, emotion: str, rng: random.R
     return rng.choice(candidates)
 
 
-def _resolve_local_ref_audio_path(local_ref_base: Path, ref_audio_path: str) -> Path:
+def _resolve_local_ref_audio_path(
+    local_ref_base: Path, ref_audio_path: str, *, container_ref_base: str = ""
+) -> Path:
     ref_audio_path = (ref_audio_path or "").replace("\\", "/")
     base_norm = str(local_ref_base).replace("\\", "/").rstrip("/").lower()
     if base_norm.endswith("/refs") and ref_audio_path.lower().startswith("refs/"):
         ref_audio_path = ref_audio_path[5:]
     if base_norm.endswith("/ref") and ref_audio_path.lower().startswith("ref/"):
         ref_audio_path = ref_audio_path[4:]
+
+    ref_audio_path = _map_container_to_local_path(
+        ref_audio_path, container_ref_base=container_ref_base, local_ref_base=local_ref_base
+    )
 
     local_audio = Path(ref_audio_path)
     if local_audio.is_absolute():
@@ -213,8 +249,12 @@ def _resolve_local_ref_audio_path(local_ref_base: Path, ref_audio_path: str) -> 
     return local_audio
 
 
-def _read_prompt_text_for_ref(local_ref_base: Path, ref_audio_path: str) -> str:
-    local_audio = _resolve_local_ref_audio_path(local_ref_base, ref_audio_path)
+def _read_prompt_text_for_ref(
+    local_ref_base: Path, ref_audio_path: str, *, container_ref_base: str = ""
+) -> str:
+    local_audio = _resolve_local_ref_audio_path(
+        local_ref_base, ref_audio_path, container_ref_base=container_ref_base
+    )
     prompt_path = local_audio.with_suffix(".txt")
     if not prompt_path.exists():
         raise FileNotFoundError(f"Missing prompt txt for ref: {prompt_path}")
@@ -352,7 +392,9 @@ def generate_character_tts_wav(
             for attempt in range(1, attempts + 1):
                 chosen_ref = rng.choice(remaining) if remaining else _choose_ref_for_emotion(config, emotion_key, rng)
 
-                local_audio = _resolve_local_ref_audio_path(config.local_ref_base, chosen_ref)
+                local_audio = _resolve_local_ref_audio_path(
+                    config.local_ref_base, chosen_ref, container_ref_base=config.container_ref_base
+                )
                 dur = _wav_duration_seconds(local_audio) if local_audio.exists() else None
                 if dur is not None and (dur < min_ref_s or dur > max_ref_s):
                     print(
@@ -365,7 +407,9 @@ def generate_character_tts_wav(
 
                 try:
                     try:
-                        prompt_text = _read_prompt_text_for_ref(config.local_ref_base, chosen_ref)
+                        prompt_text = _read_prompt_text_for_ref(
+                            config.local_ref_base, chosen_ref, container_ref_base=config.container_ref_base
+                        )
                     except FileNotFoundError:
                         prompt_text = (default_prompt_text or "").strip()
                         if prompt_text:
@@ -387,6 +431,7 @@ def generate_character_tts_wav(
                             out_wav_path=part_path,
                             api_base=api_base,
                             container_ref_base=config.container_ref_base,
+                            local_ref_base=config.local_ref_base,
                             text_lang=text_lang,
                             prompt_lang=prompt_lang,
                             prompt_text=prompt_text,
@@ -405,6 +450,7 @@ def generate_character_tts_wav(
                                 out_wav_path=part_path,
                                 api_base=api_base,
                                 container_ref_base=config.container_ref_base,
+                                local_ref_base=config.local_ref_base,
                                 text_lang=text_lang,
                                 prompt_lang=prompt_lang,
                                 prompt_text="",
@@ -454,6 +500,7 @@ def gpt_sovits_tts_to_wav(
     out_wav_path: str | os.PathLike[str],
     api_base: str = "http://127.0.0.1:9880",
     container_ref_base: str = "/workspace/Ref",
+    local_ref_base: Path | None = None,
     text_lang: str = "ko-KR",
     prompt_lang: Optional[str] = None,
     prompt_text: str = "",
@@ -468,9 +515,13 @@ def gpt_sovits_tts_to_wav(
       - text, text_lang, prompt_lang, ref_audio_path, media_type, streaming_mode, (optional) prompt_text
     """
     api_base = api_base.rstrip("/") + "/"
-    resolved_ref = _normalize_ref_path(ref_audio_path, container_ref_base)
+    resolved_ref = _normalize_ref_path(
+        ref_audio_path, container_ref_base=container_ref_base, local_ref_base=local_ref_base
+    )
     if not resolved_ref:
         raise ValueError("ref_audio_path is empty")
+    if resolved_ref.replace("\\", "/") != (ref_audio_path or "").replace("\\", "/"):
+        print(f"[info] mapped ref_audio_path: {ref_audio_path} -> {resolved_ref}")
 
     def _normalize_sovits_lang(lang: str) -> str:
         lang = (lang or "").strip()

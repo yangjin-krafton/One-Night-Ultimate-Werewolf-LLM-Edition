@@ -33,6 +33,13 @@
             </div>
 
             <div class="landing__action">
+              <div class="landing__avatar-wrapper">
+                <div id="avatarPreview" class="landing__avatar">👻</div>
+                <button id="avatarBtn" class="landing__avatar-btn" aria-label="Change Avatar">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
+                </button>
+              </div>
+
               <div class="landing__input-group">
                 <input id="nameInput" class="landing__input" maxlength="10" placeholder="당신의 이름은?" autocomplete="off" />
                 <div class="landing__input-border"></div>
@@ -46,11 +53,27 @@
         </section>
 
         <section class="room hidden" id="room">
-          <div class="grid" id="grid"></div>
+          <div class="room__top">
+            <div class="grid" id="grid"></div>
+          </div>
+          
+          <div class="room__bottom">
+            <div class="info-deck" id="infoDeck">
+              <!-- Cards will be injected by JS -->
+              <div class="info-card placeholder">
+                <div class="info-card__content">
+                  <h3>대기 중...</h3>
+                  <p>호스트가 시나리오를 선택하고 있습니다.</p>
+                </div>
+              </div>
+            </div>
+            <div class="deck-indicators" id="deckIndicators"></div>
+          </div>
 
           <div class="actionbar" id="actionbar">
-            <button class="btn" id="scenarioBtn">시나리오 선택</button>
-            <button class="btn btn--primary" id="startBtn">게임 시작</button>
+            <button class="btn hidden" id="rerollBtn">🎨 내 컬러 변경</button>
+            <button class="btn hidden" id="scenarioBtn">시나리오 선택</button>
+            <button class="btn btn--primary hidden" id="startBtn">게임 시작</button>
             <button class="btn hidden" id="voteBtn">투표</button>
           </div>
         </section>

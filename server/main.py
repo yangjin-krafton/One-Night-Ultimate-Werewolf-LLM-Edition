@@ -124,6 +124,7 @@ class Player:
     name: str
     seat: int
     color: str
+    avatar: str = ""  # New: Emoji avatar
     ws: WebSocket | None = None
 
 
@@ -147,9 +148,16 @@ class RoomState:
     night_variant_player_count: int | None = None
 
     def reseat(self) -> None:
+        used_colors = {p.color for p in self.players if p.color}
         for idx, p in enumerate(self.players, start=1):
             p.seat = idx
-            p.color = _generate_seat_color(idx)
+            if not p.color:
+                # Find an unused color
+                available = [c for c in COLOR_PALETTE if c not in used_colors]
+                if not available:
+                    available = COLOR_PALETTE # Fallback
+                p.color = random.choice(available)
+                used_colors.add(p.color)
 
     def connected_count(self) -> int:
         return sum(1 for p in self.players if p.ws is not None)
@@ -162,6 +170,7 @@ class RoomState:
                     "name": p.name,
                     "seat": p.seat,
                     "color": p.color,
+                    "avatar": p.avatar,
                     "connected": p.ws is not None,
                     "isHost": p.client_id == self.host_client_id,
                 }
@@ -399,18 +408,20 @@ class GameServer:
         self._room.votes.pop(client_id, None)
         self._room.reseat()
 
-    async def handle_join(self, ws: WebSocket, client_id: str, name: str) -> None:
+    async def handle_join(self, ws: WebSocket, client_id: str, name: str, avatar: str) -> None:
         async with self._lock:
             client_id = (client_id or "").strip()
             if not client_id:
                 raise ValueError("clientId is required")
 
             name = _safe_name(name)
+            avatar = (avatar or "").strip()
 
             existing = next((p for p in self._room.players if p.client_id == client_id), None)
             if existing:
                 existing.ws = ws
                 existing.name = name
+                existing.avatar = avatar
             else:
                 seat = len(self._room.players) + 1
                 self._room.players.append(
@@ -419,6 +430,7 @@ class GameServer:
                         name=name,
                         seat=seat,
                         color=_generate_seat_color(seat),
+                        avatar=avatar,
                         ws=ws,
                     )
                 )
@@ -554,6 +566,26 @@ class GameServer:
                 return
             await self._finalize_vote_locked(timeout=False)
 
+    async def handle_reroll(self, client_id: str) -> None:
+        async with self._lock:
+            # 1. Find player
+            player = next((p for p in self._room.players if p.client_id == client_id), None)
+            if not player:
+                return
+            
+            # 2. Pick new random color
+            current_color = player.color
+            used_colors = {p.color for p in self._room.players if p.client_id != client_id}
+            available = [c for c in COLOR_PALETTE if c not in used_colors and c != current_color]
+            
+            if not available:
+                 # If all taken, just pick any other color than current
+                available = [c for c in COLOR_PALETTE if c != current_color]
+
+            if available:
+                player.color = random.choice(available)
+                await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
+
     async def _finalize_vote_locked(self, *, timeout: bool) -> None:
         connected_ids = {p.client_id for p in self._room.players if p.ws is not None}
         counts: dict[int, int] = {}
@@ -651,11 +683,14 @@ async def ws_endpoint(ws: WebSocket) -> None:
             if t == "join":
                 client_id = str(data.get("clientId") or "")
                 name = str(data.get("name") or "")
-                await game.handle_join(ws, client_id, name)
+                avatar = str(data.get("avatar") or "")
+                await game.handle_join(ws, client_id, name, avatar)
             elif t == "scenario_select":
                 await game.handle_scenario_select(client_id, str(data.get("scenarioId") or ""))
             elif t == "start_game":
                 await game.handle_start_game(client_id)
+            elif t == "reroll":
+                await game.handle_reroll(client_id)
             elif t == "submit_vote":
                 await game.handle_submit_vote(client_id, int(data.get("targetSeat") or 0))
             elif t == "night_step_done":

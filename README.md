@@ -346,7 +346,7 @@ python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/
 # 예) {"schemaVersion":2,"scenarioId":"...","playerCount":5,"episodes":{"ep1":{"openingClips":"...","roleClips":{"werewolf":"..."},"nightOutroClips":"..."}}}
 #
 # SoVITS로 시나리오 클립별 voice.wav 생성 (Docker 마운트 오버라이드)
-python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace"
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs"
 
 # 최대 인원 변형만 생성
 python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --variant-mode max-only --tts gpt-sovits --characters-dir characters/Thema_01
@@ -355,10 +355,10 @@ python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_
 #### 캐릭터 ref 파일 점검 및 수정
 ```bash
 # ref 오디오 존재/길이(3~10초) 점검
-python scripts/check_character_refs.py --characters-dir characters/Thema_01 --local-ref-base "D:\GPT_SoVIT\refs"
+python scripts/check_character_refs.py --characters-dir characters/genshin --local-ref-base "D:\GPT_SoVIT\refs"
 
 # 자동 수정 (문제 ref 삭제)
-python scripts/check_character_refs.py --characters-dir characters/Thema_01 --local-ref-base "D:\GPT_SoVIT\refs" --fix
+python scripts/check_character_refs.py --characters-dir characters/genshin --local-ref-base "D:\GPT_SoVIT\refs" --fix
 ```
 
 #### 에피소드 wav 연결 (미리듣기용)

@@ -8,7 +8,7 @@ import sys
 import wave
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, NamedTuple
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,8 +35,13 @@ class EpisodeGroup:
         return f"{self.scenario_id}/{self.episode_id}/{self.player_key}"
 
 
-def _iter_wav_paths_in_order(jobs: Iterable[object]) -> dict[EpisodeGroup, list[Path]]:
-    grouped: dict[EpisodeGroup, list[Path]] = {}
+class _ClipRef(NamedTuple):
+    clip_id: str
+    out_wav: Path
+
+
+def _iter_wav_paths_by_clip(jobs: Iterable[object]) -> dict[EpisodeGroup, list[_ClipRef]]:
+    grouped: dict[EpisodeGroup, list[_ClipRef]] = {}
     for j in jobs:
         clip_id = str(getattr(j, "clip_id"))
         out_wav = Path(getattr(j, "out_wav_path"))
@@ -45,7 +50,7 @@ def _iter_wav_paths_in_order(jobs: Iterable[object]) -> dict[EpisodeGroup, list[
             continue
         scenario_id, episode_id, player_key = parts[0], parts[1], parts[2]
         group = EpisodeGroup(scenario_id=scenario_id, episode_id=episode_id, player_key=player_key)
-        grouped.setdefault(group, []).append(out_wav)
+        grouped.setdefault(group, []).append(_ClipRef(clip_id=clip_id, out_wav=out_wav))
     return grouped
 
 
@@ -94,6 +99,99 @@ def concat_wavs(wav_paths: list[Path], out_wav_path: Path) -> Path:
     return out_wav_path
 
 
+def _variant_player_count(player_key: str) -> int | None:
+    # generate_scenario_audio.py currently uses "p{count}" keys for variants.
+    if player_key.startswith("p") and player_key[1:].isdigit():
+        return int(player_key[1:])
+    return None
+
+
+def _build_role_wake_order_map(scenario_json: dict) -> dict[tuple[str, str, str], list[str]]:
+    """
+    Returns map[(scenarioId, episodeId, playerKey)] -> roleWakeOrder list.
+
+    Supports runtime/legacy format ({scenarios:[...]}) and compact single-scenario format.
+    """
+
+    def iter_scenarios(raw_obj: dict) -> list[dict]:
+        if isinstance(raw_obj.get("scenarios"), list):
+            return [s for s in (raw_obj.get("scenarios") or []) if isinstance(s, dict)]
+        if raw_obj.get("scenarioId"):
+            return [raw_obj]
+        return []
+
+    def iter_episodes(scenario_obj: dict) -> list[dict]:
+        eps = scenario_obj.get("episodes")
+        if isinstance(eps, list):
+            return [e for e in eps if isinstance(e, dict)]
+        if isinstance(eps, dict):
+            out: list[dict] = []
+            for k, v in eps.items():
+                if isinstance(v, dict):
+                    out.append({"episodeId": str(k), **v})
+            return out
+        return []
+
+    order_map: dict[tuple[str, str, str], list[str]] = {}
+    for scenario in iter_scenarios(scenario_json):
+        scenario_id = str(scenario.get("scenarioId") or "").strip()
+        if not scenario_id:
+            continue
+        for ep in iter_episodes(scenario):
+            episode_id = str(ep.get("episodeId") or "").strip()
+            if not episode_id:
+                continue
+            variants = ep.get("variantByPlayerCount") or {}
+            if not isinstance(variants, dict):
+                continue
+            for player_count_key, variant in variants.items():
+                if not isinstance(variant, dict):
+                    continue
+                wake = variant.get("roleWakeOrder")
+                if not isinstance(wake, list):
+                    continue
+                wake_list = [str(r) for r in wake if str(r).strip()]
+                player_key = f"p{player_count_key}"
+                order_map[(scenario_id, episode_id, player_key)] = wake_list
+    return order_map
+
+
+def _clip_sort_key(clip_id: str, *, role_wake_order: list[str] | None) -> tuple:
+    parts = clip_id.split("/")
+    section = "/".join(parts[3:]) if len(parts) > 3 else ""
+
+    def parse_int(s: str, default: int = 9999) -> int:
+        try:
+            return int(s)
+        except Exception:
+            return default
+
+    if section.startswith("opening/"):
+        return (0, parse_int(section.split("/", 1)[1]))
+
+    if section.startswith("role/"):
+        # role/<roleKey>/<before|during|after>/<idx>
+        segs = section.split("/")
+        role_key = segs[1] if len(segs) > 1 else ""
+        part = segs[2] if len(segs) > 2 else ""
+        idx = segs[3] if len(segs) > 3 else ""
+
+        role_pos = 9999
+        if role_wake_order:
+            try:
+                role_pos = role_wake_order.index(role_key)
+            except ValueError:
+                role_pos = 9999
+
+        part_pos = {"before": 0, "during": 1, "after": 2}.get(part, 9)
+        return (1, role_pos, part_pos, parse_int(idx))
+
+    if section.startswith("outro/"):
+        return (2, parse_int(section.split("/", 1)[1]))
+
+    return (3, section)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Concatenate per-clip voice.wav into one big episode wav per episode (+player-count variant)."
@@ -104,14 +202,43 @@ def main() -> int:
         help="Scenario JSON path.",
     )
     parser.add_argument(
+        "--wake-order-scenario",
+        default="",
+        help=(
+            "Optional JSON path to read roleWakeOrder from (e.g. runtime scenario under scenarios/). "
+            "If omitted, uses --scenario."
+        ),
+    )
+    parser.add_argument(
         "--voices-base",
         default=str(ROOT / "public" / "assets" / "voices"),
         help="Base folder where per-clip voice.wav files exist (same as generate_scenario_audio.py --out-base).",
     )
     parser.add_argument(
         "--out-filename",
-        default="_episode.wav",
-        help="Output filename to create under each episode variant folder (e.g. _episode.wav).",
+        default="",
+        help=(
+            "Output filename (legacy). If provided, overrides --out-name-template and writes to the selected output folder."
+        ),
+    )
+    parser.add_argument(
+        "--out-dir-mode",
+        choices=["scenario", "episode", "variant"],
+        default="scenario",
+        help=(
+            "Where to write the concatenated wav: "
+            "scenario = under the scenario folder (voices_base/scenario/...), "
+            "episode = under the episode folder (voices_base/scenario/episode/...), "
+            "variant = inside each pN folder (voices_base/scenario/episode/pN/...)."
+        ),
+    )
+    parser.add_argument(
+        "--out-name-template",
+        default="{scenarioId}__{episodeId}__{playerKey}__episode.wav",
+        help=(
+            "Output filename template when --out-filename is not set. "
+            "Supported placeholders: {scenarioId}, {episodeId}, {playerKey}."
+        ),
     )
     parser.add_argument(
         "--missing",
@@ -145,22 +272,32 @@ def main() -> int:
         best_fit_player_count=(int(args.best_fit_player_count) if int(args.best_fit_player_count) > 0 else None),
     )
 
-    grouped = _iter_wav_paths_in_order(jobs)
+    grouped = _iter_wav_paths_by_clip(jobs)
     if not grouped:
         raise SystemExit("No clips found in scenario.")
 
     # Determine output locations and run concat.
     raw = json.loads(scenario_path.read_text(encoding="utf-8"))
+    wake_src_path = Path(args.wake_order_scenario) if str(args.wake_order_scenario).strip() else scenario_path
+    wake_src = json.loads(wake_src_path.read_text(encoding="utf-8"))
+    wake_order_map = _build_role_wake_order_map(wake_src)
     if isinstance(raw.get("scenarios"), list):
         scenario_ids = [str(s.get("scenarioId") or "").strip() for s in (raw.get("scenarios") or [])]
     else:
         scenario_ids = [str(raw.get("scenarioId") or "").strip()] if raw.get("scenarioId") else []
     print(f"[info] scenario={scenario_path} scenarioIds={scenario_ids or [scenario_path.stem]}")
+    if wake_src_path != scenario_path:
+        print(f"[info] wake_order_scenario={wake_src_path}")
     print(f"[info] voices_base={voices_base} episode_variants={len(grouped)}")
 
     wrote = 0
     for group in sorted(grouped.keys(), key=lambda g: (g.scenario_id, g.episode_id, g.player_key)):
-        wavs = grouped[group]
+        role_wake_order = wake_order_map.get((group.scenario_id, group.episode_id, group.player_key))
+        clip_refs = sorted(
+            grouped[group],
+            key=lambda r: _clip_sort_key(r.clip_id, role_wake_order=role_wake_order),
+        )
+        wavs = [r.out_wav for r in clip_refs]
         existing: list[Path] = []
         missing: list[Path] = []
         for p in wavs:
@@ -169,7 +306,20 @@ def main() -> int:
             else:
                 missing.append(p)
 
-        out_path = voices_base / group.scenario_id / group.episode_id / group.player_key / str(args.out_filename)
+        if str(args.out_filename).strip():
+            out_name = str(args.out_filename).strip()
+        else:
+            out_name = str(args.out_name_template).format(
+                scenarioId=group.scenario_id, episodeId=group.episode_id, playerKey=group.player_key
+            )
+
+        if str(args.out_dir_mode) == "variant":
+            out_path = voices_base / group.scenario_id / group.episode_id / group.player_key / out_name
+        elif str(args.out_dir_mode) == "episode":
+            out_path = voices_base / group.scenario_id / group.episode_id / out_name
+        else:
+            out_path = voices_base / group.scenario_id / out_name
+
         print(f"[plan] {group.key} clips={len(wavs)} ok={len(existing)} missing={len(missing)} -> {out_path}")
 
         if missing and args.missing == "fail":

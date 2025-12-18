@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "LLM",
+  "scenarioType": "runtime",
+  "ttsSource": "scenarios_tts/daybreak_wolves_tutorial.tts.json",
+  "scenarios": [
+    {
+      "scenarioId": "daybreak_wolves_tutorial",
+      "title": "데이브레이크 튜토리얼 B: 늑대의 변형과 혼란",
+      "tags": [
+        "tutorial",
+        "daybreak",
+        "wolf_variants",
+        "chaos"
+      ],
+      "recommendedPlayerCounts": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "episodes": [
+        {
+          "episodeId": "ep1",
+          "title": "EP1: 여러 종류의 늑대",
+          "variantByPlayerCount": {
+            "10": {
+              "roleDeck": [
+                "alpha_wolf",
+                "paranormal_investigator",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "villager",
+                "villager",
+                "mystic_wolf",
+                "dream_wolf",
+                "village_idiot",
+                "seer",
+                "minion"
+              ],
+              "roleWakeOrder": [
+                "alpha_wolf",
+                "mystic_wolf",
+                "dream_wolf",
+                "minion",
+                "paranormal_investigator",
+                "seer",
+                "robber",
+                "troublemaker",
+                "village_idiot",
+                "drunk",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "alpha_wolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "mystic_wolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "dream_wolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "minion": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "paranormal_investigator": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "seer": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "robber": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "troublemaker": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "village_idiot": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "drunk": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "insomniac": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "episodeId": "ep2",
+          "title": "EP2: 기억을 뒤집는 밤",
+          "variantByPlayerCount": {
+            "10": {
+              "roleDeck": [
+                "alpha_wolf",
+                "paranormal_investigator",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "villager",
+                "villager",
+                "mystic_wolf",
+                "dream_wolf",
+                "village_idiot",
+                "seer",
+                "minion"
+              ],
+              "roleWakeOrder": [
+                "alpha_wolf",
+                "mystic_wolf",
+                "dream_wolf",
+                "minion",
+                "paranormal_investigator",
+                "seer",
+                "robber",
+                "troublemaker",
+                "village_idiot",
+                "drunk",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "alpha_wolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "mystic_wolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "dream_wolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "minion": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "paranormal_investigator": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "seer": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "robber": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "troublemaker": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "village_idiot": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "drunk": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "insomniac": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

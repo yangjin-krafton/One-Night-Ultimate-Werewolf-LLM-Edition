@@ -6,6 +6,9 @@ const roomEl = qs("#room");
 const gridEl = qs("#grid");
 const joinBtn = qs("#joinBtn");
 const nameInput = qs("#nameInput");
+const avatarPreview = qs("#avatarPreview");
+const avatarBtn = qs("#avatarBtn");
+const rerollBtn = qs("#rerollBtn");
 const scenarioBtn = qs("#scenarioBtn");
 const startBtn = qs("#startBtn");
 const voteBtn = qs("#voteBtn");
@@ -62,9 +65,80 @@ function setSavedName(name) {
   localStorage.setItem("playerName", name);
 }
 
+const AVATARS = [
+  "🐺", "🦊", "🐱", "🦁", "🐯", "🐶", "🐻", "🐨", "🐼", "🐹", 
+  "🐰", "🦄", "🐮", "🐷", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤",
+  "🦉", "🦇", "🦋", "🐌", "🐞", "👻", "👽", "🤖", "🎃", "💀",
+  "🤡", "👹", "👺", "🧟", "🧞", "🧚", "🧜", "🧛", "🦸", "🦹"
+];
+
+const ROLE_DEFINITIONS = {
+  // --- Basic ---
+  werewolf: { icon: "🐺", name: "늑대인간", desc: "밤에 눈을 떠 동료를 확인합니다. 혼자라면 중앙 카드 1장을 확인합니다." },
+  minion: { icon: "😈", name: "하수인", desc: "늑대인간이 누구인지 알지만, 늑대인간은 하수인을 모릅니다. 늑대인간을 도우세요." },
+  mason: { icon: "👷", name: "석공", desc: "밤에 눈을 떠 다른 석공을 확인합니다." },
+  seer: { icon: "🔮", name: "예언자", desc: "다른 사람의 카드 1장 또는 중앙 카드 2장을 확인합니다." },
+  robber: { icon: "💰", name: "강도", desc: "다른 사람의 카드를 자신과 교환하고, 가져온 카드를 확인합니다." },
+  troublemaker: { icon: "🤪", name: "문제아", desc: "다른 두 사람의 카드를 서로 바꿉니다 (자신은 확인 불가)." },
+  drunk: { icon: "🍺", name: "취객", desc: "중앙 카드 1장과 자신의 카드를 바꿉니다 (바꾼 카드는 확인 불가)." },
+  insomniac: { icon: "🥱", name: "불면증", desc: "밤이 끝날 때 자신의 카드를 다시 확인합니다." },
+  villager: { icon: "🧑‍🌾", name: "마을주민", desc: "특별한 능력이 없습니다. 누구보다 열심히 추리하세요." },
+  hunter: { icon: "🔫", name: "사냥꾼", desc: "투표로 죽게 되면, 자신이 지목한 대상을 길동무로 데려갑니다." },
+  tanner: { icon: "🤡", name: "무두장이", desc: "투표로 죽는 것이 승리 조건입니다." },
+
+  // --- Daybreak ---
+  sentinel: { icon: "🛡️", name: "파수꾼", desc: "플레이어 한 명에게 방패 토큰을 줍니다. 방패를 받은 사람은 카드가 바뀌거나 확인되지 않습니다." },
+  alpha_wolf: { icon: "👑", name: "알파 늑대", desc: "늑대인간 차례에 중앙에 있는 늑대 카드를 누군가와 교환합니다." },
+  mystic_wolf: { icon: "🔮", name: "신비한 늑대", desc: "늑대인간 차례에 다른 사람의 카드를 확인합니다." },
+  apprentice_seer: { icon: "🎓", name: "견습 예언자", desc: "중앙 카드 1장을 확인합니다." },
+  paranormal_investigator: { icon: "🕵️", name: "초현상 수사관", desc: "다른 사람 1명의 카드를 봅니다. 늑대인간이라면 자신도 늑대인간이 됩니다." },
+  witch: { icon: "🧙‍♀️", name: "마녀", desc: "중앙 카드 1장을 확인하고, 그 카드를 누군가의 카드와 바꿀 수 있습니다." },
+  village_idiot: { icon: "🤪", name: "마을 바보", desc: "모든 카드를 왼쪽/오른쪽으로 한 칸씩 이동시킵니다." },
+  revealer: { icon: "🌞", name: "폭로자", desc: "누군가의 카드를 확인합니다. 늑대인간이라면 카드를 공개 상태로 뒤집어 둡니다." },
+  curator: { icon: "🏺", name: "큐레이터", desc: "누군가의 카드 위에 유물 토큰을 올려 능력을 변질시킵니다." },
+  bodyguard: { icon: "💪", name: "경호원", desc: "투표 결과 자신이 지목한 사람이 죽게 된다면, 대신 자신이 죽습니다." },
+  dream_wolf: { icon: "💤", name: "꿈 늑대", desc: "늑대인간이지만 밤에 눈을 뜨지 않습니다 (다른 늑대들은 당신을 압니다)." },
+
+  // --- Vampire ---
+  vampire: { icon: "🧛", name: "뱀파이어", desc: "밤에 눈을 떠 뱀파이어끼리 확인합니다. 투표 시 가장 많이 지목된 사람이 1표라도 받으면 승리합니다." },
+  count: { icon: "🏰", name: "백작", desc: "밤에 깨어나 '두려움' 토큰을 누군가에게 줍니다." },
+  renfield: { icon: "🦇", name: "렌필드", desc: "뱀파이어가 누구인지 알지만, 뱀파이어는 당신을 모릅니다." },
+  marksman: { icon: "🎯", name: "명사수", desc: "다른 사람의 카드를 확인하거나, 다른 두 사람의 카드를 서로 확인시킵니다." },
+  pickpocket: { icon: "🤏", name: "소매치기", desc: "자신의 카드를 다른 사람과 바꿉니다 (확인 불가)." },
+  gremlin: { icon: "👾", name: "그렘린", desc: "원하는 두 사람의 카드를 바꿉니다 (자신의 카드 포함 가능)." },
+  assassin: { icon: "🗡️", name: "암살자", desc: "지목한 사람이 특정 역할(가장 많이 투표받은 사람 등)이라면 승리합니다." },
+
+  // --- Bonus / Epic ---
+  doppelganger: { icon: "🎭", name: "도플갱어", desc: "다른 사람의 카드를 보고 그 역할의 능력을 복사하여 사용합니다." },
+  copycat: { icon: "🐱", name: "카피캣", desc: "중앙 카드를 보고 그 역할을 복사합니다." },
+  thing: { icon: "🦠", name: "더 씽", desc: "이웃한 플레이어를 '감염'시킵니다." },
+};
+
+function getRandomAvatar() {
+  return AVATARS[Math.floor(Math.random() * AVATARS.length)];
+}
+
+function getRoleDisplayName(roleId) {
+  if (!roleId) return "";
+  const sid = state.room?.selectedScenarioId;
+  const scenario = state.scenarioById[sid];
+  const alias = scenario?.roleAliases?.[roleId];
+  const def = ROLE_DEFINITIONS[roleId];
+  return alias || (def ? def.name : roleId);
+}
+
+function getSavedAvatar() {
+  return localStorage.getItem("playerAvatar") || getRandomAvatar();
+}
+
+function setSavedAvatar(avatar) {
+  localStorage.setItem("playerAvatar", avatar);
+}
+
 const state = {
   clientId: getClientId(),
   name: getSavedName(),
+  avatar: getSavedAvatar(),
   ws: null,
   connected: false,
   debugEnabled: false,
@@ -80,6 +154,8 @@ const state = {
   bgm: createBgmEngine(),
   narration: createNarrationEngine(),
 };
+
+const scenarioDetailInflight = new Set();
 
 nameInput.value = state.name;
 
@@ -157,11 +233,30 @@ function render() {
   const room = state.room;
   if (!room) return;
 
-  scenarioLabel.textContent = room.selectedScenarioId ? `· ${room.selectedScenarioId}` : "";
-  scenarioBtn.disabled = !isHost();
-  startBtn.disabled = !isHost() || !(state.scenarioState?.canStart);
-
   const phase = room.phase || "WAIT";
+  const amHost = isHost();
+
+  scenarioLabel.textContent = room.selectedScenarioId ? `· ${room.selectedScenarioId}` : "";
+  
+  // Button Visibility Logic
+  if (phase === "WAIT") {
+    if (amHost) {
+      rerollBtn.classList.add("hidden");
+      scenarioBtn.classList.remove("hidden");
+      startBtn.classList.remove("hidden");
+      startBtn.disabled = !(state.scenarioState?.canStart);
+    } else {
+      rerollBtn.classList.remove("hidden");
+      scenarioBtn.classList.add("hidden");
+      startBtn.classList.add("hidden");
+    }
+  } else {
+    // In game, hide lobby buttons
+    rerollBtn.classList.add("hidden");
+    scenarioBtn.classList.add("hidden");
+    startBtn.classList.add("hidden");
+  }
+
   voteBtn.classList.toggle("hidden", phase !== "VOTE");
 
   const players = room.players || [];
@@ -172,7 +267,16 @@ function render() {
     if (p.clientId === state.clientId) card.classList.add("card--me");
     if (p.isHost) card.classList.add("card--host");
     if (p.connected) card.classList.add("card--connected");
+    
+    // Inject personal neon color
+    card.style.setProperty("--player-color", p.color || "#888");
 
+    // Check if voted
+    if (state.room?.votes?.[p.clientId]) {
+      card.setAttribute("data-voted", "true");
+    }
+
+    // Top: Seat Number + Badge
     const top = document.createElement("div");
     top.className = "card__top";
 
@@ -180,29 +284,196 @@ function render() {
     seat.className = "seat";
     seat.textContent = String(p.seat);
 
+    const badgeGroup = document.createElement("div");
+    badgeGroup.className = "badgeGroup";
+
     const badge = document.createElement("div");
     badge.className = "badge";
-    badge.textContent = p.isHost ? "HOST" : p.connected ? "ONLINE" : "OFFLINE";
+    badge.textContent = p.isHost ? "HOST" : p.connected ? "ON" : "OFF"; // Shorten badge text
+    badgeGroup.appendChild(badge);
+
+    if (p.clientId === state.clientId) {
+      const meBadge = document.createElement("div");
+      meBadge.className = "badge badge--me";
+      meBadge.textContent = "ME";
+      badgeGroup.appendChild(meBadge);
+    }
 
     top.appendChild(seat);
-    top.appendChild(badge);
+    top.appendChild(badgeGroup);
+
+    // Content: Avatar + Name
+    const content = document.createElement("div");
+    content.className = "card__content";
+
+    const avatar = document.createElement("div");
+    avatar.className = "card__avatar";
+    avatar.textContent = p.avatar || "👤";
 
     const name = document.createElement("div");
     name.className = "name";
-    name.textContent = p.name + (p.clientId === state.clientId && state.myRoleId ? ` · ${state.myRoleId}` : "");
+    name.textContent = p.name + (p.clientId === state.clientId && state.myRoleId ? ` · ${getRoleDisplayName(state.myRoleId)}` : "");
 
+    content.appendChild(avatar);
+    content.appendChild(name);
+
+    // Bottom Bar (Vote Indicator)
     const bar = document.createElement("div");
     bar.className = "card__bar";
-    bar.style.opacity = state.room?.votes?.[p.clientId] ? "0.9" : "0";
 
-    card.style.boxShadow = `0 14px 26px rgba(0,0,0,.35), 0 0 0 4px ${p.color}14`;
     card.appendChild(top);
-    card.appendChild(name);
+    card.appendChild(content);
     card.appendChild(bar);
     gridEl.appendChild(card);
   }
 
+  renderInfoDeck();
   renderNightOverlay();
+}
+
+function renderInfoDeck() {
+  const deckEl = qs("#infoDeck");
+  const indicatorEl = qs("#deckIndicators");
+  const sid = state.room?.selectedScenarioId;
+  const connectedCount = (state.room?.players || []).filter((p) => p.connected).length || 0;
+  
+  // Re-render if scenario OR player count changes (to update role deck variant)
+  const hasFull = !!state.scenarioById?.[sid]?.episodes;
+  // While we only have list data (no episodes/roleDeck), don't churn the UI on every room update.
+  const cacheKey = hasFull ? `${sid}:${connectedCount}:full` : `${sid}:list`;
+  if (deckEl.dataset.cacheKey === cacheKey && sid) return;
+  deckEl.dataset.cacheKey = cacheKey;
+
+  deckEl.innerHTML = "";
+  indicatorEl.innerHTML = "";
+
+  if (!sid) {
+    deckEl.innerHTML = `
+      <div class="info-card">
+        <div class="info-card__content">
+          <div class="info-card__role-icon">⏳</div>
+          <h3>대기 중...</h3>
+          <p>호스트가 시나리오를 선택하고 있습니다.</p>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const scenario = state.scenarioById[sid];
+  if (!scenario) return;
+  if (!scenario.episodes) {
+    // Render loading UI once per selected scenario, then wait for the detail fetch.
+    if (deckEl.dataset.loadingFor !== sid) {
+      deckEl.dataset.loadingFor = sid;
+      deckEl.innerHTML = `
+        <div class="info-card">
+          <div class="info-card__content">
+            <div class="info-card__role-icon">📥</div>
+            <h3>역할 정보를 불러오는 중...</h3>
+            <p>선택된 시나리오의 등장 역할/규칙 카드를 준비하고 있습니다.</p>
+          </div>
+        </div>`;
+    }
+    if (!scenarioDetailInflight.has(sid)) {
+      ensureScenarioDetailLoaded(sid).then(() => renderInfoDeck());
+    }
+    return;
+  }
+  deckEl.dataset.loadingFor = "";
+
+  const slides = [];
+
+  // 1. Cover Slide
+  slides.push({
+    icon: "📖",
+    title: scenario.title || sid,
+    tag: "시나리오",
+    text: scenario.description || "이 시나리오에서 펼쳐지는 미스터리한 사건을 해결하세요."
+  });
+
+  // 2. Dynamic Role Slides
+  // Get active roles for current player count (or default to max if waiting)
+  // If waiting, maybe show max player variant or just first episode's default?
+  // Let's iterate ALL unique roles in the scenario to be safe, or just current variant.
+  // Using current variant is better for context.
+  const ep = (scenario.episodes || [])[0];
+  const fallbackCount =
+    connectedCount > 0 ? connectedCount : Math.max(...(scenario.recommendedPlayerCounts || [5, 6, 7, 8, 9, 10]));
+  const { variant } = selectVariantForPlayerCount(ep, fallbackCount); // Default to max recommended
+  
+  if (variant && variant.roleDeck) {
+    const deck = effectiveRoleDeckForPlayerCount(variant, fallbackCount);
+    const counts = {};
+    for (const r of deck) counts[r] = (counts[r] || 0) + 1;
+    const uniqueRoles = Object.keys(counts);
+
+    const wolfTeam = new Set(["werewolf", "alpha_wolf", "mystic_wolf", "dream_wolf", "minion"]);
+    uniqueRoles.sort((a, b) => {
+      const aw = wolfTeam.has(a) ? 0 : 1;
+      const bw = wolfTeam.has(b) ? 0 : 1;
+      if (aw !== bw) return aw - bw;
+      if (a === "tanner") return -1;
+      if (b === "tanner") return 1;
+      return a.localeCompare(b);
+    });
+
+    for (const roleId of uniqueRoles) {
+      const def = ROLE_DEFINITIONS[roleId] || { icon: "❓", name: roleId, desc: "정보 없음" };
+      const displayName = getRoleDisplayName(roleId);
+      const countText = counts[roleId] > 1 ? ` · ${counts[roleId]}장` : "";
+      
+      slides.push({
+        icon: def.icon,
+        title: `${displayName}${countText}`,
+        tag: wolfTeam.has(roleId) ? "Team 늑대" : roleId === "tanner" ? "독립" : "Team 마을",
+        text: `<b>${def.name}</b><br>${def.desc}`
+      });
+    }
+  } else {
+    // Fallback if no variant found
+     slides.push({
+      icon: "🎭",
+      title: "등장 역할",
+      tag: "Rule",
+      text: "플레이어 수에 따라 역할이 결정됩니다."
+    });
+  }
+
+  // 3. Victory Condition
+  slides.push({
+    icon: "🏆",
+    title: "승리 조건",
+    tag: "Rule",
+    text: "<b>마을주민:</b> 늑대인간을 찾아 투표로 처형하세요.<br><br><b>늑대인간:</b> 정체를 들키지 않고 살아남으세요."
+  });
+
+  // Render Slides
+  slides.forEach((s, idx) => {
+    const card = document.createElement("div");
+    card.className = "info-card";
+    card.innerHTML = `
+      <div class="info-card__content">
+        <span class="info-card__tag">${s.tag}</span>
+        <div class="info-card__role-icon">${s.icon}</div>
+        <h3>${escapeHtml(s.title)}</h3>
+        <p>${s.text}</p>
+      </div>
+    `;
+    deckEl.appendChild(card);
+
+    const dot = document.createElement("div");
+    dot.className = "indicator";
+    if (idx === 0) dot.classList.add("active");
+    indicatorEl.appendChild(dot);
+  });
+
+  // Update indicators on scroll
+  deckEl.onscroll = () => {
+    const idx = Math.round(deckEl.scrollLeft / deckEl.clientWidth);
+    Array.from(indicatorEl.children).forEach((d, i) => {
+      d.classList.toggle("active", i === idx);
+    });
+  };
 }
 
 function renderNightOverlay() {
@@ -217,17 +488,19 @@ function renderNightOverlay() {
   const roleId = state.myRoleId || "";
   const kind = step.kind || "";
   const activeRole = step.roleId || "";
+  const activeRoleName = getRoleDisplayName(activeRole);
+  const myRoleName = getRoleDisplayName(roleId);
 
   const stepLabel = `${String(step.stepIndex || 0)}/${String(step.stepCount || 0)}`;
   nightTitle.textContent = `NIGHT · ${stepLabel}`;
 
-  nightRole.textContent = roleId ? `내 역할: ${roleId}` : "내 역할: (미정)";
+  nightRole.textContent = roleId ? `내 역할: ${myRoleName}` : "내 역할: (미정)";
 
   if (kind === "role") {
     if (roleId && roleId === activeRole) {
-      nightHint.textContent = `${activeRole} 차례입니다. 눈을 뜨고 행동하세요.`;
+      nightHint.textContent = `${activeRoleName} 차례입니다. 눈을 뜨고 행동하세요.`;
     } else {
-      nightHint.textContent = `${activeRole} 차례입니다. 눈을 감고 기다리세요.`;
+      nightHint.textContent = `${activeRoleName} 차례입니다. 눈을 감고 기다리세요.`;
     }
   } else if (kind === "opening") {
     nightHint.textContent = "모두 눈을 감고 밤을 시작합니다.";
@@ -271,6 +544,29 @@ async function fetchScenarios() {
   state.scenarios = list;
   state.scenarioById = {};
   for (const s of list) state.scenarioById[s.scenarioId] = s;
+}
+
+async function ensureScenarioDetailLoaded(scenarioId) {
+  const sid = String(scenarioId || "").trim();
+  if (!sid) return null;
+  const cached = state.scenarioById?.[sid];
+  if (cached?.episodes) return cached;
+  if (scenarioDetailInflight.has(sid)) return null;
+
+  scenarioDetailInflight.add(sid);
+  try {
+    const res = await fetch(`/api/scenarios/${encodeURIComponent(sid)}`);
+    if (!res.ok) return null;
+    const full = await res.json();
+    state.scenarioById[sid] = full;
+    const idx = (state.scenarios || []).findIndex((x) => x?.scenarioId === sid);
+    if (idx >= 0) state.scenarios[idx] = full;
+    return full;
+  } catch {
+    return null;
+  } finally {
+    scenarioDetailInflight.delete(sid);
+  }
 }
 
 function renderScenarioList() {
@@ -678,6 +974,21 @@ async function init() {
   showJoin();
   setConn(false);
   setBgGradient("WAIT");
+  
+  // Avatar Init
+  avatarPreview.textContent = state.avatar;
+  avatarBtn.addEventListener("click", () => {
+    state.avatar = getRandomAvatar();
+    setSavedAvatar(state.avatar);
+    avatarPreview.textContent = state.avatar;
+    
+    // Animation
+    avatarPreview.style.transform = "scale(0.8) rotate(15deg)";
+    setTimeout(() => {
+      avatarPreview.style.transform = "scale(1) rotate(0deg)";
+    }, 150);
+  });
+
   await fetchScenarios();
   renderScenarioList();
   connect();
@@ -688,37 +999,28 @@ async function init() {
     setSavedName(name);
 
     const joinSection = qs("#join");
-    const landingEl = qs(".landing");
     const transitionLayer = qs("#transitionLayer");
 
-    // 1. Start Animation: Moon expands & Text fades
+    // 1. Start Darken (0.75s)
+    if (transitionLayer) transitionLayer.classList.add("active");
     joinSection.classList.add("exiting-mode");
-    landingEl.classList.add("exiting");
-    
-    // Optional: Darken background slightly before moon fills
-    if (transitionLayer) {
-      setTimeout(() => transitionLayer.classList.add("active"), 800);
-    }
 
-    // 2. Wait for moon to fill screen (1.5s)
-    await new Promise((r) => setTimeout(r, 1500));
+    // 2. Wait for full blackout (0.75s)
+    await new Promise((r) => setTimeout(r, 750));
 
-    // 3. Connect & Switch Room (Behind the overlay)
-    send({ type: "join", data: { clientId: state.clientId, name } });
+    // 3. Switch Scene (Behind the black overlay)
+    send({ type: "join", data: { clientId: state.clientId, name, avatar: state.avatar } });
     
-    // Manually show room elements without hiding joinSection yet
     roomEl.classList.remove("hidden");
     qs(".topbar").classList.remove("hidden");
+    joinSection.classList.add("hidden");
 
-    // 4. Fade out the overlay (Moon/Landing) to reveal Room
-    joinSection.classList.add("fade-out");
+    // 4. Start Brighten (0.75s)
     if (transitionLayer) transitionLayer.classList.remove("active");
 
-    // 5. Cleanup after fade
-    await new Promise((r) => setTimeout(r, 800));
-    joinSection.classList.add("hidden");
-    joinSection.classList.remove("exiting-mode", "fade-out");
-    landingEl.classList.remove("exiting");
+    // 5. Final Cleanup
+    await new Promise((r) => setTimeout(r, 750));
+    joinSection.classList.remove("exiting-mode");
   });
   nameInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") joinBtn.click();
@@ -730,6 +1032,10 @@ async function init() {
   });
   scenarioBackdrop.addEventListener("click", () => closeModal(scenarioModal));
   scenarioClose.addEventListener("click", () => closeModal(scenarioModal));
+
+  rerollBtn.addEventListener("click", () => {
+    send({ type: "reroll" });
+  });
 
   startBtn.addEventListener("click", async () => {
     await ensureAudioUnlocked();

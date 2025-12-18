@@ -16,8 +16,25 @@
       "recommendedPlayerCounts": [
         3,
         4,
-        5
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
       ],
+      "roleAliases": {
+        "werewolf": "숨어든 악령",
+        "seer": "심령 연구원",
+        "robber": "도굴꾼",
+        "troublemaker": "폴터가이스트",
+        "insomniac": "불면증 환자",
+        "drunk": "겁쟁이",
+        "mason": "동아리 선배",
+        "villager": "신입 부원",
+        "hunter": "퇴마사",
+        "tanner": "관심종자"
+      },
       "episodes": [
         {
           "episodeId": "ep1",
@@ -58,6 +75,90 @@
                 "nightOutroClipCount": 1,
                 "roleClipCounts": {
                   "werewolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "seer": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "robber": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "troublemaker": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "drunk": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "insomniac": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  }
+                }
+              }
+            },
+            "10": {
+              "roleDeck": [
+                "werewolf",
+                "werewolf",
+                "minion",
+                "seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "mason",
+                "mason",
+                "hunter",
+                "tanner",
+                "villager"
+              ],
+              "roleWakeOrder": [
+                "werewolf",
+                "minion",
+                "mason",
+                "seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "minion": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "mason": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -162,6 +263,90 @@
                   }
                 }
               }
+            },
+            "10": {
+              "roleDeck": [
+                "werewolf",
+                "werewolf",
+                "minion",
+                "seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "mason",
+                "mason",
+                "hunter",
+                "tanner",
+                "villager"
+              ],
+              "roleWakeOrder": [
+                "werewolf",
+                "minion",
+                "mason",
+                "seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "minion": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "mason": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "seer": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "robber": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "troublemaker": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "drunk": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "insomniac": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  }
+                }
+              }
             }
           }
         },
@@ -204,6 +389,90 @@
                 "nightOutroClipCount": 1,
                 "roleClipCounts": {
                   "werewolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "seer": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "robber": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "troublemaker": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "drunk": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "insomniac": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  }
+                }
+              }
+            },
+            "10": {
+              "roleDeck": [
+                "werewolf",
+                "werewolf",
+                "minion",
+                "seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "mason",
+                "mason",
+                "hunter",
+                "tanner",
+                "villager"
+              ],
+              "roleWakeOrder": [
+                "werewolf",
+                "minion",
+                "mason",
+                "seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "minion": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
+                  "mason": {
                     "before": 0,
                     "during": 1,
                     "after": 0
