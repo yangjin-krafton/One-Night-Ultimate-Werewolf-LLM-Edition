@@ -79,11 +79,32 @@
         </section>
       </main>
 
+      <button class="hostEndBtn hidden" id="hostEndBtn">게임 종료</button>
+
+      <div class="nightOverlay hidden" id="roleOverlay" aria-live="polite">
+        <div class="nightOverlay__panel">
+          <div class="nightOverlay__title" id="roleTitle">ROLE</div>
+          <div class="nightOverlay__role" id="roleName"></div>
+          <div class="nightOverlay__hint" id="roleDesc"></div>
+          <div class="nightOverlay__body">
+            <div class="nightOverlay__active" id="roleProfile"></div>
+            <div class="nightOverlay__action" id="roleAction">
+              <button class="btn btn--primary" id="eyesClosedBtn">눈을 감아요 · 휴대폰 내려놓기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="nightOverlay hidden" id="nightOverlay" aria-live="polite">
         <div class="nightOverlay__panel">
           <div class="nightOverlay__title" id="nightTitle">NIGHT</div>
           <div class="nightOverlay__role" id="nightRole"></div>
           <div class="nightOverlay__hint" id="nightHint"></div>
+          <div class="nightOverlay__body" id="nightBody">
+            <div class="nightOverlay__active" id="nightActive"></div>
+            <div class="nightOverlay__private hidden" id="nightPrivate"></div>
+            <div class="nightOverlay__action hidden" id="nightAction"></div>
+          </div>
         </div>
       </div>
 
@@ -99,6 +120,14 @@
           </div>
           <div class="modal__body">
             <div class="scenarioList" id="scenarioList"></div>
+
+            <div class="episodePicker hidden" id="episodePicker">
+              <div class="episodePicker__top">
+                <button class="btn btn--ghost" id="episodeBack">← 시나리오</button>
+                <div class="episodePicker__title" id="episodePickerTitle">에피소드 선택</div>
+              </div>
+              <div class="episodeList" id="episodeList"></div>
+            </div>
           </div>
         </div>
       </div>

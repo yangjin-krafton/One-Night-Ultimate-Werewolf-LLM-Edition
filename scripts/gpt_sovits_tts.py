@@ -443,7 +443,7 @@ def generate_character_tts_wav(
                         # Some GPT-SoVITS setups fail when fast-langdetect models/cache aren't present.
                         # If that happens and we sent prompt_text, retry once without it so batch jobs continue.
                         if prompt_text.strip() and _FAST_LANGDETECT_ERROR_RE.search(str(e)):
-                            print("[warn] SoVITS fast-langdetect error; retrying without prompt_text.")
+                            print("[warn] SoVITS fast-langdetect error; retrying without prompt_text and prompt_lang.")
                             gpt_sovits_tts_to_wav(
                                 text=seg.text,
                                 ref_audio_path=chosen_ref,
@@ -452,7 +452,7 @@ def generate_character_tts_wav(
                                 container_ref_base=config.container_ref_base,
                                 local_ref_base=config.local_ref_base,
                                 text_lang=text_lang,
-                                prompt_lang=prompt_lang,
+                                prompt_lang="",
                                 prompt_text="",
                                 media_type=media_type,
                                 streaming_mode=streaming_mode,
@@ -537,11 +537,13 @@ def gpt_sovits_tts_to_wav(
     params = {
         "text": text or "",
         "text_lang": _normalize_sovits_lang(text_lang),
-        "prompt_lang": _normalize_sovits_lang(prompt_lang or text_lang),
         "ref_audio_path": resolved_ref,
         "media_type": media_type,
         "streaming_mode": "true" if streaming_mode else "false",
     }
+    # Only add prompt_lang if it's not explicitly disabled (empty string)
+    if prompt_lang != "":
+        params["prompt_lang"] = _normalize_sovits_lang(prompt_lang or text_lang)
     if prompt_text.strip():
         params["prompt_text"] = prompt_text.strip()
 

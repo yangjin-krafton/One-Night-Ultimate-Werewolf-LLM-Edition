@@ -1,10 +1,10 @@
 {
-  "characterId": "ganyu",
+  "characterId": "paranormal_investigator",
   "localRefBase": "./",
   "containerRefBase": "/workspace/refs",
   "defaultRefs": [
     "genshin-voice/Korean/VO_AQ/VO_ganyu/vo_LYAQ107_3_ganyu_06.wav"
-    ],
+  ],
   "emotionRefs": {
     "happy": [
       "genshin-voice/Korean/VO_HS/VO_ganyu/vo_ganyu_mimitomo_friendship2_01.wav",

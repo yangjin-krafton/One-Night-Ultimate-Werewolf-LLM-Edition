@@ -3,9 +3,7 @@
   "localRefBase": "./",
   "containerRefBase": "/workspace/refs",
   "defaultRefs": [
-    "genshin-voice/Korean/VO_AQ/VO_ganyu/vo_LYAQ107_3_ganyu_04.wav",
-    "genshin-voice/Korean/VO_AQ/VO_ganyu/vo_LYAQ107_3_ganyu_06.wav",
-    "genshin-voice/Korean/VO_AQ/VO_ganyu/vo_SZAQ001_1_ganyu_03.wav"
+    "genshin-voice/Korean/VO_AQ/VO_ganyu/vo_LYAQ107_3_ganyu_06.wav"
   ],
   "emotionRefs": {
     "happy": [

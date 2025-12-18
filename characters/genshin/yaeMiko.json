@@ -1,0 +1,48 @@
+{
+  "characterId": "yaeMiko",
+  "localRefBase": "./",
+  "containerRefBase": "/workspace/refs",
+  "defaultRefs": [
+    "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ104_1_yaeMiko_23.wav",
+    "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ104_1_yaeMiko_25.wav",
+    "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ104_5_yaeMiko_06.wav",
+    "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ104_5_yaeMiko_08.wav",
+    "genshin-voice/Korean/VO_HS/VO_yaeMiko/vo_yaeMiko_mimitomo_friendship2_17b_2.wav"
+  ],
+  "emotionRefs": {
+    "happy": [
+      "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ104_1_yaeMiko_14.wav",
+      "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ104_4_yaeMiko_01.wav",
+      "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ105_1_yaeMiko_01.wav",
+      "genshin-voice/Korean/VO_EQ/VO_yaeMiko/vo_SCHJEQ001_2_yaeMiko_05.wav",
+      "genshin-voice/Korean/VO_EQ/VO_yaeMiko/vo_SCHJEQ001_10_yaeMiko_11.wav",
+      "genshin-voice/Korean/VO_LQ/VO_yaeMiko/vo_YMLQ001_3_yaeMiko_15.wav"
+    ],
+    "sad": [
+      "genshin-voice/Korean/VO_HS/VO_yaeMiko/vo_yaeMiko_mimitomo_friendship2_02.wav"
+    ],
+    "angry": [
+      "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ108_2_yaeMiko_03.wav",
+      "genshin-voice/Korean/VO_EQ/VO_yaeMiko/vo_SCHJEQ003_9_yaeMiko_05.wav",
+      "genshin-voice/Korean/VO_LQ/VO_yaeMiko/vo_YMLQ002_1_yaeMiko_17.wav"
+    ],
+    "fearful": [
+      "genshin-voice/Korean/VO_AQ/VO_yaeMiko/vo_DQAQ108_2_yaeMiko_19.wav"
+    ],
+    "surprised": [
+      "genshin-voice/Korean/VO_LQ/VO_yaeMiko/vo_SGLQ103_5_yaeMiko_23.wav",
+      "genshin-voice/Korean/VO_LQ/VO_yaeMiko/vo_YMLQ001_3_yaeMiko_04.wav"
+    ]
+  },
+  "tagAliases": {
+    "기쁨": "happy",
+    "신남": "happy",
+    "슬픔": "sad",
+    "화남": "angry",
+    "분노": "angry",
+    "공포": "fearful",
+    "놀람": "surprised",
+    "기본": "default",
+    "normal": "default"
+  }
+}

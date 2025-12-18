@@ -20,6 +20,7 @@ PUBLIC_DIR = ROOT / "public"
 
 
 PHASE_WAIT = "WAIT"
+PHASE_ROLE = "ROLE"
 PHASE_NIGHT = "NIGHT"
 PHASE_DEBATE = "DEBATE"
 PHASE_VOTE = "VOTE"
@@ -108,13 +109,64 @@ def effective_role_deck(variant: dict[str, Any] | None, player_count: int) -> li
 
 
 def scenario_can_start(scenario: dict[str, Any] | None, player_count: int) -> bool:
+    return scenario_can_start_for_episode(scenario, player_count, episode_id=None)
+
+
+def find_episode_by_id(scenario: dict[str, Any] | None, episode_id: str | None) -> dict[str, Any] | None:
+    if not scenario or not episode_id:
+        return None
+    wanted = str(episode_id).strip()
+    if not wanted:
+        return None
+    for ep in scenario.get("episodes") or []:
+        if not isinstance(ep, dict):
+            continue
+        if str(ep.get("episodeId") or "").strip() == wanted:
+            return ep
+    return None
+
+
+def first_episode_id(scenario: dict[str, Any] | None) -> str | None:
+    if not scenario:
+        return None
+    eps = scenario.get("episodes") or []
+    if not eps:
+        return None
+    ep0 = eps[0] or {}
+    eid = str(ep0.get("episodeId") or "").strip()
+    return eid or None
+
+
+def next_episode_id(scenario: dict[str, Any] | None, current_episode_id: str | None) -> str | None:
+    if not scenario:
+        return None
+    eps = [ep for ep in (scenario.get("episodes") or []) if isinstance(ep, dict)]
+    if not eps:
+        return None
+    ids = [str(ep.get("episodeId") or "").strip() for ep in eps]
+    ids = [x for x in ids if x]
+    if not ids:
+        return None
+    if not current_episode_id:
+        return ids[0]
+    cur = str(current_episode_id).strip()
+    try:
+        i = ids.index(cur)
+    except ValueError:
+        return ids[0]
+    return ids[i + 1] if i + 1 < len(ids) else None
+
+
+def scenario_can_start_for_episode(
+    scenario: dict[str, Any] | None, player_count: int, episode_id: str | None
+) -> bool:
     if not scenario:
         return False
     episodes = scenario.get("episodes") or []
     if not episodes:
         return False
-    first = episodes[0] or {}
-    v = select_variant_for_player_count(first, player_count)
+    ep = find_episode_by_id(scenario, episode_id) or (episodes[0] or {})
+    v = select_variant_for_player_count(ep, player_count)
     return bool(v)
 
 
@@ -126,6 +178,7 @@ class Player:
     color: str
     avatar: str = ""  # New: Emoji avatar
     ws: WebSocket | None = None
+    is_spectator: bool = False
 
 
 @dataclass
@@ -133,6 +186,7 @@ class RoomState:
     players: list[Player] = field(default_factory=list)
     host_client_id: str | None = None
     selected_scenario_id: str | None = None
+    selected_episode_id: str | None = None
     phase: str = PHASE_WAIT
     phase_ends_at_ms: int | None = None
     votes: dict[str, int] = field(default_factory=dict)  # clientId -> targetSeat
@@ -146,6 +200,14 @@ class RoomState:
     night_step_ends_at_ms: int | None = None
     night_episode_id: str | None = None
     night_variant_player_count: int | None = None
+    night_waiting_host_step_id: int | None = None
+    night_waiting_actor_ids: set[str] = field(default_factory=set)
+    night_done_actor_ids: set[str] = field(default_factory=set)
+    night_waiting_role_id: str | None = None
+    night_ready_ids: set[str] = field(default_factory=set)
+
+    # If True, when an episode naturally completes and returns to WAIT, auto-advance to next episode (if any).
+    advance_episode_on_return: bool = True
 
     def reseat(self) -> None:
         used_colors = {p.color for p in self.players if p.color}
@@ -162,6 +224,9 @@ class RoomState:
     def connected_count(self) -> int:
         return sum(1 for p in self.players if p.ws is not None)
 
+    def connected_player_count(self) -> int:
+        return sum(1 for p in self.players if p.ws is not None and not p.is_spectator)
+
     def snapshot(self) -> dict[str, Any]:
         return {
             "players": [
@@ -173,11 +238,13 @@ class RoomState:
                     "avatar": p.avatar,
                     "connected": p.ws is not None,
                     "isHost": p.client_id == self.host_client_id,
+                    "isSpectator": bool(p.is_spectator),
                 }
                 for p in self.players
             ],
             "hostClientId": self.host_client_id,
             "selectedScenarioId": self.selected_scenario_id,
+            "selectedEpisodeId": self.selected_episode_id,
             "phase": self.phase,
             "phaseEndsAtMs": self.phase_ends_at_ms,
             "votes": dict(self.votes),
@@ -212,6 +279,15 @@ class GameServer:
         if self._room.phase_ends_at_ms:
             self._phase_task = asyncio.create_task(self._phase_timer(self._room.phase, self._room.phase_ends_at_ms))
 
+    async def _abort_game_locked(self, *, reason: str) -> None:
+        # Host aborted / host left. Return to lobby safely without advancing episode.
+        self._room.advance_episode_on_return = False
+        self._room.votes.clear()
+        self._room.role_by_client_id.clear()
+        self._room.center_roles = []
+        self._reset_night_locked()
+        await self._set_phase_locked(PHASE_WAIT, None)
+
     async def _send_to(self, client_id: str, payload: dict[str, Any]) -> None:
         for p in self._room.players:
             if p.client_id != client_id or p.ws is None:
@@ -236,6 +312,9 @@ class GameServer:
             if phase == PHASE_NIGHT:
                 # Night is driven by the night-step sequencer.
                 return
+            if phase == PHASE_ROLE:
+                await self._begin_night_locked(reason="role_timeout")
+                return
             if phase == PHASE_DEBATE:
                 await self._set_phase_locked(PHASE_VOTE, 30_000)
             elif phase == PHASE_VOTE:
@@ -247,6 +326,27 @@ class GameServer:
                 await self._set_phase_locked(PHASE_ENDING, 15_000)
             elif phase == PHASE_ENDING:
                 self._room.votes.clear()
+                if self._room.advance_episode_on_return:
+                    scenario = self._scenarios.get(self._room.selected_scenario_id or "")
+                    nxt = next_episode_id(scenario, self._room.selected_episode_id)
+                    if nxt:
+                        self._room.selected_episode_id = nxt
+                        can_start = scenario_can_start_for_episode(
+                            scenario, self._room.connected_player_count(), self._room.selected_episode_id
+                        )
+                        await self.broadcast(
+                            {
+                                "type": "scenario_state",
+                                "data": {
+                                    "selectedScenarioId": self._room.selected_scenario_id,
+                                    "selectedEpisodeId": self._room.selected_episode_id,
+                                    "canStart": can_start,
+                                    "playerCount": self._room.connected_player_count(),
+                                    "totalConnected": self._room.connected_count(),
+                                },
+                            }
+                        )
+                self._room.advance_episode_on_return = True
                 await self._set_phase_locked(PHASE_WAIT, None)
 
     def _reset_night_locked(self) -> None:
@@ -255,6 +355,86 @@ class GameServer:
         self._room.night_step_ends_at_ms = None
         self._room.night_episode_id = None
         self._room.night_variant_player_count = None
+        self._room.night_waiting_host_step_id = None
+        self._room.night_waiting_actor_ids.clear()
+        self._room.night_done_actor_ids.clear()
+        self._room.night_waiting_role_id = None
+        self._room.night_ready_ids.clear()
+
+    async def _begin_night_locked(self, *, reason: str) -> None:
+        # Called from ROLE phase when everyone is ready (or timeout).
+        if self._room.phase != PHASE_ROLE:
+            return
+        await self._set_phase_locked(PHASE_NIGHT, None)
+        await self._broadcast_night_step_locked()
+
+    def _active_players_locked(self) -> list[Player]:
+        return [p for p in self._room.players if p.ws is not None and not p.is_spectator]
+
+    def _seat_by_client_id_locked(self, client_id: str) -> int | None:
+        for p in self._room.players:
+            if p.client_id == client_id:
+                return int(p.seat)
+        return None
+
+    def _client_id_by_seat_locked(self, seat: int) -> str | None:
+        for p in self._room.players:
+            if p.ws is None or p.is_spectator:
+                continue
+            if int(p.seat) == int(seat):
+                return p.client_id
+        return None
+
+    def _role_action_required_locked(self, role_id: str, actor_ids: list[str]) -> bool:
+        rid = (role_id or "").strip()
+        if rid in {"seer", "robber", "troublemaker", "drunk"}:
+            return True
+        if rid == "werewolf":
+            # Only lone wolf needs an action (optional center peek).
+            return len(actor_ids) == 1
+        return False
+
+    async def _send_night_private_locked(self, *, step_id: int, role_id: str, actor_ids: list[str]) -> None:
+        rid = (role_id or "").strip()
+        if not rid or not actor_ids:
+            return
+
+        def _seats(ids: list[str]) -> list[int]:
+            out: list[int] = []
+            for cid in ids:
+                seat = self._seat_by_client_id_locked(cid)
+                if seat is not None:
+                    out.append(int(seat))
+            out.sort()
+            return out
+
+        if rid == "minion":
+            wolf_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == "werewolf"]
+            payload = {"wolfSeats": _seats(wolf_ids)}
+        elif rid == "mason":
+            mason_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == "mason"]
+            payload = {"masonSeats": _seats([cid for cid in mason_ids if cid in actor_ids]) or _seats(mason_ids)}
+        elif rid == "werewolf":
+            wolf_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == "werewolf"]
+            payload = {"wolfSeats": _seats(wolf_ids), "lone": len(wolf_ids) == 1, "canPeekCenter": len(wolf_ids) == 1}
+        elif rid == "insomniac":
+            # Will also be sent as night_result on action-less step start.
+            payload = {"currentRole": self._room.role_by_client_id.get(actor_ids[0], "")}
+        else:
+            return
+
+        for cid in actor_ids:
+            await self._send_to(cid, {"type": "night_private", "data": {"stepId": step_id, "roleId": rid, "payload": payload}})
+
+    async def _maybe_advance_night_locked(self, *, reason: str) -> None:
+        if self._room.phase != PHASE_NIGHT:
+            return
+        # Need host ack for this step, and all required actor actions.
+        if self._room.night_waiting_host_step_id is not None:
+            return
+        if self._room.night_waiting_actor_ids and not self._room.night_waiting_actor_ids.issubset(self._room.night_done_actor_ids):
+            return
+        await self._advance_night_locked(reason=reason)
 
     def _build_night_queue_locked(self, *, episode: dict[str, Any], variant: dict[str, Any], player_count: int) -> list[dict[str, Any]]:
         """
@@ -299,14 +479,51 @@ class GameServer:
         step_id = self._room.night_step_id
         # Fallback timeout if host doesn't ack.
         self._room.night_step_ends_at_ms = _now_ms() + 12_000
+        self._room.night_waiting_host_step_id = step_id
+        self._room.night_waiting_actor_ids.clear()
+        self._room.night_done_actor_ids.clear()
+        self._room.night_waiting_role_id = str(item.get("roleId") or "") if item.get("kind") == "role" else None
 
         scenario_id = self._room.selected_scenario_id or ""
+        kind = str(item.get("kind") or "")
+        role_id = str(item.get("roleId") or "")
+
+        active_seats: list[int] = []
+        actor_ids: list[str] = []
+        requires_action = False
+        if kind == "role" and role_id:
+            # Determine actors based on current roles (roles may have swapped earlier).
+            actor_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == role_id]
+            seats = [self._seat_by_client_id_locked(cid) for cid in actor_ids]
+            active_seats = sorted([int(x) for x in seats if x is not None])
+            requires_action = self._role_action_required_locked(role_id, actor_ids)
+            if requires_action and actor_ids:
+                # For now, accept only one actor for interactive roles.
+                self._room.night_waiting_actor_ids.add(actor_ids[0])
+            # Informational private hints.
+            await self._send_night_private_locked(step_id=step_id, role_id=role_id, actor_ids=actor_ids)
+            # Insomniac reveals current card at its wake step.
+            if role_id == "insomniac" and actor_ids:
+                await self._send_to(
+                    actor_ids[0],
+                    {
+                        "type": "night_result",
+                        "data": {
+                            "stepId": step_id,
+                            "roleId": "insomniac",
+                            "result": {"currentRole": self._room.role_by_client_id.get(actor_ids[0], "")},
+                        },
+                    },
+                )
+
         payload = {
             "type": "night_step",
             "data": {
                 "stepId": step_id,
                 "kind": item.get("kind"),
                 "roleId": item.get("roleId"),
+                "activeSeats": active_seats,
+                "requiresAction": requires_action,
                 "sectionKey": item.get("sectionKey"),
                 "scenarioId": scenario_id,
                 "episodeId": self._room.night_episode_id,
@@ -332,6 +549,11 @@ class GameServer:
                 return
             if self._room.night_step_id != step_id or self._room.night_step_ends_at_ms != ends_at_ms:
                 return
+            # Timeout: skip waiting for host/action and advance.
+            self._room.night_waiting_host_step_id = None
+            self._room.night_waiting_actor_ids.clear()
+            self._room.night_done_actor_ids.clear()
+            self._room.night_waiting_role_id = None
             await self._advance_night_locked(reason="timeout")
 
     async def _advance_night_locked(self, *, reason: str) -> None:
@@ -352,7 +574,108 @@ class GameServer:
                 return
             if int(step_id) != int(self._room.night_step_id):
                 return
-            await self._advance_night_locked(reason="ack")
+            # Host ack for the currently broadcast step.
+            if self._room.night_waiting_host_step_id == int(step_id):
+                self._room.night_waiting_host_step_id = None
+            await self._maybe_advance_night_locked(reason="ack")
+
+    async def handle_night_action(self, client_id: str, step_id: int, action: dict[str, Any]) -> None:
+        async with self._lock:
+            if self._room.phase != PHASE_NIGHT:
+                return
+            if int(step_id) != int(self._room.night_step_id):
+                return
+            if client_id not in self._room.night_waiting_actor_ids:
+                return
+            role_id = (self._room.night_waiting_role_id or "").strip()
+            if not role_id:
+                return
+
+            # Apply action (best-effort; invalid actions are ignored).
+            if role_id == "seer":
+                mode = str(action.get("mode") or "")
+                if mode == "player":
+                    seat = int(action.get("seat") or 0)
+                    tid = self._client_id_by_seat_locked(seat)
+                    if tid:
+                        await self._send_to(
+                            client_id,
+                            {
+                                "type": "night_result",
+                                "data": {"stepId": step_id, "roleId": "seer", "result": {"seat": seat, "role": self._room.role_by_client_id.get(tid, "")}},
+                            },
+                        )
+                elif mode == "center":
+                    idxs = action.get("indices") or []
+                    try:
+                        idxs = [int(x) for x in list(idxs)][:2]
+                    except Exception:
+                        idxs = []
+                    idxs = [i for i in idxs if 0 <= i <= 2]
+                    if len(idxs) == 2 and idxs[0] != idxs[1] and len(self._room.center_roles) >= 3:
+                        res = [{"index": i, "role": self._room.center_roles[i]} for i in idxs]
+                        await self._send_to(
+                            client_id,
+                            {"type": "night_result", "data": {"stepId": step_id, "roleId": "seer", "result": {"center": res}}},
+                        )
+            elif role_id == "robber":
+                seat = int(action.get("seat") or 0)
+                tid = self._client_id_by_seat_locked(seat)
+                if tid and tid != client_id:
+                    a = self._room.role_by_client_id.get(client_id)
+                    b = self._room.role_by_client_id.get(tid)
+                    if a is not None and b is not None:
+                        self._room.role_by_client_id[client_id], self._room.role_by_client_id[tid] = b, a
+                        await self._send_to(
+                            client_id,
+                            {"type": "night_result", "data": {"stepId": step_id, "roleId": "robber", "result": {"newRole": b, "targetSeat": seat}}},
+                        )
+            elif role_id == "troublemaker":
+                seats = action.get("seats") or []
+                try:
+                    seats = [int(x) for x in list(seats)][:2]
+                except Exception:
+                    seats = []
+                if len(seats) == 2 and seats[0] != seats[1]:
+                    a_id = self._client_id_by_seat_locked(seats[0])
+                    b_id = self._client_id_by_seat_locked(seats[1])
+                    if a_id and b_id and a_id != b_id:
+                        ra = self._room.role_by_client_id.get(a_id)
+                        rb = self._room.role_by_client_id.get(b_id)
+                        if ra is not None and rb is not None:
+                            self._room.role_by_client_id[a_id], self._room.role_by_client_id[b_id] = rb, ra
+                            await self._send_to(
+                                client_id,
+                                {
+                                    "type": "night_result",
+                                    "data": {"stepId": step_id, "roleId": "troublemaker", "result": {"swappedSeats": seats}},
+                                },
+                            )
+            elif role_id == "drunk":
+                idx = int(action.get("centerIndex") or -1)
+                if 0 <= idx <= 2 and len(self._room.center_roles) >= 3:
+                    cur = self._room.role_by_client_id.get(client_id)
+                    if cur is not None:
+                        self._room.role_by_client_id[client_id], self._room.center_roles[idx] = self._room.center_roles[idx], cur
+                        await self._send_to(
+                            client_id,
+                            {"type": "night_result", "data": {"stepId": step_id, "roleId": "drunk", "result": {"swapped": True}}},
+                        )
+            elif role_id == "werewolf":
+                # Lone wolf optional center peek.
+                idx = int(action.get("centerIndex") or -1)
+                wolf_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == "werewolf"]
+                if len(wolf_ids) == 1 and wolf_ids[0] == client_id and 0 <= idx <= 2 and len(self._room.center_roles) >= 3:
+                    await self._send_to(
+                        client_id,
+                        {
+                            "type": "night_result",
+                            "data": {"stepId": step_id, "roleId": "werewolf", "result": {"centerIndex": idx, "role": self._room.center_roles[idx]}},
+                        },
+                    )
+
+            self._room.night_done_actor_ids.add(client_id)
+            await self._maybe_advance_night_locked(reason="action")
 
     def scenario_list(self) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
@@ -376,6 +699,23 @@ class GameServer:
 
     def scenario_get(self, scenario_id: str) -> dict[str, Any] | None:
         return self._scenarios.get(scenario_id)
+
+    async def _broadcast_scenario_state_locked(self) -> None:
+        scenario = self._scenarios.get(self._room.selected_scenario_id or "")
+        player_count = self._room.connected_player_count()
+        can_start = scenario_can_start_for_episode(scenario, player_count, self._room.selected_episode_id)
+        await self.broadcast(
+            {
+                "type": "scenario_state",
+                "data": {
+                    "selectedScenarioId": self._room.selected_scenario_id,
+                    "selectedEpisodeId": self._room.selected_episode_id,
+                    "canStart": can_start,
+                    "playerCount": player_count,
+                    "totalConnected": self._room.connected_count(),
+                },
+            }
+        )
 
     async def broadcast(self, payload: dict[str, Any]) -> None:
         dead: list[str] = []
@@ -416,6 +756,7 @@ class GameServer:
 
             name = _safe_name(name)
             avatar = (avatar or "").strip()
+            want_spectator = bool(getattr(ws, "_one_night_spectator", False))
 
             existing = next((p for p in self._room.players if p.client_id == client_id), None)
             if existing:
@@ -424,6 +765,8 @@ class GameServer:
                 existing.avatar = avatar
             else:
                 seat = len(self._room.players) + 1
+                # If game already started or room already has 10 active players, extra joins become spectators.
+                is_spectator = bool(want_spectator) or (self._room.phase != PHASE_WAIT) or (self._room.connected_player_count() >= 10)
                 self._room.players.append(
                     Player(
                         client_id=client_id,
@@ -432,6 +775,7 @@ class GameServer:
                         color=_generate_seat_color(seat),
                         avatar=avatar,
                         ws=ws,
+                        is_spectator=is_spectator,
                     )
                 )
                 if self._room.host_client_id is None:
@@ -440,7 +784,9 @@ class GameServer:
             self._room.reseat()
 
             scenario = self._scenarios.get(self._room.selected_scenario_id or "")
-            can_start = scenario_can_start(scenario, self._room.connected_count())
+            can_start = scenario_can_start_for_episode(
+                scenario, self._room.connected_player_count(), self._room.selected_episode_id
+            )
 
             await ws.send_json({"type": "hello", "serverTimeMs": _now_ms(), "debugEnabled": self._debug_enabled})
             await ws.send_json({"type": "room_snapshot", "data": self._room.snapshot()})
@@ -450,8 +796,10 @@ class GameServer:
                     "type": "scenario_state",
                     "data": {
                         "selectedScenarioId": self._room.selected_scenario_id,
+                        "selectedEpisodeId": self._room.selected_episode_id,
                         "canStart": can_start,
-                        "playerCount": self._room.connected_count(),
+                        "playerCount": self._room.connected_player_count(),
+                        "totalConnected": self._room.connected_count(),
                     },
                 }
             )
@@ -459,17 +807,25 @@ class GameServer:
 
     async def handle_disconnect(self, client_id: str) -> None:
         async with self._lock:
+            was_host = client_id == self._room.host_client_id
+            was_in_game = self._room.phase != PHASE_WAIT
+            if was_host and was_in_game:
+                await self._abort_game_locked(reason="host_left")
             await self._disconnect_client_locked(client_id)
             scenario = self._scenarios.get(self._room.selected_scenario_id or "")
-            can_start = scenario_can_start(scenario, self._room.connected_count())
+            can_start = scenario_can_start_for_episode(
+                scenario, self._room.connected_player_count(), self._room.selected_episode_id
+            )
             await self.broadcast({"type": "host_changed", "data": {"hostClientId": self._room.host_client_id}})
             await self.broadcast(
                 {
                     "type": "scenario_state",
                     "data": {
                         "selectedScenarioId": self._room.selected_scenario_id,
+                        "selectedEpisodeId": self._room.selected_episode_id,
                         "canStart": can_start,
-                        "playerCount": self._room.connected_count(),
+                        "playerCount": self._room.connected_player_count(),
+                        "totalConnected": self._room.connected_count(),
                     },
                 }
             )
@@ -479,20 +835,59 @@ class GameServer:
         async with self._lock:
             if client_id != self._room.host_client_id:
                 return
+            if self._room.phase != PHASE_WAIT:
+                return
             scenario_id = (scenario_id or "").strip()
             if scenario_id not in self._scenarios:
                 return
             self._room.selected_scenario_id = scenario_id
+            self._room.selected_episode_id = first_episode_id(self._scenarios.get(scenario_id))
 
             scenario = self._scenarios.get(scenario_id)
-            can_start = scenario_can_start(scenario, self._room.connected_count())
+            can_start = scenario_can_start_for_episode(
+                scenario, self._room.connected_player_count(), self._room.selected_episode_id
+            )
             await self.broadcast(
                 {
                     "type": "scenario_state",
                     "data": {
                         "selectedScenarioId": self._room.selected_scenario_id,
+                        "selectedEpisodeId": self._room.selected_episode_id,
                         "canStart": can_start,
-                        "playerCount": self._room.connected_count(),
+                        "playerCount": self._room.connected_player_count(),
+                        "totalConnected": self._room.connected_count(),
+                    },
+                }
+            )
+            await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
+
+    async def handle_episode_select(self, client_id: str, episode_id: str) -> None:
+        async with self._lock:
+            if client_id != self._room.host_client_id:
+                return
+            if self._room.phase != PHASE_WAIT:
+                return
+            scenario = self._scenarios.get(self._room.selected_scenario_id or "")
+            if not scenario:
+                return
+            episode_id = (episode_id or "").strip()
+            if not episode_id:
+                return
+            if not find_episode_by_id(scenario, episode_id):
+                return
+            self._room.selected_episode_id = episode_id
+            can_start = scenario_can_start_for_episode(
+                scenario, self._room.connected_player_count(), self._room.selected_episode_id
+            )
+            await self.broadcast(
+                {
+                    "type": "scenario_state",
+                    "data": {
+                        "selectedScenarioId": self._room.selected_scenario_id,
+                        "selectedEpisodeId": self._room.selected_episode_id,
+                        "canStart": can_start,
+                        "playerCount": self._room.connected_player_count(),
+                        "totalConnected": self._room.connected_count(),
                     },
                 }
             )
@@ -502,7 +897,7 @@ class GameServer:
         episodes = scenario.get("episodes") or []
         if not episodes:
             return False
-        ep = episodes[0] or {}
+        ep = find_episode_by_id(scenario, self._room.selected_episode_id) or (episodes[0] or {})
         variant = select_variant_for_player_count(ep, player_count)
         if not variant:
             return False
@@ -510,7 +905,7 @@ class GameServer:
         if len(deck) < player_count + 3:
             return False
         random.shuffle(deck)
-        player_ids = [p.client_id for p in self._room.players if p.ws is not None]
+        player_ids = [p.client_id for p in self._room.players if p.ws is not None and not p.is_spectator]
         if len(player_ids) != player_count:
             return False
         self._room.role_by_client_id = {cid: deck[i] for i, cid in enumerate(player_ids)}
@@ -537,26 +932,62 @@ class GameServer:
         async with self._lock:
             if client_id != self._room.host_client_id:
                 return
+            if self._room.phase != PHASE_WAIT:
+                return
             scenario = self._scenarios.get(self._room.selected_scenario_id or "")
-            if not scenario_can_start(scenario, self._room.connected_count()):
+            if not scenario_can_start_for_episode(
+                scenario, self._room.connected_player_count(), self._room.selected_episode_id
+            ):
                 return
             self._room.votes.clear()
+            self._room.advance_episode_on_return = True
             # Assign roles and start night sequencer.
-            ok = await self._assign_roles_locked(scenario=scenario, player_count=self._room.connected_count())
+            ok = await self._assign_roles_locked(scenario=scenario, player_count=self._room.connected_player_count())
             if not ok:
                 return
+            self._room.night_ready_ids.clear()
 
-            for cid, role_id in self._room.role_by_client_id.items():
-                await self._send_to(cid, {"type": "role_assignment", "data": {"roleId": role_id}})
+            active_ids = {p.client_id for p in self._room.players if p.ws is not None and not p.is_spectator}
+            for p in self._room.players:
+                if p.ws is None:
+                    continue
+                if p.client_id in active_ids:
+                    role_id = self._room.role_by_client_id.get(p.client_id, "")
+                    await self._send_to(p.client_id, {"type": "role_assignment", "data": {"roleId": role_id}})
+                else:
+                    await self._send_to(p.client_id, {"type": "role_assignment", "data": {"roleId": ""}})
 
-            await self._set_phase_locked(PHASE_NIGHT, None)
-            await self._broadcast_night_step_locked()
+            # Give everyone time to read their role; night begins after all confirm (or timeout).
+            await self._set_phase_locked(PHASE_ROLE, 90_000)
+
+    async def handle_end_game(self, client_id: str) -> None:
+        async with self._lock:
+            if client_id != self._room.host_client_id:
+                return
+            if self._room.phase == PHASE_WAIT:
+                # Still allow "end" to hard-reset in lobby.
+                await self._abort_game_locked(reason="host_end_from_wait")
+                return
+            await self._abort_game_locked(reason="host_end")
+
+    async def handle_night_ready(self, client_id: str) -> None:
+        async with self._lock:
+            if self._room.phase != PHASE_ROLE:
+                return
+            p = next((x for x in self._room.players if x.client_id == client_id and x.ws is not None), None)
+            if not p or p.is_spectator:
+                return
+            self._room.night_ready_ids.add(client_id)
+
+            active_ids = {x.client_id for x in self._active_players_locked()}
+            if active_ids and self._room.night_ready_ids.issuperset(active_ids):
+                await self._begin_night_locked(reason="all_ready")
 
     async def handle_submit_vote(self, client_id: str, target_seat: int) -> None:
         async with self._lock:
             if self._room.phase not in (PHASE_VOTE,):
                 return
-            connected_ids = {p.client_id for p in self._room.players if p.ws is not None}
+            connected_ids = {p.client_id for p in self._room.players if p.ws is not None and not p.is_spectator}
             if client_id not in connected_ids:
                 return
             self._room.votes[client_id] = int(target_seat)
@@ -587,7 +1018,7 @@ class GameServer:
                 await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
 
     async def _finalize_vote_locked(self, *, timeout: bool) -> None:
-        connected_ids = {p.client_id for p in self._room.players if p.ws is not None}
+        connected_ids = {p.client_id for p in self._room.players if p.ws is not None and not p.is_spectator}
         counts: dict[int, int] = {}
         for cid in connected_ids:
             if cid not in self._room.votes:
@@ -610,11 +1041,13 @@ class GameServer:
                 sid = (data.get("scenarioId") or "").strip()
                 if sid in self._scenarios:
                     self._room.selected_scenario_id = sid
+                    self._room.selected_episode_id = first_episode_id(self._scenarios.get(sid))
             elif action == "set_phase":
                 phase = (data.get("phase") or "").strip().upper()
                 duration_sec = int(data.get("durationSec") or 30)
                 if phase in {
                     PHASE_WAIT,
+                    PHASE_ROLE,
                     PHASE_NIGHT,
                     PHASE_DEBATE,
                     PHASE_VOTE,
@@ -638,14 +1071,18 @@ class GameServer:
                 await self._set_phase_locked(PHASE_NIGHT, 10_000)
 
             scenario = self._scenarios.get(self._room.selected_scenario_id or "")
-            can_start = scenario_can_start(scenario, self._room.connected_count())
+            can_start = scenario_can_start_for_episode(
+                scenario, self._room.connected_player_count(), self._room.selected_episode_id
+            )
             await self.broadcast(
                 {
                     "type": "scenario_state",
                     "data": {
                         "selectedScenarioId": self._room.selected_scenario_id,
+                        "selectedEpisodeId": self._room.selected_episode_id,
                         "canStart": can_start,
-                        "playerCount": self._room.connected_count(),
+                        "playerCount": self._room.connected_player_count(),
+                        "totalConnected": self._room.connected_count(),
                     },
                 }
             )
@@ -684,9 +1121,12 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 client_id = str(data.get("clientId") or "")
                 name = str(data.get("name") or "")
                 avatar = str(data.get("avatar") or "")
+                setattr(ws, "_one_night_spectator", bool(data.get("spectator") or False))
                 await game.handle_join(ws, client_id, name, avatar)
             elif t == "scenario_select":
                 await game.handle_scenario_select(client_id, str(data.get("scenarioId") or ""))
+            elif t == "episode_select":
+                await game.handle_episode_select(client_id, str(data.get("episodeId") or ""))
             elif t == "start_game":
                 await game.handle_start_game(client_id)
             elif t == "reroll":
@@ -695,6 +1135,12 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 await game.handle_submit_vote(client_id, int(data.get("targetSeat") or 0))
             elif t == "night_step_done":
                 await game.handle_night_step_done(client_id, int(data.get("stepId") or 0))
+            elif t == "night_action":
+                await game.handle_night_action(client_id, int(data.get("stepId") or 0), dict(data.get("action") or {}))
+            elif t == "night_ready":
+                await game.handle_night_ready(client_id)
+            elif t == "end_game":
+                await game.handle_end_game(client_id)
             elif t == "debug":
                 await game.handle_debug(client_id, str(data.get("action") or ""), dict(data.get("data") or {}))
             elif t == "leave":

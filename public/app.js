@@ -1,6 +1,44 @@
 /* global speechSynthesis */
 
 const qs = (sel) => document.querySelector(sel);
+
+let viewportFixInstalled = false;
+let viewportRaf = 0;
+
+function updateAppViewportVars() {
+  const vv = window.visualViewport;
+  const height = Math.max(1, Math.floor(vv?.height || window.innerHeight || 0));
+  const width = Math.max(1, Math.floor(vv?.width || window.innerWidth || 0));
+  const top = Math.max(0, Math.floor(vv?.offsetTop || 0));
+  const left = Math.max(0, Math.floor(vv?.offsetLeft || 0));
+  document.documentElement.style.setProperty("--app-height", `${height}px`);
+  document.documentElement.style.setProperty("--app-width", `${width}px`);
+  document.documentElement.style.setProperty("--vv-top", `${top}px`);
+  document.documentElement.style.setProperty("--vv-left", `${left}px`);
+}
+
+function scheduleAppViewportVars() {
+  if (viewportRaf) return;
+  viewportRaf = requestAnimationFrame(() => {
+    viewportRaf = 0;
+    updateAppViewportVars();
+  });
+}
+
+function installViewportFix() {
+  if (viewportFixInstalled) return;
+  viewportFixInstalled = true;
+
+  scheduleAppViewportVars();
+  window.addEventListener("resize", scheduleAppViewportVars, { passive: true });
+  window.addEventListener("orientationchange", scheduleAppViewportVars, { passive: true });
+  window.addEventListener("focus", scheduleAppViewportVars, { passive: true });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", scheduleAppViewportVars, { passive: true });
+    window.visualViewport.addEventListener("scroll", scheduleAppViewportVars, { passive: true });
+  }
+}
 const joinEl = qs("#join");
 const roomEl = qs("#room");
 const gridEl = qs("#grid");
@@ -16,11 +54,16 @@ const connDot = qs("#connDot");
 const phaseLabel = qs("#phaseLabel");
 const scenarioLabel = qs("#scenarioLabel");
 const timerEl = qs("#timer");
+const hostEndBtn = qs("#hostEndBtn");
 
 const scenarioModal = qs("#scenarioModal");
 const scenarioListEl = qs("#scenarioList");
 const scenarioBackdrop = qs("#scenarioBackdrop");
 const scenarioClose = qs("#scenarioClose");
+const episodePickerEl = qs("#episodePicker");
+const episodeBackBtn = qs("#episodeBack");
+const episodeListEl = qs("#episodeList");
+const episodePickerTitleEl = qs("#episodePickerTitle");
 
 const voteModal = qs("#voteModal");
 const voteGridEl = qs("#voteGrid");
@@ -31,6 +74,17 @@ const nightOverlay = qs("#nightOverlay");
 const nightTitle = qs("#nightTitle");
 const nightRole = qs("#nightRole");
 const nightHint = qs("#nightHint");
+const nightActive = qs("#nightActive");
+const nightPrivate = qs("#nightPrivate");
+const nightAction = qs("#nightAction");
+
+const roleOverlay = qs("#roleOverlay");
+const roleTitle = qs("#roleTitle");
+const roleName = qs("#roleName");
+const roleDesc = qs("#roleDesc");
+const roleProfile = qs("#roleProfile");
+const roleAction = qs("#roleAction");
+const eyesClosedBtn = qs("#eyesClosedBtn");
 
 const url = new URL(window.location.href);
 const debugClientId = url.searchParams.get("debugClientId") || "";
@@ -149,7 +203,13 @@ const state = {
   tickTimer: null,
   lastNarrationKey: "",
   myRoleId: "",
+  mySeat: 0,
+  isSpectator: false,
   nightStep: null,
+  nightPrivate: null,
+  nightResult: null,
+  nightUi: null,
+  roleReady: false,
   lastNightStepId: 0,
   bgm: createBgmEngine(),
   narration: createNarrationEngine(),
@@ -157,11 +217,16 @@ const state = {
 
 const scenarioDetailInflight = new Set();
 
+const episodePickerState = {
+  scenarioId: "",
+};
+
 nameInput.value = state.name;
 
 function setBgGradient(phase) {
   const map = {
     WAIT: "var(--grad-wait)",
+    ROLE: "var(--grad-night)",
     NIGHT: "var(--grad-night)",
     DEBATE: "var(--grad-debate)",
     VOTE: "var(--grad-vote)",
@@ -235,8 +300,17 @@ function render() {
 
   const phase = room.phase || "WAIT";
   const amHost = isHost();
+  syncHostEndButton();
+  const me = (room.players || []).find((p) => p.clientId === state.clientId) || null;
+  state.mySeat = Number(me?.seat || 0);
+  state.isSpectator = !!me?.isSpectator;
 
-  scenarioLabel.textContent = room.selectedScenarioId ? `· ${room.selectedScenarioId}` : "";
+  if (room.selectedScenarioId) {
+    const ep = room.selectedEpisodeId ? ` / ${room.selectedEpisodeId}` : "";
+    scenarioLabel.textContent = `· ${room.selectedScenarioId}${ep}`;
+  } else {
+    scenarioLabel.textContent = "";
+  }
   
   // Button Visibility Logic
   if (phase === "WAIT") {
@@ -257,7 +331,7 @@ function render() {
     startBtn.classList.add("hidden");
   }
 
-  voteBtn.classList.toggle("hidden", phase !== "VOTE");
+  voteBtn.classList.toggle("hidden", phase !== "VOTE" || state.isSpectator);
 
   const players = room.players || [];
   gridEl.innerHTML = "";
@@ -328,6 +402,7 @@ function render() {
   }
 
   renderInfoDeck();
+  renderRoleOverlay();
   renderNightOverlay();
 }
 
@@ -388,7 +463,15 @@ function renderInfoDeck() {
     icon: "📖",
     title: scenario.title || sid,
     tag: "시나리오",
-    text: scenario.description || "이 시나리오에서 펼쳐지는 미스터리한 사건을 해결하세요."
+    text:
+      (scenario.description || "이 시나리오에서 펼쳐지는 미스터리한 사건을 해결하세요.") +
+      (() => {
+        const eps = Array.isArray(scenario.episodes) ? scenario.episodes : [];
+        const selectedEpisodeId = state.room?.selectedEpisodeId || state.scenarioState?.selectedEpisodeId || "";
+        const ep = eps.find((e) => (e?.episodeId || "") === selectedEpisodeId) || eps[0];
+        const epTitle = ep?.title || ep?.episodeId || "";
+        return epTitle ? `<br><br><b>에피소드:</b> ${escapeHtml(epTitle)}` : "";
+      })()
   });
 
   // 2. Dynamic Role Slides
@@ -396,7 +479,9 @@ function renderInfoDeck() {
   // If waiting, maybe show max player variant or just first episode's default?
   // Let's iterate ALL unique roles in the scenario to be safe, or just current variant.
   // Using current variant is better for context.
-  const ep = (scenario.episodes || [])[0];
+  const selectedEpisodeId = state.room?.selectedEpisodeId || state.scenarioState?.selectedEpisodeId || "";
+  const eps = Array.isArray(scenario.episodes) ? scenario.episodes : [];
+  const ep = eps.find((e) => (e?.episodeId || "") === selectedEpisodeId) || eps[0];
   const fallbackCount =
     connectedCount > 0 ? connectedCount : Math.max(...(scenario.recommendedPlayerCounts || [5, 6, 7, 8, 9, 10]));
   const { variant } = selectVariantForPlayerCount(ep, fallbackCount); // Default to max recommended
@@ -485,29 +570,274 @@ function renderNightOverlay() {
   }
 
   nightOverlay.classList.remove("hidden");
-  const roleId = state.myRoleId || "";
-  const kind = step.kind || "";
-  const activeRole = step.roleId || "";
-  const activeRoleName = getRoleDisplayName(activeRole);
-  const myRoleName = getRoleDisplayName(roleId);
+  // Default night mode: fullscreen profile card (consistent brightness), unless I'm actively acting.
+  const kind = String(step.kind || "");
+  const activeRole = String(step.roleId || "");
+  const activeRoleName = activeRole ? getRoleDisplayName(activeRole) : "";
+  const activeSeats = Array.isArray(step.activeSeats) ? step.activeSeats.map((n) => Number(n)) : [];
+  const isActor = !!state.mySeat && activeSeats.includes(Number(state.mySeat)) && !state.isSpectator;
+  nightOverlay.classList.toggle("nightOverlay--fullscreen", !isActor);
 
   const stepLabel = `${String(step.stepIndex || 0)}/${String(step.stepCount || 0)}`;
   nightTitle.textContent = `NIGHT · ${stepLabel}`;
 
-  nightRole.textContent = roleId ? `내 역할: ${myRoleName}` : "내 역할: (미정)";
+  nightRole.textContent = state.isSpectator ? "관전 중" : state.myRoleId ? `내 역할: ${getRoleDisplayName(state.myRoleId)}` : "내 역할: (미정)";
 
-  if (kind === "role") {
-    if (roleId && roleId === activeRole) {
-      nightHint.textContent = `${activeRoleName} 차례입니다. 눈을 뜨고 행동하세요.`;
-    } else {
-      nightHint.textContent = `${activeRoleName} 차례입니다. 눈을 감고 기다리세요.`;
-    }
-  } else if (kind === "opening") {
-    nightHint.textContent = "모두 눈을 감고 밤을 시작합니다.";
-  } else if (kind === "outro") {
+  // Reset containers
+  nightActive.innerHTML = "";
+  nightPrivate.classList.add("hidden");
+  nightPrivate.innerHTML = "";
+  nightAction.classList.add("hidden");
+  nightAction.innerHTML = "";
+
+  const players = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
+  const bySeat = new Map(players.map((p) => [Number(p.seat), p]));
+
+  const buildLargeCard = (p, badgeText) => {
+    const el = document.createElement("div");
+    el.className = "profileCardLarge";
+    el.style.setProperty("--p-color", p?.color || "#888");
+    el.innerHTML = `
+      <div class="profileCardLarge__top">
+        <div class="profileCardLarge__seat">${escapeHtml(String(p?.seat ?? ""))}</div>
+        <div class="profileCardLarge__badge">${escapeHtml(badgeText || "")}</div>
+      </div>
+      <div class="profileCardLarge__avatar">${escapeHtml(p?.avatar || "👤")}</div>
+      <div class="profileCardLarge__name">${escapeHtml(p?.name || "")}</div>
+    `;
+    return el;
+  };
+
+  const me = (state.room?.players || []).find((p) => p.clientId === state.clientId) || null;
+  const myCard = me ? buildLargeCard(me, "EYES CLOSED") : null;
+
+  if (kind === "opening") {
+    nightHint.textContent = "모두 눈을 감고 휴대폰을 내려놓으세요.";
+    if (myCard) nightActive.appendChild(myCard);
+    return;
+  }
+  if (kind === "outro") {
     nightHint.textContent = "밤이 끝났습니다. 모두 눈을 뜨세요.";
-  } else {
+    if (myCard) nightActive.appendChild(myCard);
+    return;
+  }
+
+  // ROLE steps
+  if (kind !== "role") {
     nightHint.textContent = "밤 진행 중...";
+    return;
+  }
+
+  // Default (non-actor): keep my profile card fullscreen until day.
+  if (!isActor) {
+    nightHint.textContent = `${activeRoleName || "누군가"} 차례입니다. 계속 눈을 감고 기다리세요.`;
+    if (myCard) nightActive.appendChild(myCard);
+    return;
+  }
+
+  // Actor device: show interaction UI (and keep brightness the same).
+  nightHint.textContent = `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`;
+
+  // Private hint payloads (server-sent).
+  const priv = state.nightPrivate?.payload || null;
+  if (priv) {
+    nightPrivate.classList.remove("hidden");
+    // Keep text minimal; no secrets beyond what server intended.
+    nightPrivate.innerHTML = `<div>${escapeHtml(JSON.stringify(priv))}</div>`;
+  }
+
+  const stepId = Number(step.stepId || 0);
+  const roleId = activeRole;
+
+  const setChoiceState = (next) => {
+    state.nightUi = { ...(state.nightUi || {}), ...next };
+    renderNightOverlay();
+  };
+
+  const renderPlayerChoices = ({ selectedSeats = [], max = 1 } = {}) => {
+    const row = document.createElement("div");
+    row.className = "nightAction__row";
+    for (const p of players) {
+      const b = document.createElement("button");
+      b.className = "nightChoice";
+      b.textContent = `${p.seat}`;
+      b.style.setProperty("--p-color", p.color || "#888");
+      if (selectedSeats.includes(Number(p.seat))) b.classList.add("nightChoice--selected");
+      b.addEventListener("click", () => {
+        const seat = Number(p.seat);
+        let nextSel = [...selectedSeats];
+        if (nextSel.includes(seat)) nextSel = nextSel.filter((x) => x !== seat);
+        else if (max === 1) nextSel = [seat];
+        else if (nextSel.length < max) nextSel.push(seat);
+        else nextSel = [nextSel[1], seat];
+        setChoiceState({ selectedSeats: nextSel });
+      });
+      row.appendChild(b);
+    }
+    return row;
+  };
+
+  const renderCenterChoices = ({ selected = [], max = 1 } = {}) => {
+    const row = document.createElement("div");
+    row.className = "nightAction__row";
+    for (const idx of [0, 1, 2]) {
+      const b = document.createElement("button");
+      b.className = "nightChoice";
+      b.textContent = `센터 ${idx + 1}`;
+      if (selected.includes(idx)) b.classList.add("nightChoice--selected");
+      b.addEventListener("click", () => {
+        let next = [...selected];
+        if (next.includes(idx)) next = next.filter((x) => x !== idx);
+        else if (max === 1) next = [idx];
+        else if (next.length < max) next.push(idx);
+        else next = [next[1], idx];
+        setChoiceState({ selectedCenter: next });
+      });
+      row.appendChild(b);
+    }
+    return row;
+  };
+
+  const submitBtn = (label, onClick) => {
+    const b = document.createElement("button");
+    b.className = "btn btn--primary";
+    b.textContent = label;
+    b.addEventListener("click", onClick);
+    return b;
+  };
+
+  const ui = state.nightUi || {};
+  nightAction.classList.remove("hidden");
+
+  if (roleId === "seer") {
+    const mode = ui.mode || "player";
+    const top = document.createElement("div");
+    top.className = "nightAction__row";
+    const m1 = document.createElement("button");
+    m1.className = "nightChoice" + (mode === "player" ? " nightChoice--selected" : "");
+    m1.textContent = "플레이어 1명";
+    m1.addEventListener("click", () => setChoiceState({ mode: "player", selectedSeats: [], selectedCenter: [] }));
+    const m2 = document.createElement("button");
+    m2.className = "nightChoice" + (mode === "center" ? " nightChoice--selected" : "");
+    m2.textContent = "센터 2장";
+    m2.addEventListener("click", () => setChoiceState({ mode: "center", selectedSeats: [], selectedCenter: [] }));
+    top.appendChild(m1);
+    top.appendChild(m2);
+    nightAction.appendChild(top);
+
+    if (mode === "player") {
+      nightAction.appendChild(renderPlayerChoices({ selectedSeats: ui.selectedSeats || [], max: 1 }));
+      nightAction.appendChild(
+        submitBtn("확인", () => {
+          const seat = (ui.selectedSeats || [])[0];
+          if (!seat) return;
+          send({ type: "night_action", data: { stepId, action: { mode: "player", seat } } });
+        })
+      );
+    } else {
+      nightAction.appendChild(renderCenterChoices({ selected: ui.selectedCenter || [], max: 2 }));
+      nightAction.appendChild(
+        submitBtn("확인", () => {
+          const indices = ui.selectedCenter || [];
+          if (!Array.isArray(indices) || indices.length !== 2) return;
+          send({ type: "night_action", data: { stepId, action: { mode: "center", indices } } });
+        })
+      );
+    }
+  } else if (roleId === "robber") {
+    nightAction.appendChild(renderPlayerChoices({ selectedSeats: ui.selectedSeats || [], max: 1 }));
+    nightAction.appendChild(
+      submitBtn("교환", () => {
+        const seat = (ui.selectedSeats || [])[0];
+        if (!seat) return;
+        send({ type: "night_action", data: { stepId, action: { seat } } });
+      })
+    );
+  } else if (roleId === "troublemaker") {
+    nightAction.appendChild(renderPlayerChoices({ selectedSeats: ui.selectedSeats || [], max: 2 }));
+    nightAction.appendChild(
+      submitBtn("교환", () => {
+        const seats = ui.selectedSeats || [];
+        if (!Array.isArray(seats) || seats.length !== 2) return;
+        send({ type: "night_action", data: { stepId, action: { seats } } });
+      })
+    );
+  } else if (roleId === "drunk") {
+    nightAction.appendChild(renderCenterChoices({ selected: ui.selectedCenter || [], max: 1 }));
+    nightAction.appendChild(
+      submitBtn("교환", () => {
+        const centerIndex = (ui.selectedCenter || [])[0];
+        if (centerIndex === undefined || centerIndex === null) return;
+        send({ type: "night_action", data: { stepId, action: { centerIndex } } });
+      })
+    );
+  } else if (roleId === "werewolf") {
+    // Lone wolf optional peek.
+    const canPeek = !!(state.nightPrivate?.payload && state.nightPrivate.payload.canPeekCenter);
+    if (!canPeek) {
+      nightAction.classList.add("hidden");
+      nightAction.innerHTML = "";
+    } else {
+      nightAction.appendChild(renderCenterChoices({ selected: ui.selectedCenter || [], max: 1 }));
+      nightAction.appendChild(
+        submitBtn("센터 확인", () => {
+          const centerIndex = (ui.selectedCenter || [])[0];
+          if (centerIndex === undefined || centerIndex === null) return;
+          send({ type: "night_action", data: { stepId, action: { centerIndex } } });
+        })
+      );
+    }
+  } else {
+    nightAction.classList.add("hidden");
+    nightAction.innerHTML = "";
+  }
+
+  // Show last private result (actor-only)
+  if (state.nightResult?.result) {
+    nightPrivate.classList.remove("hidden");
+    nightPrivate.innerHTML = `<div>${escapeHtml(JSON.stringify(state.nightResult.result))}</div>`;
+  }
+}
+
+function renderRoleOverlay() {
+  const phase = state.room?.phase || "WAIT";
+  if (phase !== "ROLE") {
+    roleOverlay.classList.add("hidden");
+    return;
+  }
+  roleOverlay.classList.remove("hidden");
+  roleOverlay.classList.toggle("nightOverlay--fullscreen", true);
+  roleTitle.textContent = "ROLE · 역할 확인";
+
+  if (state.isSpectator) {
+    roleName.textContent = "관전 중";
+    roleDesc.textContent = "이 라운드는 관전합니다. 휴대폰을 내려놓고 눈을 감아주세요. 모두 준비되면 밤이 시작됩니다.";
+    roleAction.classList.add("hidden");
+  } else {
+    const rid = state.myRoleId || "";
+    roleName.textContent = rid ? getRoleDisplayName(rid) : "(역할을 받는 중...)";
+    const def = ROLE_DEFINITIONS[rid];
+    roleDesc.textContent =
+      (def?.desc || "자신의 역할을 확인하세요.") +
+      " 준비되면 아래 버튼을 누르고, 휴대폰을 테이블에 내려놓은 채 눈을 감아주세요.";
+    roleAction.classList.toggle("hidden", !!state.roleReady);
+  }
+
+  roleProfile.innerHTML = "";
+  const me = (state.room?.players || []).find((p) => p.clientId === state.clientId) || null;
+  if (me) {
+    const card = document.createElement("div");
+    card.className = "profileCardLarge";
+    card.style.setProperty("--p-color", me.color || "#888");
+    card.innerHTML = `
+      <div class="profileCardLarge__top">
+        <div class="profileCardLarge__seat">${escapeHtml(String(me.seat || ""))}</div>
+        <div class="profileCardLarge__badge">${state.roleReady ? "EYES CLOSED" : "READY?"}</div>
+      </div>
+      <div class="profileCardLarge__avatar">${escapeHtml(me.avatar || "👤")}</div>
+      <div class="profileCardLarge__name">${escapeHtml(me.name || "")}</div>
+    `;
+    roleProfile.appendChild(card);
   }
 }
 
@@ -581,17 +911,61 @@ function renderScenarioList() {
         ${(s.tags || []).slice(0, 4).map((t) => `<span class="pill">${escapeHtml(t)}</span>`).join("")}
       </div>
     `;
-    item.addEventListener("click", () => {
-      send({ type: "scenario_select", data: { scenarioId: s.scenarioId } });
-      closeModal(scenarioModal);
+    item.addEventListener("click", async () => {
+      const scenarioId = s.scenarioId;
+      const full = (await ensureScenarioDetailLoaded(scenarioId)) || state.scenarioById?.[scenarioId] || s;
+      const episodes = Array.isArray(full?.episodes) ? full.episodes : [];
+      if (episodes.length <= 1) {
+        send({ type: "scenario_select", data: { scenarioId } });
+        closeModal(scenarioModal);
+        return;
+      }
+      openEpisodePicker({ scenarioId, scenario: full });
     });
     scenarioListEl.appendChild(item);
   }
 }
 
+function openEpisodePicker({ scenarioId, scenario }) {
+  episodePickerState.scenarioId = String(scenarioId || "").trim();
+  scenarioListEl.classList.add("hidden");
+  episodePickerEl.classList.remove("hidden");
+
+  const title = scenario?.title || scenarioId;
+  episodePickerTitleEl.textContent = `에피소드 선택 · ${title}`;
+
+  const selectedEpisodeId = state.room?.selectedEpisodeId || state.scenarioState?.selectedEpisodeId || "";
+  episodeListEl.innerHTML = "";
+  const episodes = Array.isArray(scenario?.episodes) ? scenario.episodes : [];
+  for (const ep of episodes) {
+    const episodeId = String(ep?.episodeId || "").trim();
+    if (!episodeId) continue;
+    const item = document.createElement("div");
+    item.className = "episodeItem";
+    if (episodeId === selectedEpisodeId) item.classList.add("episodeItem--selected");
+    item.innerHTML = `
+      <div class="episodeItem__title">${escapeHtml(ep?.title || episodeId)}</div>
+      <div class="episodeItem__meta">${escapeHtml(episodeId)}</div>
+    `;
+    item.addEventListener("click", () => {
+      send({ type: "scenario_select", data: { scenarioId: episodePickerState.scenarioId } });
+      send({ type: "episode_select", data: { episodeId } });
+      closeModal(scenarioModal);
+    });
+    episodeListEl.appendChild(item);
+  }
+}
+
+function closeEpisodePicker() {
+  episodePickerState.scenarioId = "";
+  episodePickerEl.classList.add("hidden");
+  scenarioListEl.classList.remove("hidden");
+  episodeListEl.innerHTML = "";
+}
+
 function renderVoteGrid() {
   voteGridEl.innerHTML = "";
-  const players = state.room?.players || [];
+  const players = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
   for (const p of players) {
     const b = document.createElement("button");
     b.className = "btn voteBtn";
@@ -667,13 +1041,29 @@ function handleMsg(msg) {
   }
   if (msg.type === "role_assignment") {
     state.myRoleId = msg.data?.roleId || "";
+    state.nightPrivate = null;
+    state.nightResult = null;
+    state.roleReady = false;
     render();
     return;
   }
   if (msg.type === "night_step") {
     state.nightStep = msg.data || null;
+    state.nightPrivate = null;
+    state.nightResult = null;
+    state.nightUi = null;
     render();
     if (isHost()) playNightStepAsHost(state.nightStep).catch(() => {});
+    return;
+  }
+  if (msg.type === "night_private") {
+    state.nightPrivate = msg.data || null;
+    render();
+    return;
+  }
+  if (msg.type === "night_result") {
+    state.nightResult = msg.data || null;
+    render();
     return;
   }
   if (msg.type === "vote_result_public") {
@@ -687,6 +1077,11 @@ function handleMsg(msg) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+}
+
+function syncHostEndButton() {
+  const visible = !!state.room && isHost();
+  hostEndBtn.classList.toggle("hidden", !visible);
 }
 
 function maybeAutoNarrate() {
@@ -971,6 +1366,7 @@ async function ensureAudioUnlocked() {
 }
 
 async function init() {
+  installViewportFix();
   showJoin();
   setConn(false);
   setBgGradient("WAIT");
@@ -1028,10 +1424,18 @@ async function init() {
 
   scenarioBtn.addEventListener("click", async () => {
     await ensureAudioUnlocked();
+    closeEpisodePicker();
     openModal(scenarioModal);
   });
-  scenarioBackdrop.addEventListener("click", () => closeModal(scenarioModal));
-  scenarioClose.addEventListener("click", () => closeModal(scenarioModal));
+  episodeBackBtn.addEventListener("click", () => closeEpisodePicker());
+  scenarioBackdrop.addEventListener("click", () => {
+    closeEpisodePicker();
+    closeModal(scenarioModal);
+  });
+  scenarioClose.addEventListener("click", () => {
+    closeEpisodePicker();
+    closeModal(scenarioModal);
+  });
 
   rerollBtn.addEventListener("click", () => {
     send({ type: "reroll" });
@@ -1048,6 +1452,26 @@ async function init() {
   });
   voteBackdrop.addEventListener("click", () => closeModal(voteModal));
   voteClose.addEventListener("click", () => closeModal(voteModal));
+
+  hostEndBtn.addEventListener("click", () => {
+    if (!isHost()) return;
+    const phase = state.room?.phase || "WAIT";
+    const ok = window.confirm(
+      phase === "WAIT"
+        ? "정말 게임 상태를 초기화할까요? (로비로 유지)"
+        : "정말 게임을 종료하고 로비로 돌아갈까요?"
+    );
+    if (!ok) return;
+    send({ type: "end_game", data: {} });
+  });
+
+  eyesClosedBtn.addEventListener("click", () => {
+    if (state.isSpectator) return;
+    if (state.roleReady) return;
+    state.roleReady = true;
+    renderRoleOverlay();
+    send({ type: "night_ready", data: {} });
+  });
 }
 
 function initDebugApi() {

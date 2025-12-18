@@ -348,6 +348,10 @@ python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/
 # SoVITS로 시나리오 클립별 voice.wav 생성 (Docker 마운트 오버라이드)
 python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs"
 
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/daybreak_tools_tutorial.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs"
+
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/daybreak_wolves_tutorial.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs"
+
 # 최대 인원 변형만 생성
 python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --variant-mode max-only --tts gpt-sovits --characters-dir characters/Thema_01
 ```
@@ -358,13 +362,15 @@ python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_
 python scripts/check_character_refs.py --characters-dir characters/genshin --local-ref-base "D:\GPT_SoVIT\refs"
 
 # 자동 수정 (문제 ref 삭제)
-python scripts/check_character_refs.py --characters-dir characters/genshin --local-ref-base "D:\GPT_SoVIT\refs" --fix
+python scripts/check_character_refs.py --characters-dir characters/Thema_01 --local-ref-base "D:\GPT_SoVIT\refs" --fix
 ```
 
 #### 에피소드 wav 연결 (미리듣기용)
 ```bash
 # 클립별 voice.wav를 에피소드 단위로 이어붙임
 python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club.tts.json --voices-base public/assets/voices
+
+python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club_10.tts.json --voices-base public/assets/voices
 
 # 미리보기 모드
 python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club.tts.json --voices-base public/assets/voices --dry-run
@@ -373,6 +379,75 @@ python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club
 #### Genshin 음성 샘플 다운로드 (옵션)
 ```bash
 python scripts/download_genshin_voice_sample.py --query "Paimon" --language "Korean" --character "paimon" --in-game-contains "VO_paimon" --all --out-dir out/genshin-voice --layout in_game_path
+```
+
+## GPT-SoVITS 서버 (Docker / WSL)
+
+이 프로젝트는 GPT-SoVITS의 `api_v2.py`를 Docker 컨테이너에서 실행하는 흐름을 가정합니다.
+
+### 1) 컨테이너 실행 (지속 모드)
+
+`--rm`을 쓰면 종료 시 컨테이너가 삭제되어(= 컨테이너 안에서 `pip install`한 것들이 날아감) 디버깅이 불편합니다. 아래처럼 **컨테이너를 남기는 모드**를 권장합니다.
+
+```bash
+docker run -it --gpus all --shm-size=16g --name gpt-sovits \
+  -p 9880:9880 \
+  -v /mnt/d/GPT_SoVIT:/workspace \
+  gpt-sovits:cu124-ready bash
+```
+
+다음부터 다시 들어갈 때:
+
+```bash
+docker start -ai gpt-sovits
+```
+
+### 2) (최초 1회) Python 의존성 설치
+
+컨테이너 안(`/workspace`)에서:
+
+```bash
+python3 -m pip install -U pip setuptools wheel
+python3 -m pip install -r requirements.txt
+python3 -m pip install -r extra-req.txt
+```
+
+`peft`/`transformers` 호환 이슈가 나면(예: `transformers.modeling_layers`):
+
+```bash
+python3 -m pip install -U "transformers>=4.56,<5" "peft>=0.12"
+```
+
+### 3) RTX 5080(Blackwell) GPU 사용 시: torch nightly 필요
+
+`RuntimeError: CUDA error: no kernel image is available for execution on the device`가 나면, 현재 torch 빌드가 Blackwell을 지원하지 않는 상태입니다.
+
+컨테이너 안에서:
+
+```bash
+python3 -m pip uninstall -y torch torchvision torchaudio
+python3 -m pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+```
+
+### 4) API 서버 실행
+
+컨테이너 안에서:
+
+```bash
+python3 api_v2.py -a 0.0.0.0 -p 9880 -c GPT_SoVITS/configs/tts_infer.yaml
+```
+
+정상 기동 확인:
+
+- `http://127.0.0.1:9880/docs`
+
+### 5) (WSL 환경) Windows IP로 접속 안 될 때: portproxy
+
+`127.0.0.1:9880/docs`는 되는데 `http://<Windows-IP>:9880/docs`가 안 되면, Windows 관리자 PowerShell에서:
+
+```powershell
+netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=9880 connectaddress=127.0.0.1 connectport=9880
+netsh advfirewall firewall add rule name="WSL GPT-SoVITS 9880" dir=in action=allow protocol=TCP localport=9880
 ```
 
 ### 환경변수 설정 (PowerShell, 권장)

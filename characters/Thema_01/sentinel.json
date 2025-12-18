@@ -1,0 +1,40 @@
+{
+  "characterId": "sentinel",
+  "localRefBase": "./",
+  "containerRefBase": "/workspace/refs",
+  "defaultRefs": [
+    "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ003_1_albedo_02.wav",
+    "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ003_3_albedo_14.wav",
+    "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ003_5_albedo_05.wav",
+    "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ003_5_albedo_07.wav",
+    "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ005_3_albedo_04.wav"
+  ],
+  "emotionRefs": {
+    "happy": [
+      "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ003_4_albedo_03.wav",
+      "genshin-voice/Korean/VO_friendship/VO_albedo/vo_albedo_pref_foodLike.wav"
+    ],
+    "sad": [
+      "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ004_2_albedo_11.wav",
+      "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ004_4_albedo_12.wav"
+    ],
+    "angry": [
+      "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ005_2_albedo_09.wav"
+    ],
+    "fearful": [
+      "genshin-voice/Korean/VO_LQ/VO_albedo/vo_ABDLQ003_7_albedo_07.wav",
+      "genshin-voice/Korean/VO_friendship/VO_albedo/vo_albedo_friendship_01.wav"
+    ]
+  },
+  "tagAliases": {
+    "기쁨": "happy",
+    "신남": "happy",
+    "슬픔": "sad",
+    "화남": "angry",
+    "분노": "angry",
+    "공포": "fearful",
+    "놀람": "surprised",
+    "기본": "default",
+    "normal": "default"
+  }
+}
