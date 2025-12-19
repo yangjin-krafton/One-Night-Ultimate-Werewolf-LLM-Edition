@@ -370,16 +370,9 @@ python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/
 
 #### 시나리오 JSON에서 일괄 생성
 ```bash
-# TTS용 JSON은 runtime용(roleDeck/wakeOrder)과 분리하고, 대사(text)만 관리해도 됩니다(compact schema v2).
-# 감정 태그([happy]/{기쁨} 등)는 GPT-SoVITS/Windows TTS 모두 `scripts/gpt_sovits_tts.py`에서 분절 처리됩니다.
-# 예) {"schemaVersion":2,"scenarioId":"...","playerCount":5,"episodes":{"ep1":{"openingClips":"...","roleClips":{"werewolf":"..."},"nightOutroClips":"..."}}}
-#
-# SoVITS로 시나리오 클립별 voice.wav 생성 (Docker 마운트 오버라이드)
-python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs"
 
-python scripts/generate_scenario_audio.py --scenario scenarios_tts/daybreak_tools_tutorial.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs"
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club_10.tts.json `--tts gpt-sovits --characters-dir characters/Thema_01 `--character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs" `--api-base http://localhost:9880 `--sovits-http-method post --concat-episodes
 
-python scripts/generate_scenario_audio.py --scenario scenarios_tts/daybreak_wolves_tutorial.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs"
 
 # 최대 인원 변형만 생성
 python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --variant-mode max-only --tts gpt-sovits --characters-dir characters/Thema_01
@@ -399,7 +392,7 @@ python scripts/check_character_refs.py --characters-dir characters/Thema_01 --lo
 # 클립별 voice.wav를 에피소드 단위로 이어붙임
 python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club.tts.json --voices-base public/assets/voices
 
-python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club_10.tts.json --voices-base public/assets/voices
+python scripts/concat_episode_wavs.py --scenario scenarios_tts/basic_werewolf_tutorial.tts.json --voices-base public/assets/voices
 
 # 미리보기 모드
 python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club.tts.json --voices-base public/assets/voices --dry-run
@@ -469,6 +462,40 @@ python3 api_v2.py -a 0.0.0.0 -p 9880 -c GPT_SoVITS/configs/tts_infer.yaml
 정상 기동 확인:
 
 - `http://127.0.0.1:9880/docs`
+- (중요) `0.0.0.0`는 **서버 bind 용도**입니다. 브라우저/클라이언트에서는 `http://127.0.0.1:9880/docs` 또는 `http://localhost:9880/docs`로 접속하세요.
+
+#### 자주 겪는 문제 1) `transformers.modeling_layers` / `peft` 호환
+`python3 api_v2.py ...` 실행 시 아래처럼 뜨면:
+
+- `ModuleNotFoundError: No module named 'transformers.modeling_layers'`
+
+컨테이너 안에서:
+
+```bash
+python3 -m pip install -U "transformers>=4.56,<5" "peft>=0.12"
+```
+
+#### 자주 겪는 문제 2) Blackwell(예: RTX 5080)에서 `no kernel image`
+아래 에러가 나면 torch 빌드가 해당 GPU를 지원하지 않는 상태입니다:
+
+- `RuntimeError: CUDA error: no kernel image is available for execution on the device`
+
+컨테이너 안에서(토치 nightly 설치):
+
+```bash
+python3 -m pip uninstall -y torch torchvision torchaudio
+python3 -m pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+```
+
+#### 자주 겪는 문제 3) 포트가 이미 사용 중 (`address already in use`)
+이미 컨테이너 안에 `api_v2.py -p 9880`가 떠 있으면 새로 띄울 때 실패합니다.
+
+컨테이너 안에서:
+
+```bash
+ps aux | grep -E "api_v2\\.py" | grep -v grep
+kill <PID>
+```
 
 ### 5) (WSL 환경) Windows IP로 접속 안 될 때: portproxy
 
@@ -479,9 +506,28 @@ netsh interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=9880 conne
 netsh advfirewall firewall add rule name="WSL GPT-SoVITS 9880" dir=in action=allow protocol=TCP localport=9880
 ```
 
+만약 PowerShell에서 `netsh`가 `CommandNotFoundException`으로 뜨면(환경/Path 이슈), 아래처럼 `netsh.exe`를 절대경로로 실행하세요:
+
+```powershell
+& "$env:WINDIR\\System32\\netsh.exe" interface portproxy add v4tov4 listenaddress=0.0.0.0 listenport=9880 connectaddress=127.0.0.1 connectport=9880
+& "$env:WINDIR\\System32\\netsh.exe" advfirewall firewall add rule name="WSL GPT-SoVITS 9880" dir=in action=allow protocol=TCP localport=9880
+```
+
+#### (중요) Docker 컨테이너는 반드시 포트를 publish 해야 함
+아래처럼 `docker run`에 `-p 9880:9880`가 포함되어 있어야 Windows에서 `localhost:9880`으로 접근할 수 있습니다.
+이미 만들어진 컨테이너에 포트 publish를 “추가”할 수는 없어서, 누락했다면 컨테이너를 지우고 다시 만들어야 합니다.
+
+```bash
+docker rm -f gpt-sovits
+docker run -it --gpus all --shm-size=16g --name gpt-sovits \
+  -p 9880:9880 \
+  -v /mnt/d/GPT_SoVIT:/workspace \
+  gpt-sovits:cu124-ready bash
+```
+
 ### 환경변수 설정 (PowerShell, 권장)
 ```powershell
-$env:GPT_SOVITS_API_BASE = "http://127.0.0.1:9880"
+$env:GPT_SOVITS_API_BASE = "http://localhost:9880"
 $env:GPT_SOVITS_CHARACTER_LOCAL_REF_BASE = "D:\GPT_SoVIT"
 $env:GPT_SOVITS_CHARACTER_CONTAINER_REF_BASE = "/workspace"
 $env:GPT_SOVITS_MAX_REF_ATTEMPTS = "12"
@@ -494,3 +540,70 @@ $env:GPT_SOVITS_REF_MAX_S = "10"
 - 컨테이너 마운트 경로 확인 (`/workspace` 등)
 - SoVITS 서버 포트 변경 시 `GPT_SOVITS_API_BASE` 조정
 - ref 길이 문제 시 `--on-error windows`로 대체 TTS 사용
+
+### 빠른 점검 커맨드 (Windows)
+`/docs` 접속 확인:
+
+- `http://localhost:9880/docs`
+
+ping-only 스모크 테스트:
+
+```powershell
+python scripts/tts_smoke_test.py --api-base http://localhost:9880 --ping-only
+```
+
+실제 TTS 생성(컨테이너 기준 ref 경로를 넣어야 함):
+
+```powershell
+python scripts/tts_smoke_test.py --api-base http://localhost:9880 `
+  --ref-audio-path "/workspace/refs/genshin-voice/Korean/VO_AQ/VO_dehya/vo_XMAQ005_10_dehya_01.wav" `
+  --text "테스트입니다." --out out_smoke.wav
+```
+
+### `generate_scenario_audio.py` 실행 팁 (RemoteDisconnected 등)
+`http.client.RemoteDisconnected`는 보통 다음 중 하나입니다:
+- Windows→WSL2→Docker 경로에서 `127.0.0.1` 대신 `localhost`로 접근해야 하는 경우
+- 긴 GET URL(특히 `prompt_text`)을 프록시/스택이 끊는 경우
+
+권장(Windows) - 안정적으로 동작하는 설정(POST 강제):
+
+```powershell
+$env:GPT_SOVITS_API_BASE="http://localhost:9880"
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/daybreak_wolves_tutorial.tts.json `
+  --tts gpt-sovits --characters-dir characters/Thema_01 `
+  --character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs" `
+  --sovits-http-method post
+```
+
+추가 옵션(필요 시):
+- `--sovits-request-retries 5`: 일시적인 네트워크 끊김에 더 강하게 재시도
+- `--sovits-max-url-chars 1200`: GET URL이 길어질 때(특히 `prompt_text`) 서버/프록시가 끊는 환경에서 안전장치 강화
+
+#### fast-langdetect 관련 400 에러
+아래처럼 뜨면:
+- `fast-langdetect: Cache directory not found: /workspace/GPT_SoVITS/pretrained_models/fast_langdetect`
+
+`generate_scenario_audio.py`는 내부적으로 **prompt_text 없이 재시도**해서 계속 진행할 수 있게 되어 있습니다. 그래도 막히면(환경에 따라 `prompt_lang is required`), `--sovits-http-method post`를 유지하고 로그를 확인하세요.
+
+#### NLTK tagger 관련 400 에러
+아래처럼 뜨면:
+- `Resource averaged_perceptron_tagger_eng not found`
+
+이는 컨테이너 안에서 NLTK 데이터가 없어서 발생합니다. 해결:
+- `D:\GPT_SoVIT\api_v2.py`는 서버 시작 시 `nltk_data`를 자동으로 준비하도록 보완되어 있습니다(재시작 필요).
+- 수동으로 하려면 컨테이너 안에서:
+
+```bash
+python3 - <<'PY'
+import nltk, os
+from pathlib import Path
+base = Path('/workspace/GPT_SoVITS/pretrained_models/nltk_data')
+base.mkdir(parents=True, exist_ok=True)
+os.environ['NLTK_DATA']=str(base)
+nltk.download('averaged_perceptron_tagger', download_dir=str(base))
+try: nltk.download('averaged_perceptron_tagger_eng', download_dir=str(base))
+except Exception: pass
+nltk.download('punkt', download_dir=str(base))
+print('ok', base)
+PY
+```

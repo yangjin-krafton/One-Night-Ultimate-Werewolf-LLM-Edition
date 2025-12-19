@@ -36,6 +36,17 @@ def _load_gpt_sovits_module() -> Any:
     return module
 
 
+def _load_concat_module() -> Any:
+    mod_path = ROOT / "scripts" / "concat_episode_wavs.py"
+    spec = importlib.util.spec_from_file_location("one_night_concat_episode_wavs", mod_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Failed to load module: {mod_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _iter_clips_from_variant(narration: dict[str, Any]) -> Iterable[tuple[str, str, str]]:
     """
     Yield tuples: (section_key, speakerId, text)
@@ -304,9 +315,32 @@ def main() -> int:
         default=str(ROOT / "characters"),
         help="Characters directory (can be a theme folder). Scans for <id>/character.json or **/<id>.json.",
     )
-    parser.add_argument("--api-base", default=os.environ.get("GPT_SOVITS_API_BASE", "http://127.0.0.1:9880"))
+    default_api_base = os.environ.get("GPT_SOVITS_API_BASE")
+    if not default_api_base:
+        # In WSL2+Docker setups, Windows often reaches the container via portproxy on localhost.
+        # Keeping the default as localhost reduces confusion and matches the README guidance.
+        default_api_base = "http://localhost:9880" if os.name == "nt" else "http://127.0.0.1:9880"
+    parser.add_argument("--api-base", default=default_api_base)
     parser.add_argument("--text-lang", default=os.environ.get("GPT_SOVITS_TEXT_LANG", "ko-KR"))
     parser.add_argument("--prompt-lang", default=os.environ.get("GPT_SOVITS_PROMPT_LANG", ""))
+    parser.add_argument(
+        "--sovits-http-method",
+        default=os.environ.get("GPT_SOVITS_HTTP_METHOD", "auto"),
+        choices=["auto", "get", "post"],
+        help="Force GPT-SoVITS /tts request method (auto/get/post). post can reduce disconnects on long GET URLs.",
+    )
+    parser.add_argument(
+        "--sovits-max-url-chars",
+        type=int,
+        default=int(os.environ.get("GPT_SOVITS_MAX_URL_CHARS", "1800")),
+        help="If GET URL exceeds this and prompt_text is set, retry without prompt_text. (0 disables)",
+    )
+    parser.add_argument(
+        "--sovits-request-retries",
+        type=int,
+        default=int(os.environ.get("GPT_SOVITS_REQUEST_RETRIES", "2")),
+        help="Extra retries for GPT-SoVITS /tts requests on transient network errors.",
+    )
     parser.add_argument(
         "--character-local-ref-base",
         default=os.environ.get("GPT_SOVITS_CHARACTER_LOCAL_REF_BASE", ""),
@@ -324,6 +358,29 @@ def main() -> int:
     parser.add_argument("--windows-sample-rate", type=int, default=int(os.environ.get("WINDOWS_TTS_SAMPLE_RATE", "16000")))
     parser.add_argument("--limit", type=int, default=0, help="If set, generate only first N clips.")
     parser.add_argument("--dry-run", action="store_true", help="Print planned outputs without generating.")
+    parser.add_argument(
+        "--concat-episodes",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="After generating per-clip voice.wav files, also write concatenated per-episode wav(s).",
+    )
+    parser.add_argument(
+        "--concat-missing",
+        choices=["fail", "skip"],
+        default=os.environ.get("TTS_CONCAT_MISSING", "skip"),
+        help="When concatenating episode wavs: fail or skip missing clip wavs (default: skip).",
+    )
+    parser.add_argument(
+        "--concat-out-dir-mode",
+        choices=["scenario", "episode", "variant"],
+        default=os.environ.get("TTS_CONCAT_OUT_DIR_MODE", "scenario"),
+        help="Where to write concatenated wavs (default: scenario).",
+    )
+    parser.add_argument(
+        "--concat-out-name-template",
+        default=os.environ.get("TTS_CONCAT_OUT_NAME_TEMPLATE", "{scenarioId}__{episodeId}__{playerKey}__episode.wav"),
+        help="Filename template for concatenated episode wavs.",
+    )
     parser.add_argument(
         "--variant-mode",
         choices=["all", "max-only", "best-fit"],
@@ -396,6 +453,10 @@ def main() -> int:
                     media_type="wav",
                     streaming_mode=False,
                     timeout_s=int(args.timeout_s),
+                    request_retries=int(args.sovits_request_retries),
+                    request_retry_backoff_s=1.0,
+                    max_url_chars=int(args.sovits_max_url_chars),
+                    http_method=str(args.sovits_http_method),
                     seed=None,
                     keep_parts_dir=None,
                 )
@@ -457,6 +518,23 @@ def main() -> int:
         encoding="utf-8",
     )
     print(f"[done] wrote manifest: {manifest_path}")
+
+    if args.concat_episodes:
+        concat_mod = _load_concat_module()
+        rc = concat_mod.concat_episode_wavs_from_jobs(
+            jobs=jobs,
+            scenario_json_path=scenario_path,
+            voices_base=out_base,
+            wake_order_scenario_path=None,
+            out_dir_mode=str(args.concat_out_dir_mode),
+            out_name_template=str(args.concat_out_name_template),
+            out_filename="",
+            missing=str(args.concat_missing),
+            dry_run=bool(args.dry_run),
+        )
+        if rc != 0:
+            return int(rc)
+
     return 0
 
 

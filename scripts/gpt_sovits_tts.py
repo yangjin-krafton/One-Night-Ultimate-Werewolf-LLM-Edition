@@ -9,14 +9,16 @@ import random
 import re
 import subprocess
 import tempfile
+import time
 import wave
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlencode, urljoin
 from urllib.request import Request, urlopen
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
+import http.client
 
 
 @dataclass(frozen=True)
@@ -327,6 +329,10 @@ def generate_character_tts_wav(
     media_type: str = "wav",
     streaming_mode: bool = False,
     timeout_s: int = 120,
+    request_retries: int = 2,
+    request_retry_backoff_s: float = 1.0,
+    max_url_chars: int = 1800,
+    http_method: str = "auto",
     seed: Optional[int] = None,
     max_ref_attempts: int = 8,
     keep_parts_dir: str | os.PathLike[str] | None = None,
@@ -438,12 +444,17 @@ def generate_character_tts_wav(
                             media_type=media_type,
                             streaming_mode=streaming_mode,
                             timeout_s=timeout_s,
+                            request_retries=int(request_retries),
+                            request_retry_backoff_s=float(request_retry_backoff_s),
+                            max_url_chars=int(max_url_chars),
+                            http_method=str(http_method),
                         )
                     except RuntimeError as e:
                         # Some GPT-SoVITS setups fail when fast-langdetect models/cache aren't present.
                         # If that happens and we sent prompt_text, retry once without it so batch jobs continue.
+                        # Keep prompt_lang (or let it default to text_lang) because some servers require it.
                         if prompt_text.strip() and _FAST_LANGDETECT_ERROR_RE.search(str(e)):
-                            print("[warn] SoVITS fast-langdetect error; retrying without prompt_text and prompt_lang.")
+                            print("[warn] SoVITS fast-langdetect error; retrying without prompt_text.")
                             gpt_sovits_tts_to_wav(
                                 text=seg.text,
                                 ref_audio_path=chosen_ref,
@@ -452,11 +463,15 @@ def generate_character_tts_wav(
                                 container_ref_base=config.container_ref_base,
                                 local_ref_base=config.local_ref_base,
                                 text_lang=text_lang,
-                                prompt_lang="",
+                                prompt_lang=prompt_lang,
                                 prompt_text="",
                                 media_type=media_type,
                                 streaming_mode=streaming_mode,
                                 timeout_s=timeout_s,
+                                request_retries=int(request_retries),
+                                request_retry_backoff_s=float(request_retry_backoff_s),
+                                max_url_chars=int(max_url_chars),
+                                http_method=str(http_method),
                             )
                         else:
                             raise
@@ -507,6 +522,10 @@ def gpt_sovits_tts_to_wav(
     media_type: str = "wav",
     streaming_mode: bool = False,
     timeout_s: int = 120,
+    request_retries: int = 2,
+    request_retry_backoff_s: float = 1.0,
+    max_url_chars: int = 1800,
+    http_method: str = "auto",
 ) -> Path:
     """
     Call GPT-SoVITS `GET /tts` (api_v2.py) and write the returned audio to `out_wav_path`.
@@ -547,31 +566,98 @@ def gpt_sovits_tts_to_wav(
     if prompt_text.strip():
         params["prompt_text"] = prompt_text.strip()
 
-    # Use %20 for spaces (not '+') to match stricter servers.
-    tts_url = urljoin(api_base, "tts") + "?" + urlencode(params, safe="/:", quote_via=quote)
-    req = Request(tts_url, method="GET")
+    def _build_get_url(p: dict[str, str]) -> str:
+        # Use %20 for spaces (not '+') to match stricter servers.
+        return urljoin(api_base, "tts") + "?" + urlencode(p, safe="/:", quote_via=quote)
+
+    def _make_request(*, method: str, url: str, p: dict[str, str]) -> Request:
+        method = (method or "GET").upper()
+        if method == "GET":
+            return Request(url, method="GET")
+        if method == "POST":
+            # api_v2.py expects JSON for POST /tts (FastAPI pydantic model).
+            body = json.dumps(p, ensure_ascii=False).encode("utf-8")
+            return Request(
+                urljoin(api_base, "tts"),
+                data=body,
+                method="POST",
+                headers={"Content-Type": "application/json; charset=utf-8"},
+            )
+        raise ValueError(f"Unsupported http_method: {method}")
+
+    tts_url = _build_get_url(params)
+    if int(max_url_chars) > 0 and len(tts_url) > int(max_url_chars) and "prompt_text" in params:
+        # Some HTTP stacks/proxies silently drop overly-long URLs (common symptom: RemoteDisconnected).
+        # Prefer dropping prompt_text (quality may drop a bit) over hard-failing an entire batch job.
+        print(
+            f"[warn] GPT-SoVITS /tts URL too long ({len(tts_url)} chars). "
+            "Retrying without prompt_text to avoid server/proxy disconnects."
+        )
+        params.pop("prompt_text", None)
+        tts_url = _build_get_url(params)
+
+    method_pref = (http_method or "auto").strip().lower()
+    if method_pref not in ("auto", "get", "post"):
+        raise ValueError("http_method must be one of: auto, get, post")
 
     out_path = Path(out_wav_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with urlopen(req, timeout=timeout_s) as resp:
-            if getattr(resp, "status", 200) >= 400:
-                raise RuntimeError(f"HTTP {resp.status}")
-            audio_bytes = resp.read()
-    except HTTPError as e:
-        body = ""
+    last_err: Exception | None = None
+    attempts = max(1, int(request_retries) + 1)
+    for attempt in range(1, attempts + 1):
         try:
-            body = (e.read() or b"").decode("utf-8", errors="replace")
-        except Exception:
-            body = "<failed to read error body>"
-        raise RuntimeError(
-            "GPT-SoVITS /tts request failed.\n"
-            f"HTTP {e.code} {e.reason}\n"
-            f"url={tts_url}\n"
-            f"body={body[:2000]}"
-        ) from e
-    out_path.write_bytes(audio_bytes)
-    return out_path
+            if method_pref == "post":
+                req = _make_request(method="POST", url=tts_url, p=params)
+            else:
+                req = _make_request(method="GET", url=tts_url, p=params)
+
+            with urlopen(req, timeout=timeout_s) as resp:
+                if getattr(resp, "status", 200) >= 400:
+                    raise RuntimeError(f"HTTP {resp.status}")
+                audio_bytes = resp.read()
+                if not audio_bytes:
+                    raise RuntimeError("Empty audio response from GPT-SoVITS /tts")
+                out_path.write_bytes(audio_bytes)
+                return out_path
+        except HTTPError as e:
+            body = ""
+            try:
+                body = (e.read() or b"").decode("utf-8", errors="replace")
+            except Exception:
+                body = "<failed to read error body>"
+            if method_pref == "auto" and e.code in (405, 415) and attempt == 1:
+                # Some servers only support GET for /tts; others only accept POST.
+                # On early method-related errors, flip once.
+                method_pref = "post" if req.get_method() == "GET" else "get"
+                last_err = e
+                continue
+            raise RuntimeError(
+                "GPT-SoVITS /tts request failed.\n"
+                f"HTTP {e.code} {e.reason}\n"
+                f"url={tts_url}\n"
+                f"body={body[:2000]}"
+            ) from e
+        except (URLError, TimeoutError, ConnectionError, http.client.RemoteDisconnected) as e:
+            last_err = e
+            if method_pref == "auto" and isinstance(e, http.client.RemoteDisconnected) and attempt == 1:
+                # If the server closes connections on long/complex GETs, try POST once.
+                method_pref = "post"
+                continue
+            if attempt >= attempts:
+                break
+            sleep_s = request_retry_backoff_s * (2 ** (attempt - 1))
+            print(f"[warn] GPT-SoVITS request error ({type(e).__name__}); retry {attempt}/{attempts} after {sleep_s:.1f}s")
+            time.sleep(sleep_s)
+        except Exception as e:
+            # Non-network error: don't retry, but include the URL for debugging.
+            raise RuntimeError(f"GPT-SoVITS /tts request failed. url={tts_url}. error={type(e).__name__}: {e}") from e
+
+    raise RuntimeError(
+        "GPT-SoVITS /tts request failed after retries.\n"
+        f"url={tts_url}\n"
+        f"error={type(last_err).__name__ if last_err else 'Unknown'}: {last_err}\n"
+        "hint=Check GPT-SoVITS server logs; RemoteDisconnected often means the server process crashed while handling the request."
+    ) from last_err
 
 
 def windows_tts_to_wav(

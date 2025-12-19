@@ -192,6 +192,97 @@ def _clip_sort_key(clip_id: str, *, role_wake_order: list[str] | None) -> tuple:
     return (3, section)
 
 
+def concat_episode_wavs_from_jobs(
+    *,
+    jobs: Iterable[object],
+    scenario_json_path: Path,
+    voices_base: Path,
+    wake_order_scenario_path: Path | None = None,
+    out_dir_mode: str = "scenario",
+    out_name_template: str = "{scenarioId}__{episodeId}__{playerKey}__episode.wav",
+    out_filename: str = "",
+    missing: str = "fail",
+    dry_run: bool = False,
+) -> int:
+    """
+    Concatenate generated per-clip wavs into one episode wav per (scenarioId, episodeId, pN).
+
+    This is the same logic as the CLI `main()` but accepts already-built jobs so callers
+    (e.g. generate_scenario_audio.py) can run it as a post-processing step.
+    """
+    grouped = _iter_wav_paths_by_clip(jobs)
+    if not grouped:
+        print("[warn] concat: no clips found in jobs; skipping")
+        return 0
+
+    scenario_path = Path(scenario_json_path)
+    raw = json.loads(scenario_path.read_text(encoding="utf-8"))
+    wake_src_path = wake_order_scenario_path or scenario_path
+    wake_src = json.loads(Path(wake_src_path).read_text(encoding="utf-8"))
+    wake_order_map = _build_role_wake_order_map(wake_src)
+
+    if isinstance(raw.get("scenarios"), list):
+        scenario_ids = [str(s.get("scenarioId") or "").strip() for s in (raw.get("scenarios") or [])]
+    else:
+        scenario_ids = [str(raw.get("scenarioId") or "").strip()] if raw.get("scenarioId") else []
+
+    print(f"[info] concat: scenario={scenario_path} scenarioIds={scenario_ids or [scenario_path.stem]}")
+    if Path(wake_src_path) != scenario_path:
+        print(f"[info] concat: wake_order_scenario={wake_src_path}")
+    print(f"[info] concat: voices_base={voices_base} episode_variants={len(grouped)}")
+
+    wrote = 0
+    for group in sorted(grouped.keys(), key=lambda g: (g.scenario_id, g.episode_id, g.player_key)):
+        role_wake_order = wake_order_map.get((group.scenario_id, group.episode_id, group.player_key))
+        clip_refs = sorted(grouped[group], key=lambda r: _clip_sort_key(r.clip_id, role_wake_order=role_wake_order))
+        wavs = [r.out_wav for r in clip_refs]
+
+        existing: list[Path] = []
+        missing_paths: list[Path] = []
+        for p in wavs:
+            if p.exists():
+                existing.append(p)
+            else:
+                missing_paths.append(p)
+
+        if str(out_filename).strip():
+            out_name = str(out_filename).strip()
+        else:
+            out_name = str(out_name_template).format(
+                scenarioId=group.scenario_id, episodeId=group.episode_id, playerKey=group.player_key
+            )
+
+        if str(out_dir_mode) == "variant":
+            out_path = voices_base / group.scenario_id / group.episode_id / group.player_key / out_name
+        elif str(out_dir_mode) == "episode":
+            out_path = voices_base / group.scenario_id / group.episode_id / out_name
+        else:
+            out_path = voices_base / group.scenario_id / out_name
+
+        print(f"[plan] concat: {group.key} clips={len(wavs)} ok={len(existing)} missing={len(missing_paths)} -> {out_path}")
+
+        if missing_paths and str(missing) == "fail":
+            print("[error] concat: missing clip wav(s):")
+            for m in missing_paths[:20]:
+                print(f"  - {m}")
+            if len(missing_paths) > 20:
+                print(f"  ... (+{len(missing_paths)-20} more)")
+            return 1
+
+        if dry_run:
+            continue
+
+        if not existing:
+            print(f"[warn] concat: skipping empty episode output (no existing wavs): {group.key}")
+            continue
+
+        concat_wavs(existing, out_path)
+        wrote += 1
+
+    print(f"[done] concat: wrote {wrote} episode wav(s)")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Concatenate per-clip voice.wav into one big episode wav per episode (+player-count variant)."
