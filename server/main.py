@@ -32,6 +32,7 @@ PHASE_ENDING = "ENDING"
 
 NIGHT_HOST_ACK_TIMEOUT_MS = 180_000
 NIGHT_ACTION_WINDOW_MS = 1_000
+LOBBY_DISCONNECT_EVICT_MS = 30_000
 
 
 COLOR_PALETTE = [
@@ -61,6 +62,10 @@ def _now_ms() -> int:
 def _safe_name(name: str) -> str:
     cleaned = (name or "").strip()
     return cleaned[:20] if cleaned else "Player"
+
+
+def _name_key(name: str) -> str:
+    return _safe_name(name).strip().lower()
 
 
 def _generate_seat_color(seat_index: int) -> str:
@@ -364,6 +369,7 @@ class Player:
     avatar: str = ""  # New: Emoji avatar
     ws: WebSocket | None = None
     is_spectator: bool = False
+    disconnected_at_ms: int | None = None
 
 
 @dataclass
@@ -449,6 +455,58 @@ class GameServer:
         )
         self._phase_task: asyncio.Task[None] | None = None
         self._night_task: asyncio.Task[None] | None = None
+        self._cleanup_task: asyncio.Task[None] | None = None
+
+    def start_background_tasks(self) -> None:
+        if self._cleanup_task and not self._cleanup_task.done():
+            return
+        self._cleanup_task = asyncio.create_task(self._cleanup_loop())
+
+    async def _cleanup_loop(self) -> None:
+        while True:
+            try:
+                await asyncio.sleep(2.0)
+                async with self._lock:
+                    # Only auto-evict disconnected players in lobby; in-game we keep slots for reconnection.
+                    if self._room.phase != PHASE_WAIT:
+                        continue
+                    now = _now_ms()
+                    to_remove: list[str] = []
+                    for p in self._room.players:
+                        if p.ws is not None:
+                            continue
+                        if p.disconnected_at_ms is None:
+                            continue
+                        if now - int(p.disconnected_at_ms) >= LOBBY_DISCONNECT_EVICT_MS:
+                            to_remove.append(p.client_id)
+                    if not to_remove:
+                        continue
+                    for cid in to_remove:
+                        await self._remove_player_locked(cid)
+
+                    scenario = self._scenarios.get(self._room.selected_scenario_id or "")
+                    can_start = scenario_can_start_for_episode(
+                        scenario, self._room.connected_player_count(), self._room.selected_episode_id
+                    )
+                    await self.broadcast({"type": "host_changed", "data": {"hostClientId": self._room.host_client_id}})
+                    await self.broadcast(
+                        {
+                            "type": "scenario_state",
+                            "data": {
+                                "selectedScenarioId": self._room.selected_scenario_id,
+                                "selectedEpisodeId": self._room.selected_episode_id,
+                                "canStart": can_start,
+                                "playerCount": self._room.connected_player_count(),
+                                "totalConnected": self._room.connected_count(),
+                            },
+                        }
+                    )
+                    await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
+            except asyncio.CancelledError:
+                return
+            except Exception:
+                # Best-effort cleanup.
+                continue
 
     def _cancel_phase_task(self) -> None:
         if self._phase_task and not self._phase_task.done():
@@ -678,6 +736,44 @@ class GameServer:
             queue.append({"kind": "outro", "sectionKey": f"outro/{i:03d}"})
 
         return queue
+
+    def _current_night_step_payload_locked(self) -> dict[str, Any] | None:
+        if self._room.phase != PHASE_NIGHT:
+            return None
+        if not self._room.night_queue:
+            return None
+        if self._room.night_index >= len(self._room.night_queue):
+            return None
+
+        item = self._room.night_queue[self._room.night_index]
+        kind = str(item.get("kind") or "")
+        role_id = str(item.get("roleId") or "")
+
+        active_seats: list[int] = []
+        requires_action = False
+        if kind == "role" and role_id:
+            actor_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == role_id]
+            seats = [self._seat_by_client_id_locked(cid) for cid in actor_ids]
+            active_seats = sorted([int(x) for x in seats if x is not None])
+            requires_action = self._role_action_required_locked(role_id, actor_ids)
+
+        return {
+            "type": "night_step",
+            "data": {
+                "stepId": self._room.night_step_id,
+                "kind": item.get("kind"),
+                "roleId": item.get("roleId"),
+                "activeSeats": active_seats,
+                "requiresAction": requires_action,
+                "sectionKey": item.get("sectionKey"),
+                "scenarioId": self._room.selected_scenario_id or "",
+                "episodeId": self._room.night_episode_id,
+                "variantPlayerCount": self._room.night_variant_player_count,
+                "stepIndex": self._room.night_index + 1,
+                "stepCount": len(self._room.night_queue),
+                "stepEndsAtMs": self._room.night_step_ends_at_ms,
+            },
+        }
 
     async def _broadcast_night_step_locked(self) -> None:
         if self._room.phase != PHASE_NIGHT:
@@ -964,9 +1060,25 @@ class GameServer:
                 dead.append(p.client_id)
         if dead:
             for cid in dead:
-                await self._disconnect_client_locked(cid)
+                await self._mark_disconnected_locked(cid)
 
-    async def _disconnect_client_locked(self, client_id: str) -> None:
+    async def _mark_disconnected_locked(self, client_id: str, *, ws: WebSocket | None = None) -> None:
+        """
+        Mark a player as temporarily disconnected while keeping their slot/state so they can resume.
+        """
+        for p in self._room.players:
+            if p.client_id != client_id:
+                continue
+            if ws is not None and p.ws is not ws:
+                return
+            p.ws = None
+            p.disconnected_at_ms = p.disconnected_at_ms or _now_ms()
+            return
+
+    async def _remove_player_locked(self, client_id: str) -> None:
+        """
+        Permanently remove a player from the room (explicit leave).
+        """
         for i, p in enumerate(list(self._room.players)):
             if p.client_id != client_id:
                 continue
@@ -982,23 +1094,40 @@ class GameServer:
             self._room.host_client_id = self._room.players[0].client_id if self._room.players else None
 
         self._room.votes.pop(client_id, None)
+        self._room.night_ready_ids.discard(client_id)
+        self._room.night_done_actor_ids.discard(client_id)
+        self._room.night_waiting_actor_ids.discard(client_id)
+        self._room.role_by_client_id.pop(client_id, None)
         self._room.reseat()
 
-    async def handle_join(self, ws: WebSocket, client_id: str, name: str, avatar: str) -> None:
+    async def handle_join(self, ws: WebSocket, client_id: str, name: str, avatar: str) -> str:
         async with self._lock:
             client_id = (client_id or "").strip()
             if not client_id:
                 raise ValueError("clientId is required")
 
             name = _safe_name(name)
+            nkey = _name_key(name)
             avatar = (avatar or "").strip()
             want_spectator = bool(getattr(ws, "_one_night_spectator", False))
 
+            match_by = "clientId"
             existing = next((p for p in self._room.players if p.client_id == client_id), None)
+            if not existing:
+                match_by = "name"
+                existing = next((p for p in self._room.players if _name_key(p.name) == nkey), None)
             if existing:
+                prior_ws = existing.ws
                 existing.ws = ws
                 existing.name = name
                 existing.avatar = avatar
+                existing.disconnected_at_ms = None
+                assigned_client_id = existing.client_id
+                if prior_ws is not None and prior_ws is not ws:
+                    try:
+                        await prior_ws.close()
+                    except Exception:
+                        pass
             else:
                 seat = len(self._room.players) + 1
                 # If game already started or room already has 10 active players, extra joins become spectators.
@@ -1016,6 +1145,7 @@ class GameServer:
                 )
                 if self._room.host_client_id is None:
                     self._room.host_client_id = client_id
+                assigned_client_id = client_id
 
             self._room.reseat()
 
@@ -1024,7 +1154,41 @@ class GameServer:
                 scenario, self._room.connected_player_count(), self._room.selected_episode_id
             )
 
-            await ws.send_json({"type": "hello", "serverTimeMs": _now_ms(), "debugEnabled": self._debug_enabled})
+            await ws.send_json(
+                {
+                    "type": "hello",
+                    "serverTimeMs": _now_ms(),
+                    "debugEnabled": self._debug_enabled,
+                    "assignedClientId": assigned_client_id,
+                    "assignedName": name,
+                }
+            )
+            if existing and match_by == "name":
+                await ws.send_json(
+                    {
+                        "type": "lobby_notice",
+                        "data": {
+                            "kind": "reconnected",
+                            "name": name,
+                            "replaced": bool(prior_ws is not None and prior_ws is not ws),
+                        },
+                    }
+                )
+
+            # Resume: send role and current night step to reconnected clients.
+            if self._room.phase != PHASE_WAIT:
+                role_id = self._room.role_by_client_id.get(assigned_client_id, "")
+                await ws.send_json({"type": "role_assignment", "data": {"roleId": role_id}})
+                # If we're mid-night, send the current step so the client can render the proper UI immediately.
+                step_payload = self._current_night_step_payload_locked()
+                if step_payload:
+                    await ws.send_json(step_payload)
+                    # Resend private hints that influence UI (e.g. lone wolf canPeekCenter).
+                    step_id = int(self._room.night_step_id or 0)
+                    role_on_step = str(step_payload.get("data", {}).get("roleId") or "")
+                    if role_on_step:
+                        actor_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == role_on_step]
+                        await self._send_night_private_locked(step_id=step_id, role_id=role_on_step, actor_ids=actor_ids)
             await ws.send_json({"type": "room_snapshot", "data": self._room.snapshot()})
             await self.broadcast({"type": "host_changed", "data": {"hostClientId": self._room.host_client_id}})
             await self.broadcast(
@@ -1040,14 +1204,42 @@ class GameServer:
                 }
             )
             await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
+            return assigned_client_id
 
-    async def handle_disconnect(self, client_id: str) -> None:
+    async def handle_disconnect(self, ws: WebSocket, client_id: str) -> None:
         async with self._lock:
+            # Only disconnect if this websocket is still the current connection for that player.
+            await self._mark_disconnected_locked(client_id, ws=ws)
+            scenario = self._scenarios.get(self._room.selected_scenario_id or "")
+            can_start = scenario_can_start_for_episode(
+                scenario, self._room.connected_player_count(), self._room.selected_episode_id
+            )
+            await self.broadcast({"type": "host_changed", "data": {"hostClientId": self._room.host_client_id}})
+            await self.broadcast(
+                {
+                    "type": "scenario_state",
+                    "data": {
+                        "selectedScenarioId": self._room.selected_scenario_id,
+                        "selectedEpisodeId": self._room.selected_episode_id,
+                        "canStart": can_start,
+                        "playerCount": self._room.connected_player_count(),
+                        "totalConnected": self._room.connected_count(),
+                    },
+                }
+            )
+            await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
+
+    async def handle_leave(self, ws: WebSocket, client_id: str) -> None:
+        async with self._lock:
+            # Treat as a real leave only if this websocket is the active one for the player.
+            p = next((x for x in self._room.players if x.client_id == client_id), None)
+            if not p or p.ws is not ws:
+                return
             was_host = client_id == self._room.host_client_id
             was_in_game = self._room.phase != PHASE_WAIT
             if was_host and was_in_game:
                 await self._abort_game_locked(reason="host_left")
-            await self._disconnect_client_locked(client_id)
+            await self._remove_player_locked(client_id)
             scenario = self._scenarios.get(self._room.selected_scenario_id or "")
             can_start = scenario_can_start_for_episode(
                 scenario, self._room.connected_player_count(), self._room.selected_episode_id
@@ -1168,19 +1360,56 @@ class GameServer:
     async def handle_start_game(self, client_id: str) -> None:
         async with self._lock:
             if client_id != self._room.host_client_id:
+                await self._send_to(
+                    client_id,
+                    {
+                        "type": "lobby_notice",
+                        "data": {
+                            "kind": "start_blocked",
+                            "reason": "not_host",
+                            "hostClientId": self._room.host_client_id,
+                        },
+                    },
+                )
                 return
             if self._room.phase != PHASE_WAIT:
                 return
             scenario = self._scenarios.get(self._room.selected_scenario_id or "")
+            if not scenario or not (self._room.selected_scenario_id or "").strip():
+                await self._send_to(
+                    client_id,
+                    {"type": "lobby_notice", "data": {"kind": "start_blocked", "reason": "no_scenario"}},
+                )
+                return
             if not scenario_can_start_for_episode(
                 scenario, self._room.connected_player_count(), self._room.selected_episode_id
             ):
+                await self._send_to(
+                    client_id,
+                    {
+                        "type": "lobby_notice",
+                        "data": {
+                            "kind": "start_blocked",
+                            "reason": "cannot_start",
+                            "scenarioId": self._room.selected_scenario_id,
+                            "episodeId": self._room.selected_episode_id,
+                            "playerCount": self._room.connected_player_count(),
+                        },
+                    },
+                )
                 return
             self._room.votes.clear()
             self._room.advance_episode_on_return = True
             # Assign roles and start night sequencer.
             ok = await self._assign_roles_locked(scenario=scenario, player_count=self._room.connected_player_count())
             if not ok:
+                await self._send_to(
+                    client_id,
+                    {
+                        "type": "lobby_notice",
+                        "data": {"kind": "start_blocked", "reason": "assign_failed"},
+                    },
+                )
                 return
             self._room.night_ready_ids.clear()
 
@@ -1364,7 +1593,14 @@ class GameServer:
 
 
 game = GameServer()
+
+
 app = FastAPI()
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    game.start_background_tasks()
 
 
 @app.get("/api/scenarios")
@@ -1406,7 +1642,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 name = str(data.get("name") or "")
                 avatar = str(data.get("avatar") or "")
                 setattr(ws, "_one_night_spectator", bool(data.get("spectator") or False))
-                await game.handle_join(ws, client_id, name, avatar)
+                client_id = await game.handle_join(ws, client_id, name, avatar)
             elif t == "scenario_select":
                 await game.handle_scenario_select(client_id, str(data.get("scenarioId") or ""))
             elif t == "episode_select":
@@ -1429,14 +1665,14 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 await game.handle_debug(client_id, str(data.get("action") or ""), dict(data.get("data") or {}))
             elif t == "leave":
                 if client_id:
-                    await game.handle_disconnect(client_id)
+                    await game.handle_leave(ws, client_id)
                     break
     except WebSocketDisconnect:
         if client_id:
-            await game.handle_disconnect(client_id)
+            await game.handle_disconnect(ws, client_id)
     except Exception:
         if client_id:
-            await game.handle_disconnect(client_id)
+            await game.handle_disconnect(ws, client_id)
 
 
 if PUBLIC_DIR.exists():

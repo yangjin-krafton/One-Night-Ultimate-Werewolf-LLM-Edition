@@ -53,6 +53,7 @@ const rerollBtn = qs("#rerollBtn");
 const scenarioBtn = qs("#scenarioBtn");
 const startBtn = qs("#startBtn");
 const voteBtn = qs("#voteBtn");
+const leaveBtn = qs("#leaveBtn");
 const connDot = qs("#connDot");
 const phaseLabel = qs("#phaseLabel");
 const scenarioLabel = qs("#scenarioLabel");
@@ -112,6 +113,18 @@ const eyesClosedBtn = qs("#eyesClosedBtn");
 const url = new URL(window.location.href);
 const debugClientId = url.searchParams.get("debugClientId") || "";
 const debugName = url.searchParams.get("debugName") || "";
+const keepAwakeAudioParam = url.searchParams.get("keepAwakeAudio") || "";
+const keepAwakeVideoParam = url.searchParams.get("keepAwakeVideo") || "";
+const CLIENT_INSTANCE_ID = (() => {
+  try {
+    return crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  } catch {
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+})();
+const CLIENT_ID_ANNOUNCE_KEY = "one-night:client_id_announce";
+const CLIENT_ID_CHANNEL = "one-night:client_id_channel";
+let _clientIdGuard = null;
 
 function uuid() {
   if (crypto?.randomUUID) return crypto.randomUUID();
@@ -131,6 +144,120 @@ function getClientId() {
     sessionStorage.setItem(key, v);
   }
   return v;
+}
+
+function installClientIdCollisionGuard() {
+  if (_clientIdGuard) return _clientIdGuard;
+
+  const peers = new Map(); // instanceId -> clientId
+  const listeners = new Set();
+  let bc = null;
+  const post = (payload) => {
+    try {
+      bc?.postMessage?.(payload);
+    } catch {
+      // ignore
+    }
+    try {
+      localStorage.setItem(CLIENT_ID_ANNOUNCE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
+  };
+
+  const notify = (payload) => {
+    for (const fn of listeners) {
+      try {
+        fn(payload);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const handleIncoming = (payload) => {
+    if (!payload || typeof payload !== "object") return;
+    const kind = String(payload.kind || "ping");
+    const to = String(payload.to || "");
+    const instanceId = String(payload.instanceId || "");
+    const clientId = String(payload.clientId || "");
+    if (!instanceId || !clientId) return;
+    if (to && to !== CLIENT_INSTANCE_ID) return;
+    if (instanceId === CLIENT_INSTANCE_ID) return;
+    peers.set(instanceId, clientId);
+    notify({ instanceId, clientId, ts: Number(payload.ts || 0) });
+    if (kind === "ping") {
+      post({ kind: "pong", clientId: getClientId(), instanceId: CLIENT_INSTANCE_ID, to: instanceId, ts: Date.now() });
+    }
+  };
+
+  try {
+    if ("BroadcastChannel" in window) {
+      bc = new BroadcastChannel(CLIENT_ID_CHANNEL);
+      bc.addEventListener("message", (ev) => handleIncoming(ev?.data));
+    }
+  } catch {
+    bc = null;
+  }
+
+  const onStorage = (ev) => {
+    if (ev.key !== CLIENT_ID_ANNOUNCE_KEY) return;
+    if (!ev.newValue) return;
+    try {
+      handleIncoming(JSON.parse(ev.newValue));
+    } catch {
+      // ignore
+    }
+  };
+  window.addEventListener("storage", onStorage);
+
+  const announce = (clientId) => {
+    post({ kind: "ping", clientId: String(clientId || ""), instanceId: CLIENT_INSTANCE_ID, ts: Date.now() });
+  };
+
+  _clientIdGuard = {
+    peers,
+    announce,
+    on: (fn) => {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+  };
+
+  return _clientIdGuard;
+}
+
+async function ensureUniqueClientId() {
+  if (debugClientId) return state.clientId;
+  if (state.clientIdLocked) return state.clientId;
+  if (state.room) return state.clientId;
+
+  const guard = installClientIdCollisionGuard();
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const current = state.clientId;
+    guard.announce(current);
+    // Give other tabs a brief window to reply (duplicate-tab copies sessionStorage).
+    // eslint-disable-next-line no-await-in-loop
+    await wait(140);
+
+    const collisions = [];
+    for (const [instanceId, clientId] of guard.peers.entries()) {
+      if (clientId === current) collisions.push(instanceId);
+    }
+    if (!collisions.length) return current;
+
+    const winner = [CLIENT_INSTANCE_ID, ...collisions].sort()[0];
+    if (winner === CLIENT_INSTANCE_ID) return current;
+
+    const next = uuid();
+    sessionStorage.setItem("clientId", next);
+    state.clientId = next;
+    guard.announce(next);
+  }
+
+  return state.clientId;
 }
 
 function getSavedName() {
@@ -246,6 +373,10 @@ const state = {
   lastLobbyNoticeKey: "",
   bgm: createBgmEngine(),
   narration: createNarrationEngine(),
+  keepAwakeAudio: createKeepAwakeAudioEngine(),
+  keepAwakeAudioEnabled: localStorage.getItem("keepAwakeAudioEnabled") === "1",
+  keepAwakeVideo: createKeepAwakeVideoEngine(),
+  keepAwakeVideoEnabled: localStorage.getItem("keepAwakeVideoEnabled") === "1",
   debugRolePreview: false,
   debugNightPreview: false,
   debugSeedClientIds: [],
@@ -257,6 +388,7 @@ const state = {
   debugRoleBySeat: {},
   debugRoleByCenter: {},
   nightPreview: { active: false },
+  clientIdLocked: false,
 };
 
 const scenarioDetailInflight = new Set();
@@ -312,13 +444,15 @@ function setPhase(phase, endsAtMs) {
 let wakeLockSentinel = null;
 
 function shouldKeepScreenAwake(phase) {
-  return ["ROLE", "NIGHT", "DEBATE", "VOTE", "RESULT", "REVEAL"].includes(String(phase || "").toUpperCase());
+  const p = String(phase || "").toUpperCase();
+  if (p === "WAIT") return !!state.room && isHost();
+  return ["ROLE", "NIGHT", "DEBATE", "VOTE", "RESULT", "REVEAL"].includes(p);
 }
 
 async function requestWakeLock() {
-  if (!("wakeLock" in navigator)) return;
-  if (document.visibilityState !== "visible") return;
-  if (wakeLockSentinel) return;
+  if (!("wakeLock" in navigator)) return false;
+  if (document.visibilityState !== "visible") return false;
+  if (wakeLockSentinel) return true;
   try {
     // Screen Wake Lock API (supported on Chromium/Android).
     wakeLockSentinel = await navigator.wakeLock.request("screen");
@@ -329,8 +463,10 @@ async function requestWakeLock() {
       },
       { once: true }
     );
+    return true;
   } catch {
     wakeLockSentinel = null;
+    return false;
   }
 }
 
@@ -348,9 +484,26 @@ async function syncWakeLock() {
   const phase = state.room?.phase || "WAIT";
   if (!shouldKeepScreenAwake(phase)) {
     await releaseWakeLock();
+    await state.keepAwakeAudio.stop();
+    await state.keepAwakeVideo?.stop?.();
     return;
   }
-  await requestWakeLock();
+  const ok = await requestWakeLock();
+  if (ok) {
+    await state.keepAwakeAudio.stop();
+    await state.keepAwakeVideo?.stop?.();
+    return;
+  }
+  // Wake Lock unsupported/failed: optionally fall back to silent video/audio "keep alive" tricks.
+  if (state.keepAwakeVideoEnabled && state.keepAwakeVideo?.start) {
+    const started = await state.keepAwakeVideo.start();
+    if (started) {
+      await state.keepAwakeAudio.stop();
+      return;
+    }
+  }
+  if (!state.keepAwakeAudioEnabled) return;
+  await state.keepAwakeAudio.start();
 }
 
 document.addEventListener("visibilitychange", () => {
@@ -429,6 +582,40 @@ function renderLobbyNotice() {
     lobbyNoticeBodyEl.innerHTML = `
       <div class="hint">모든 에피소드가 끝났습니다. 다른 시나리오를 선택해 주세요.</div>
     `;
+  } else if (kind === "start_blocked") {
+    const reason = String(n.reason || "");
+    lobbyNoticeTitleEl.textContent = "게임 시작 불가";
+
+    const hostId = String(n.hostClientId || "");
+    const hostPlayer = hostId ? (state.room?.players || []).find((p) => p.clientId === hostId) : null;
+    lobbyNoticeSubtitleEl.textContent = hostPlayer ? `현재 호스트: ${hostPlayer.seat}번 ${hostPlayer.name || ""}` : "";
+
+    if (reason === "not_host") {
+      lobbyNoticeBodyEl.innerHTML = `
+        <div class="hint">이 기기(탭)는 호스트가 아니어서 시작할 수 없습니다.</div>
+        <div class="hint">같은 PC에서 탭을 “복제/복사”로 열면 플레이어 ID가 겹쳐 2창을 띄워도 1명으로 잡힐 수 있어요.</div>
+        <div class="hint">해결: 다른 창은 새 탭에서 주소를 직접 입력해 열거나(복제 X), 시크릿 창/다른 브라우저로 열어보세요.</div>
+      `;
+    } else if (reason === "no_scenario") {
+      lobbyNoticeBodyEl.innerHTML = `<div class="hint">시나리오를 먼저 선택해야 게임을 시작할 수 있습니다.</div>`;
+    } else if (reason === "cannot_start") {
+      const pc = Number(n.playerCount || 0);
+      lobbyNoticeBodyEl.innerHTML = `
+        <div class="hint">현재 인원(${escapeHtml(String(pc))}명)으로 시작할 수 없는 설정입니다.</div>
+        <div class="hint">인원을 맞추거나 다른 에피소드를 선택해 보세요.</div>
+      `;
+    } else if (reason === "assign_failed") {
+      lobbyNoticeBodyEl.innerHTML = `<div class="hint">역할 배정에 실패했습니다. 잠시 후 다시 시도해 주세요.</div>`;
+    } else {
+      lobbyNoticeBodyEl.innerHTML = `<div class="hint">시작할 수 없습니다. (${escapeHtml(reason || "unknown")})</div>`;
+    }
+  } else if (kind === "reconnected") {
+    const replaced = !!n.replaced;
+    lobbyNoticeTitleEl.textContent = "재접속됨";
+    lobbyNoticeSubtitleEl.textContent = escapeHtml(String(n.name || ""));
+    lobbyNoticeBodyEl.innerHTML = replaced
+      ? `<div class="hint">같은 이름으로 다시 접속해서 기존 연결을 교체했습니다.</div>`
+      : `<div class="hint">같은 이름으로 다시 접속했습니다.</div>`;
   } else {
     lobbyNoticeTitleEl.textContent = "알림";
     lobbyNoticeSubtitleEl.textContent = "";
@@ -525,7 +712,7 @@ function render() {
       rerollBtn.classList.add("hidden");
       scenarioBtn.classList.remove("hidden");
       startBtn.classList.remove("hidden");
-      startBtn.disabled = !(state.scenarioState?.canStart);
+      startBtn.disabled = false;
     } else {
       rerollBtn.classList.remove("hidden");
       scenarioBtn.classList.add("hidden");
@@ -537,6 +724,8 @@ function render() {
     scenarioBtn.classList.add("hidden");
     startBtn.classList.add("hidden");
   }
+
+  if (leaveBtn) leaveBtn.classList.remove("hidden");
 
   const canVotePhase = phase === "DEBATE" || phase === "VOTE";
   voteBtn.classList.toggle("hidden", !canVotePhase || state.isSpectator);
@@ -1041,6 +1230,8 @@ function renderNightOverlay() {
   }
 
   // Actor device: show interaction UI (and keep brightness the same).
+  // Reset logic may have hidden this; actor steps always use the action area (board or rule-only).
+  nightAction.classList.remove("hidden");
   nightHint.textContent = `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`;
 
   if (useBgRuleCard) {
@@ -2427,6 +2618,21 @@ function send(obj) {
 function handleMsg(msg) {
   if (msg.type === "hello") {
     state.debugEnabled = !!msg.debugEnabled;
+    const assigned = String(msg.assignedClientId || "");
+    if (assigned && assigned !== state.clientId) {
+      try {
+        sessionStorage.setItem("clientId", assigned);
+      } catch {
+        // ignore
+      }
+      state.clientId = assigned;
+    }
+    const assignedName = String(msg.assignedName || "");
+    if (assignedName) {
+      state.name = assignedName;
+      setSavedName(assignedName);
+      if (nameInput) nameInput.value = assignedName;
+    }
     initDebugApi();
     return;
   }
@@ -3003,12 +3209,151 @@ function createNarrationEngine() {
   return { playList, stop };
 }
 
+function createKeepAwakeAudioEngine() {
+  let ctx = null;
+  let osc = null;
+  let gain = null;
+  let running = false;
+
+  async function ensureCtx() {
+    if (ctx) return;
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    gain = ctx.createGain();
+    gain.gain.value = 0.00001;
+    gain.connect(ctx.destination);
+  }
+
+  async function start() {
+    if (running) return;
+    await ensureCtx();
+    if (ctx.state === "suspended") await ctx.resume();
+    osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = 440;
+    osc.connect(gain);
+    try {
+      osc.start();
+      running = true;
+    } catch {
+      running = false;
+    }
+  }
+
+  async function stop() {
+    if (!running) return;
+    try {
+      osc?.stop?.();
+    } catch {
+      // ignore
+    }
+    try {
+      osc?.disconnect?.();
+    } catch {
+      // ignore
+    }
+    osc = null;
+    running = false;
+  }
+
+  return { ensureCtx, start, stop, isRunning: () => running };
+}
+
+function createKeepAwakeVideoEngine() {
+  let video = null;
+  let canvas = null;
+  let stream = null;
+  let timer = null;
+  let running = false;
+  let tick = 0;
+
+  function ensureEl() {
+    if (video) return;
+
+    video = document.createElement("video");
+    video.muted = true;
+    video.volume = 0;
+    video.loop = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("muted", "");
+    video.setAttribute("aria-hidden", "true");
+    video.disablePictureInPicture = true;
+
+    video.style.position = "fixed";
+    video.style.left = "0";
+    video.style.top = "0";
+    video.style.width = "1px";
+    video.style.height = "1px";
+    video.style.opacity = "0";
+    video.style.pointerEvents = "none";
+    video.style.zIndex = "-1";
+
+    document.body.appendChild(video);
+
+    // Use a tiny canvas stream so we don't need any actual video assets.
+    canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 2;
+    const ctx2d = canvas.getContext("2d");
+    if (ctx2d) {
+      ctx2d.fillStyle = "#000";
+      ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    if (typeof canvas.captureStream === "function") {
+      try {
+        stream = canvas.captureStream(1);
+        video.srcObject = stream;
+      } catch {
+        stream = null;
+      }
+    }
+
+    // Some browsers may stop "playing" if frames never change; nudge a frame occasionally.
+    timer = window.setInterval(() => {
+      if (!ctx2d) return;
+      tick += 1;
+      ctx2d.fillStyle = tick % 2 ? "#000" : "#010101";
+      ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+    }, 1000);
+  }
+
+  async function start() {
+    if (running) return true;
+    ensureEl();
+    if (!video) return false;
+    try {
+      await video.play();
+      running = true;
+      return true;
+    } catch {
+      running = false;
+      return false;
+    }
+  }
+
+  async function stop() {
+    running = false;
+    try {
+      video?.pause?.();
+    } catch {
+      // ignore
+    }
+  }
+
+  return { start, stop, isRunning: () => running };
+}
+
 async function ensureAudioUnlocked() {
   try {
     await state.bgm.ensureCtx();
+    await state.keepAwakeAudio.ensureCtx();
   } catch {
     // ignore
   }
+  // Try to acquire wake lock / fallbacks while we are inside a user gesture.
+  syncWakeLock().catch(() => {});
 }
 
 async function init() {
@@ -3018,6 +3363,26 @@ async function init() {
   showJoin();
   setConn(false);
   setBgGradient("WAIT");
+  installClientIdCollisionGuard();
+  await ensureUniqueClientId();
+  if (keepAwakeAudioParam) {
+    const on = !["0", "false", "off", "no"].includes(String(keepAwakeAudioParam || "").toLowerCase());
+    state.keepAwakeAudioEnabled = on;
+    try {
+      localStorage.setItem("keepAwakeAudioEnabled", on ? "1" : "0");
+    } catch {
+      // ignore
+    }
+  }
+  if (keepAwakeVideoParam) {
+    const on = !["0", "false", "off", "no"].includes(String(keepAwakeVideoParam || "").toLowerCase());
+    state.keepAwakeVideoEnabled = on;
+    try {
+      localStorage.setItem("keepAwakeVideoEnabled", on ? "1" : "0");
+    } catch {
+      // ignore
+    }
+  }
   
   // Avatar Init
   avatarPreview.textContent = state.avatar;
@@ -3038,7 +3403,10 @@ async function init() {
   connect();
 
   joinBtn.addEventListener("click", async () => {
-    const name = (nameInput.value || "").trim() || "Player";
+    await ensureUniqueClientId();
+    state.clientIdLocked = true;
+    let name = (nameInput.value || "").trim();
+    if (!name) name = `Player-${state.clientId.slice(0, 4)}`;
     state.name = name;
     setSavedName(name);
 
@@ -3103,6 +3471,35 @@ async function init() {
     if (!ok) return;
     send({ type: "end_game", data: {} });
   });
+
+  if (leaveBtn) {
+    leaveBtn.addEventListener("click", () => {
+      if (!state.room) return;
+      const phase = state.room?.phase || "WAIT";
+      const ok = window.confirm(phase === "WAIT" ? "로비에서 나갈까요?" : "게임에서 나갈까요? (나가면 관전/진행이 중단됩니다)");
+      if (!ok) return;
+      try {
+        send({ type: "leave", data: {} });
+      } catch {
+        // ignore
+      }
+      try {
+        state.ws?.close?.();
+      } catch {
+        // ignore
+      }
+      state.room = null;
+      state.myRoleId = "";
+      state.mySeat = 0;
+      state.isSpectator = false;
+      state.nightStep = null;
+      state.nightPrivate = null;
+      state.nightResult = null;
+      state.nightUi = null;
+      state.roleReady = false;
+      showJoin();
+    });
+  }
 
   eyesClosedBtn.addEventListener("click", () => {
     if (state.debugRolePreview) return;
