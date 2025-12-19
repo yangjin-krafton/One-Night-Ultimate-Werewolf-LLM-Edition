@@ -2107,8 +2107,21 @@ function renderNightOverlay() {
       );
     }
   } else {
-    nightAction.classList.add("hidden");
+    // Default: NightBoard-based rule-only UI for roles that don't require card interaction (or not implemented yet).
+    const def = ROLE_DEFINITIONS[activeRole] || null;
+    const ruleText = def?.desc || `${activeRoleName || "역할"}의 차례입니다.`;
+    nightAction.classList.remove("hidden");
     nightAction.innerHTML = "";
+    nightAction.classList.add("nightOverlay__action--centerRule");
+    const panel = NightBoardUI?.createRuleOnlyPanel
+      ? NightBoardUI.createRuleOnlyPanel({ text: ruleText, escapeHtml })
+      : (() => {
+          const el = document.createElement("div");
+          el.className = "nightRuleOnly nightRuleOnly--center";
+          el.innerHTML = `<div class="nightRuleOnly__text">${escapeHtml(ruleText)}</div>`;
+          return el;
+        })();
+    nightAction.appendChild(panel);
   }
 
   // Show last private result (actor-only)

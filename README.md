@@ -140,6 +140,10 @@ gameDebug.ui.nightAction('troublemaker')
 gameDebug.ui.nightAction('drunk')
 gameDebug.ui.nightAction('insomniac')
 gameDebug.ui.nightAction('minion')
+gameDebug.ui.nightAction('mason')
+gameDebug.ui.nightAction('villager')
+gameDebug.ui.nightAction('hunter')
+gameDebug.ui.nightAction('tanner')
 gameDebug.ui.nightAction('werewolf') // (테스트용) 센터 확인 가능 플래그 포함
 
 // 밤: 대기/오프닝/아웃트로 미리보기
