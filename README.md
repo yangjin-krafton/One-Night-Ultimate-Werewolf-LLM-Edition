@@ -107,21 +107,50 @@ Prereq:
 
 Chrome DevTools Console 예시:
 ```js
+
+"werewolf",
+"alpha_wolf",
+"mystic_wolf",
+"dream_wolf",
+"minion",
+"seer",
+"apprentice_seer",
+"paranormal_investigator",
+"robber",
+"troublemaker",
+"drunk",
+"insomniac",
+"sentinel",
+"witch",
+"revealer",
+"curator",
+"bodyguard",
+"mason",
+"villager"
+
 // 역할 확인 화면 (눈 감기 전/후)
 gameDebug.ui.roleCheck({ eyesClosed: false })
 gameDebug.ui.roleCheck({ eyesClosed: true })
+gameDebug.ui.roleCheck('werewolf')
 
 // 밤 액션 UI 바로 보기 (내 폰이 '행동자'로 표시됨)
 gameDebug.ui.nightAction('seer')
 gameDebug.ui.nightAction('robber')
 gameDebug.ui.nightAction('troublemaker')
 gameDebug.ui.nightAction('drunk')
+gameDebug.ui.nightAction('insomniac')
+gameDebug.ui.nightAction('minion')
 gameDebug.ui.nightAction('werewolf') // (테스트용) 센터 확인 가능 플래그 포함
 
 // 밤: 대기/오프닝/아웃트로 미리보기
 gameDebug.ui.nightWait()
 gameDebug.ui.nightOpening()
 gameDebug.ui.nightOutro()
+
+// 클라이언트에만 임시 더미 유저를 추가:
+gameDebug.ui.seedPlayers(5) (기본 5명)
+// 클라이언트에만 임시 더미 유저를 제거:
+gameDebug.ui.clearSeedPlayers()
 
 // 오버레이 닫기
 gameDebug.ui.clear()
@@ -396,7 +425,7 @@ python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/
 #### 시나리오 JSON에서 일괄 생성
 ```bash
 # 전체 생성 + (기본) 에피소드 wav 병합까지
-python scripts/generate_scenario_audio.py --scenario scenarios_tts/daybreak.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\\GPT_SoVIT" --character-container-ref-base "/workspace/refs"  --api-base http://localhost:9880 --sovits-http-method post
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/ultimate.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\\GPT_SoVIT" --character-container-ref-base "/workspace/refs"  --api-base http://localhost:9880 --sovits-http-method post
 
 # 최대 인원 변형만 생성
 python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --variant-mode max-only --tts gpt-sovits --characters-dir characters/Thema_01

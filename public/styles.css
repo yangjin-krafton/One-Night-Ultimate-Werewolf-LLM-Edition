@@ -166,25 +166,152 @@ body::after {
 .btn{
   height:44px; padding: 0 14px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255,255,255,0.18) 0%, transparent 55%),
+    linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
   color: var(--fg);
   cursor:pointer;
   box-shadow: 0 10px 24px rgba(0,0,0,.25);
   transition: transform .15s ease, filter .15s ease;
+  position: relative;
+  overflow: hidden;
+  --btn-glow: 0;
+  --btn-fill: 0;
+}
+.btn::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='60' viewBox='0 0 180 60'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.16)' stroke-width='2'%3E%3Cpath d='M-10 50 C 20 20 40 20 70 50 S 120 80 190 45'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 220px 80px;
+  background-repeat: no-repeat;
+  background-position: 20% 30%;
+  opacity: calc(0.35 + var(--btn-glow) * 0.45);
+  pointer-events:none;
+  mix-blend-mode: screen;
+}
+.btn::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(180deg, rgba(220, 38, 38, calc(0.92 * var(--btn-fill))) 0%, rgba(127, 29, 29, calc(0.88 * var(--btn-fill))) 100%),
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.55) 0%, transparent 55%),
+    radial-gradient(circle at 80% 90%, rgba(255,255,255,0.22) 0%, transparent 60%);
+  opacity: calc(0.10 + var(--btn-glow) * 0.30 + var(--btn-fill) * 0.90);
+  pointer-events:none;
+}
+.btn{
+  border-color: color-mix(in srgb, rgba(255,255,255,0.18) 70%, transparent);
+}
+.btn:hover{
+  filter: brightness(1.03);
+}
+.btn:focus-visible{
+  outline: none;
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.32),
+    0 0 0 3px rgba(167,139,250,.22),
+    0 0 0 1px rgba(255,255,255,0.20) inset;
+}
+
+/* Disabled state */
+.btn[disabled],
+.btn[aria-disabled="true"]{
+  cursor: not-allowed;
+  opacity: 0.62;
+  filter: saturate(0.75) brightness(0.92);
+}
+
+/* Attention (slow blinking glow) */
+.btn--attn{
+  animation: btn-attn 1.05s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  box-shadow:
+    0 26px 60px rgba(0,0,0,0.35),
+    0 0 0 2px rgba(255,255,255,0.24) inset,
+    0 0 0 1px rgba(0,0,0,0.22),
+    0 0 22px color-mix(in srgb, #fb7185 45%, #a78bfa 55%);
+}
+@keyframes btn-attn{
+  0%, 100%{
+    box-shadow:
+      0 26px 60px rgba(0,0,0,0.35),
+      0 0 0 2px rgba(255,255,255,0.22) inset,
+      0 0 0 1px rgba(0,0,0,0.22),
+      0 0 14px rgba(220,38,38,0.22);
+    filter: brightness(1);
+  }
+  50%{
+    box-shadow:
+      0 28px 64px rgba(0,0,0,0.42),
+      0 0 0 2px rgba(255,255,255,0.30) inset,
+      0 0 0 1px rgba(0,0,0,0.22),
+      0 0 28px rgba(220,38,38,0.55),
+      0 0 46px rgba(251,113,133,0.25);
+    filter: brightness(1.05);
+  }
+}
+.btn--attn::before{
+  animation: btn-attn-before 1.05s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.btn--attn::after{
+  animation: btn-attn-after 1.05s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+@keyframes btn-attn-before{
+  0%, 100% { opacity: calc(0.35 + var(--btn-glow) * 0.45); }
+  50% { opacity: calc(0.65 + var(--btn-glow) * 0.30); }
+}
+@keyframes btn-attn-after{
+  0%, 100% { opacity: calc(0.10 + var(--btn-glow) * 0.30 + var(--btn-fill) * 0.90); }
+  50% { opacity: calc(0.28 + var(--btn-glow) * 0.22 + var(--btn-fill) * 0.90); }
 }
 .btn:active{transform: translateY(1px) scale(.99)}
 .btn--primary{
   border: none;
-  background: var(--grad-accent);
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.25) 42%, transparent 72%),
+    var(--grad-accent);
   background-size: 160% 160%;
   animation: gradient-pan 10s linear infinite;
 }
 .btn--danger{
   border:none;
-  background: var(--grad-danger);
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.25) 42%, transparent 72%),
+    var(--grad-danger);
   background-size: 160% 160%;
   animation: gradient-pan 10s linear infinite;
+}
+
+/* Strong red+black call-to-action (game theme) */
+.btn--cta{
+  border: 1px solid rgba(255,255,255,0.16);
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255,255,255,0.22) 0%, transparent 52%),
+    radial-gradient(circle at 80% 85%, rgba(251,113,133,0.22) 0%, transparent 60%),
+    linear-gradient(135deg, #22060a 0%, #09060a 55%, #000 100%);
+  box-shadow:
+    0 24px 58px rgba(0,0,0,0.62),
+    0 0 0 1px rgba(255,255,255,0.06) inset;
+  color: rgba(255,255,255,0.92);
+  text-shadow: 0 10px 26px rgba(0,0,0,0.55);
+}
+.btn > *{position: relative; z-index: 1}
+.btn--xl{
+  height: auto;
+  min-height: 14.5vh;
+  padding: 16px 16px;
+  border-radius: 18px;
+  font-size: 20px;
+  font-weight: 950;
+  line-height: 1.08;
+  white-space: pre-line;
+  letter-spacing: -0.01em;
+  text-align: center;
+  display: grid;
+  place-items: center;
+  /* color comes from variant (e.g. .btn--cta) */
 }
 .hint{margin-top:12px; font-size:12px; color:var(--muted)}
 code{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px}
@@ -904,6 +1031,118 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   border: 1px solid color-mix(in srgb, var(--panel-color, #ffffff) 24%, rgba(255,255,255,.14));
   padding: 12px;
 }
+
+/* NIGHT overlay: debug preview can reuse the big rule-card background like roleCheck. */
+#nightOverlay.nightOverlay--bgCard{
+  background:
+    radial-gradient(circle at 20% 20%, var(--p-grad-1, rgba(255,255,255,.08)) 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, var(--p-grad-2, rgba(255,255,255,.06)) 0%, transparent 60%),
+    rgba(0,0,0,.22);
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__panel{
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  width: 100%;
+  height: 100%;
+  padding: 18px 16px;
+  position: relative;
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__body{
+  position: absolute;
+  inset: 0;
+  margin-top: 0;
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__active{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__private,
+#nightOverlay.nightOverlay--bgCard .nightOverlay__action{
+  position: relative;
+  z-index: 3;
+  width: min(520px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+  backdrop-filter: blur(12px);
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__action{
+  background: rgba(0,0,0,.22);
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--panel-color, #ffffff) 24%, rgba(255,255,255,.14));
+  padding: 12px;
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__action--bottomBar{
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  width: min(520px, calc(var(--app-width, 100vw) - 32px));
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__action--centerRule{
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  display: grid;
+  place-items: center;
+  opacity: 1;
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__action--centerRule .nightRuleOnly{
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+}
+
+/* Single centered card layer (e.g., insomniac preview) */
+#nightOverlay.nightOverlay--bgCard .nightCenterLayer{
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+#nightOverlay.nightOverlay--bgCard .nightCenterLayer .nightChoiceCard{
+  pointer-events: auto;
+}
+#nightOverlay.nightOverlay--bgCard .profileCardLarge{
+  width: calc(var(--app-width, 100vw) * 0.92);
+  height: calc(var(--app-height, 100vh) * 0.90);
+  max-width: calc(var(--app-width, 100vw) * 0.92);
+  max-height: calc(var(--app-height, 100vh) * 0.90);
+  aspect-ratio: auto;
+}
+
+/* NIGHT debug preview: keep the background card empty (no emoji/name/desc). */
+.nightBgCard{
+  --bg-pulse: 0;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255,255,255,0.05) 0%, transparent 60%),
+    radial-gradient(circle at 80% 85%, rgba(255,255,255,0.03) 0%, transparent 65%),
+    rgba(0,0,0,.18);
+  box-shadow:
+    0 18px 44px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.08) inset,
+    0 0 calc(18px + 34px * var(--bg-pulse)) rgba(220,38,38, calc(0.10 + 0.28 * var(--bg-pulse)));
+}
+#nightOverlay.nightOverlay--bgCard .nightOverlay__action{
+  opacity: 0.86;
+}
+
+#nightOverlay.nightOverlay--noHeader .nightOverlay__title,
+#nightOverlay.nightOverlay--noHeader .nightOverlay__role,
+#nightOverlay.nightOverlay--noHeader .nightOverlay__hint{
+  display: none;
+}
 .nightOverlay__panel{
   width: min(520px, 100%);
   border-radius: 22px;
@@ -959,17 +1198,151 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   justify-content: center;
 }
 
+/* ROLE overlay: reuse the big centered card as a background layer (even when not profileOnly). */
+#roleOverlay.nightOverlay--bgCard.nightOverlay--fullscreen .nightOverlay__panel{
+  width: 100%;
+  height: 100%;
+  padding: 18px 16px;
+  position: relative;
+}
+#roleOverlay.nightOverlay--bgCard .nightOverlay__body{
+  position: absolute;
+  inset: 0;
+  margin-top: 0;
+}
+#roleOverlay.nightOverlay--bgCard .nightOverlay__active{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+#roleOverlay.nightOverlay--bgCard .nightOverlay__action{
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(env(safe-area-inset-bottom), 16px);
+  z-index: 4;
+  width: min(720px, calc(var(--app-width, 100vw) * 0.92));
+}
+#roleOverlay.nightOverlay--bgCard.nightOverlay--fullscreen .profileCardLarge{
+  width: calc(var(--app-width, 100vw) * 0.92);
+  height: calc(var(--app-height, 100vh) * 0.90);
+  max-width: calc(var(--app-width, 100vw) * 0.92);
+  max-height: calc(var(--app-height, 100vh) * 0.90);
+  aspect-ratio: auto;
+}
+
+/* Header text should float on top of the background card (no layout headroom). */
+#roleOverlay.nightOverlay--bgCard .nightOverlay__title,
+#roleOverlay.nightOverlay--bgCard .nightOverlay__role,
+#roleOverlay.nightOverlay--bgCard .nightOverlay__hint{
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  width: min(720px, calc(var(--app-width, 100vw) * 0.92));
+  text-align: center;
+  pointer-events: none;
+}
+#roleOverlay.nightOverlay--bgCard .nightOverlay__title{
+  top: max(env(safe-area-inset-top), 12px);
+}
+#roleOverlay.nightOverlay--bgCard .nightOverlay__role{
+  top: calc(max(env(safe-area-inset-top), 12px) + 18px);
+}
+#roleOverlay.nightOverlay--bgCard .nightOverlay__hint{
+  top: calc(max(env(safe-area-inset-top), 12px) + 52px);
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* When the rule card is already shown, remove duplicated header texts. */
+#roleOverlay.nightOverlay--noHeader .nightOverlay__title,
+#roleOverlay.nightOverlay--noHeader .nightOverlay__role,
+#roleOverlay.nightOverlay--noHeader .nightOverlay__hint{
+  display: none;
+}
+
+/* Role-check "eyes closed" card contents (no player identity). */
+.roleRuleCard{
+  display: grid;
+  grid-template-rows: 1fr auto 1.2fr;
+  place-items: center;
+  text-align: center;
+}
+.roleRuleCard__icon{
+  font-size: min(24vh, 24vw);
+  line-height: 1;
+  filter: drop-shadow(0 14px 26px rgba(0,0,0,0.55));
+}
+.roleRuleCard__title{
+  margin-top: 8px;
+  font-weight: 1000;
+  letter-spacing: .02em;
+  font-size: min(8vh, 8vw);
+}
+.roleRuleCard__desc{
+  margin-top: 10px;
+  max-width: 92%;
+  color: rgba(255,255,255,0.86);
+  font-size: 25px;
+  line-height: 1.5;
+}
+
+/* Bottom instruction area (≈30% of screen). */
+#roleOverlay.nightOverlay--profileOnly .nightOverlay__action{
+  width: 100%;
+  max-width: 720px;
+  min-height: 30vh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(12px);
+}
+.roleAction__text{
+  display: none;
+}
+
+/* ROLE: use unified button styling (keep a little disabled feedback). */
+#roleOverlay #eyesClosedBtn[disabled]{
+  opacity: 0.82;
+  filter: saturate(0.85);
+}
+
 /* Profile-only mode: hide any role hints and make the profile card fill ~90% of the screen. */
 .nightOverlay--profileOnly .nightOverlay__title,
 .nightOverlay--profileOnly .nightOverlay__role,
 .nightOverlay--profileOnly .nightOverlay__hint{
   display:none;
 }
-.nightOverlay--profileOnly .nightOverlay__body{margin-top: 0}
+.nightOverlay--fullscreen.nightOverlay--profileOnly .nightOverlay__panel{
+  padding: 0;
+}
+.nightOverlay--profileOnly .nightOverlay__body{
+  margin-top: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  box-sizing: border-box;
+}
+.nightOverlay--profileOnly .nightOverlay__active{
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
 .nightOverlay--profileOnly .profileCardLarge{
+  /* Always present a single large card centered, occupying ~90% of the screen. */
   width: calc(var(--app-width, 100vw) * 0.92);
   height: calc(var(--app-height, 100vh) * 0.90);
-  max-width: min(720px, calc(var(--app-width, 100vw) * 0.92));
+  max-width: calc(var(--app-width, 100vw) * 0.92);
   max-height: calc(var(--app-height, 100vh) * 0.90);
   aspect-ratio: auto;
   display: grid;
@@ -1121,7 +1494,60 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
 .profileCardLarge__name{position:relative; z-index:1; margin-top: 8px; text-align:center; font-weight: 900; font-size: 16px; max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 .nightOverlay__private{margin-top: 12px; padding: 12px; border-radius: 16px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.20)}
 .nightOverlay__action{margin-top: 12px; display:flex; flex-direction:column; gap:10px}
-.nightAction__row{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
+.nightRuleOnly{
+  width: 100%;
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(12px);
+}
+.nightRuleOnly--center{
+  min-height: clamp(240px, 46vh, 520px);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 22px 20px;
+}
+.nightRuleOnly__text{
+  font-weight: 950;
+  font-size: 18px;
+  line-height: 1.4;
+  color: rgba(255,255,255,0.90);
+}
+.nightRuleOnly--center .nightRuleOnly__text{
+  font-size: clamp(22px, 3.2vw, 34px);
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+  text-shadow: 0 0 16px rgba(0,0,0,.35);
+}
+.btn--nightConfirm{
+  width: 100%;
+  min-height: 88px; /* ~2x default button */
+  padding: 16px 18px;
+  border-radius: 18px;
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1.18;
+  white-space: pre-line;
+  text-align: center;
+}
+.btn--nightConfirm.btn--softDisabled{
+  opacity: 0.55;
+  filter: grayscale(0.15) saturate(0.75);
+}
+.nightAction__row{
+  display:grid;
+  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+.nightAction__row > *{justify-self: stretch}
+.nightAction__row--dense{
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 8px;
+}
 .nightChoice{
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,.14);
@@ -1132,9 +1558,32 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   min-width: 84px;
   font-weight: 900;
 }
+.nightChoice--disabled,
+.nightChoice[disabled],
+.nightChoice[aria-disabled="true"]{
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: saturate(0.75);
+}
+.nightChoice--blocked{
+  position: relative;
+}
+.nightChoice--blocked::after{
+  content:"🚫";
+  position:absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: min(54px, 12vmin);
+  line-height: 1;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.55));
+  background: rgba(0,0,0,0.25);
+  border-radius: inherit;
+  pointer-events: none;
+}
 .nightChoiceCard{
-  min-width: 118px;
-  width: min(160px, 30vw);
+  min-width: 0;
+  width: 100%;
   height: 148px;
   display:flex;
   flex-direction:column;
@@ -1143,6 +1592,11 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   gap: 8px;
   padding: 12px 10px;
   border-radius: 18px;
+  transform:
+    rotateX(10deg)
+    rotateZ(var(--tilt-deg, 0deg))
+    translateZ(4px);
+  transform-style: preserve-3d;
   background:
     linear-gradient(180deg,
       var(--p-grad-1, rgba(255,255,255,.04)) 0%,
@@ -1153,6 +1607,39 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   border-color: color-mix(in srgb, var(--p-color) 34%, rgba(255,255,255,.14));
   box-shadow: 0 14px 26px rgba(0,0,0,.35);
 }
+.nightChoiceCard::before{
+  content:"";
+  position:absolute;
+  left: 50%;
+  top: 100%;
+  width: 92%;
+  height: 34%;
+  transform: translate(-50%, -10%) translateZ(-2px);
+  background: radial-gradient(closest-side, rgba(0,0,0,0.55) 0%, transparent 70%);
+  filter: blur(6px);
+  opacity: 0.55;
+  pointer-events:none;
+}
+.nightChoiceCard:hover{
+  transform:
+    rotateX(10deg)
+    rotateZ(var(--tilt-deg, 0deg))
+    translateY(-3px)
+    translateZ(8px);
+}
+.nightChoiceCard:active{
+  transform:
+    rotateX(10deg)
+    rotateZ(var(--tilt-deg, 0deg))
+    translateY(-1px)
+    translateZ(6px);
+}
+.nightAction__row--dense .nightChoiceCard{
+  height: 112px;
+  padding: 10px 8px;
+  gap: 6px;
+  border-radius: 16px;
+}
 .nightChoiceCard__seat{
   font-family: 'Courier New', Courier, monospace;
   font-weight: 900;
@@ -1161,10 +1648,12 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   color: var(--p-color);
   text-shadow: 0 0 12px color-mix(in srgb, var(--p-color) 70%, transparent);
 }
+.nightAction__row--dense .nightChoiceCard__seat{font-size: 22px}
 .nightChoiceCard__avatar{
   font-size: 44px;
   line-height: 1;
 }
+.nightAction__row--dense .nightChoiceCard__avatar{font-size: 34px}
 .nightChoiceCard__name{
   font-size: 12px;
   font-weight: 800;
@@ -1173,6 +1662,78 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.nightChoiceCard--revealed{
+  gap: 6px;
+}
+.nightChoiceReveal{
+  transform: scaleX(-1);
+}
+.nightChoiceReveal__title{
+  font-weight: 1000;
+  letter-spacing: .02em;
+  font-size: 32px;
+  color: rgba(255,255,255,0.94);
+  text-align: center;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.10);
+  text-shadow: 0 10px 22px rgba(0,0,0,0.55);
+}
+.nightChoiceReveal__profile{
+  display: grid;
+  place-items: center;
+  gap: 8px;
+}
+.nightChoiceReveal__seat{
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 1000;
+  font-size: 34px;
+  line-height: 1;
+  color: rgba(255,255,255,0.92);
+  text-shadow: 0 10px 22px rgba(0,0,0,0.55);
+}
+.nightChoiceReveal__avatar{
+  font-size: 44px;
+  line-height: 1;
+}
+.nightChoiceReveal__name{
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.92);
+  max-width: 92%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.nightChoiceCard--werewolf{
+  background:
+    linear-gradient(135deg, #2b0507 0%, #0b0506 45%, #000 100%);
+  border-color: rgba(255, 50, 50, 0.45);
+  box-shadow:
+    0 16px 34px rgba(0,0,0,0.55),
+    0 0 26px rgba(220,38,38,0.35);
+  overflow: hidden;
+}
+.nightChoiceCard--werewolf::after{
+  content:"";
+  position:absolute;
+  inset:-40%;
+  background:
+    linear-gradient(115deg, transparent 0%, rgba(255, 40, 40, 0.55) 28%, transparent 55%);
+  opacity: 0.75;
+  transform: translateX(-25%) rotate(8deg);
+  animation: wolf-scan 0.65s linear infinite;
+  pointer-events:none;
+}
+@keyframes wolf-scan{
+  0%{ transform: translateX(-35%) rotate(8deg); }
+  100%{ transform: translateX(55%) rotate(8deg); }
 }
 .nightChoiceCard--center{
   border-style: dashed;
@@ -1186,8 +1747,155 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
 }
 .nightChoice--selected{
   border-color: color-mix(in srgb, var(--p-color) 70%, rgba(255,255,255,.18));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--p-color) 55%, transparent), 0 0 18px color-mix(in srgb, var(--p-color) 35%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--p-color) 55%, transparent),
+    0 0 18px color-mix(in srgb, var(--p-color) 35%, transparent),
+    0 22px 44px rgba(0,0,0,0.42);
+  outline: 3px solid color-mix(in srgb, var(--p-color) 70%, #ffffff);
+  outline-offset: 2px;
+  transform:
+    rotateX(10deg)
+    rotateZ(var(--tilt-deg, 0deg))
+    translateY(-6px)
+    translateZ(14px);
 }
+
+/* Boardgame feel: table pad behind the choice grid */
+.nightAction__row--board{
+  padding: 10px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(255,255,255,0.05) 0%, transparent 60%),
+    radial-gradient(circle at 80% 85%, rgba(255,255,255,0.03) 0%, transparent 65%),
+    rgba(0,0,0,0.14);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.22);
+  position: relative;
+  overflow: hidden;
+  perspective: 900px;
+  transform: rotateX(12deg) rotateZ(-0.6deg);
+  transform-style: preserve-3d;
+}
+.nightAction__row--board::before{
+  content:"";
+  position:absolute;
+  inset:-20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120' viewBox='0 0 220 120'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='2'%3E%3Cpath d='M-20 90 C 40 40 70 35 120 70 S 200 120 260 60'/%3E%3Cpath d='M-10 40 C 30 15 70 20 110 45 S 190 80 250 30'/%3E%3C/g%3E%3Cg fill='rgba(255,255,255,0.04)'%3E%3Ccircle cx='40' cy='90' r='3'/%3E%3Ccircle cx='170' cy='38' r='2.5'/%3E%3Ccircle cx='120' cy='95' r='2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 260px 140px;
+  background-repeat: repeat;
+  opacity: 1;
+  pointer-events:none;
+}
+.nightAction__row--board::after{
+  content:"";
+  position:absolute;
+  left: 50%;
+  top: 52%;
+  width: 120%;
+  height: 120%;
+  transform: translate(-50%, -50%) rotateX(68deg);
+  transform-origin: center;
+  background:
+    radial-gradient(closest-side, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.18) 42%, transparent 70%);
+  filter: blur(2px);
+  opacity: 0.85;
+  pointer-events:none;
+}
+.nightAction__row--board > *{position: relative; z-index: 1}
+.nightAction__row--board > *{transform-style: preserve-3d}
+
+/* Orbit board (debug seer): center stack + orbit ring + bottom profile */
+.nightBoard{
+  width: 100%;
+  display: grid;
+  grid-template-rows: auto;
+  gap: 10px;
+}
+.nightBoard__arena{
+  position: relative;
+  width: 100%;
+  height: calc(var(--app-height, 100vh) * 0.85);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(255,255,255,0.05) 0%, transparent 60%),
+    radial-gradient(circle at 80% 85%, rgba(255,255,255,0.03) 0%, transparent 65%),
+    rgba(0,0,0,0.14);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.22);
+  overflow: hidden;
+  perspective: 950px;
+  transform: rotateX(14deg);
+  transform-style: preserve-3d;
+}
+.nightBoard__arena::before{
+  content:"";
+  position:absolute;
+  inset:-20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120' viewBox='0 0 220 120'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.06)' stroke-width='2'%3E%3Cpath d='M-20 90 C 40 40 70 35 120 70 S 200 120 260 60'/%3E%3Cpath d='M-10 40 C 30 15 70 20 110 45 S 190 80 250 30'/%3E%3C/g%3E%3Cg fill='rgba(255,255,255,0.04)'%3E%3Ccircle cx='40' cy='90' r='3'/%3E%3Ccircle cx='170' cy='38' r='2.5'/%3E%3Ccircle cx='120' cy='95' r='2'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 260px 140px;
+  background-repeat: repeat;
+  opacity: 1;
+  pointer-events:none;
+}
+.nightBoard__arena::after{
+  content:"";
+  position:absolute;
+  left: 50%;
+  top: 56%;
+  width: 130%;
+  height: 130%;
+  transform: translate(-50%, -50%) rotateX(70deg);
+  transform-origin: center;
+  background: radial-gradient(closest-side, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.16) 44%, transparent 72%);
+  filter: blur(2px);
+  opacity: 0.9;
+  pointer-events:none;
+}
+.nightBoard__center{
+  position:absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translateZ(10px);
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-auto-rows: auto;
+  gap: 10px;
+  z-index: 5;
+}
+.nightBoard__meFixed{
+  width: min(520px, 92%);
+  height: auto;
+  transform:
+    rotateX(10deg)
+    rotateZ(var(--tilt-deg, 0deg))
+    translateZ(10px);
+}
+.nightBoard__orbit{
+  position:absolute;
+  inset: 0;
+}
+.nightBoard__orbitCard{
+  position:absolute;
+  width: min(154px, 22vw);
+  max-width: 154px;
+}
+.nightBoard__centerCard{
+  width: min(165px, 24vw);
+  max-width: 165px;
+}
+.nightBoard__center .nightChoiceCard{
+  justify-self: center;
+}
+/* Make choice cards ~50% smaller in orbit board mode. */
+.nightBoard .nightChoiceCard{
+  height: 154px;
+  padding: 12px 10px;
+  gap: 8px;
+  border-radius: 18px;
+}
+.nightBoard .nightChoiceCard__seat{font-size: 28px}
+.nightBoard .nightChoiceCard__avatar{font-size: 44px}
+.nightBoard .nightChoiceCard__name{font-size: 12px}
 
 #nightOverlay .nightOverlay__private{
   border-color: color-mix(in srgb, var(--panel-color, #ffffff) 30%, rgba(255,255,255,.12));
@@ -1384,25 +2092,22 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   transition: transform 0.3s ease;
 }
 
-.landing__btn {
+.landing__btn{
   width: 100%;
   height: 56px;
   border-radius: 28px;
   border: none;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-  color: white;
-  font-size: 1.1rem;
-  font-weight: bold;
-  letter-spacing: 0.05em;
-  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
 }
-
-.landing__btn:active {
-  transform: scale(0.98);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+.nightAction__row--dense .nightChoiceCard__name{font-size: 11px}
+.landing__btn.btn{
+  height: 56px;
+  border-radius: 28px;
+  font-size: 1.1rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
 }
+.landing__btn.btn:active{transform: translateY(1px) scale(.99)}
 
 .landing__hint {
   font-size: 0.8rem;

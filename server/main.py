@@ -1274,6 +1274,42 @@ class GameServer:
             if client_id != self._room.host_client_id:
                 return
 
+            if action == "ui_preview":
+                # Broadcast a client-side UI preview command for development.
+                # data: { target: "all"|"seats"|"clients", seats?: [int], clientIds?: [str], includeHost?: bool, ui: { name: str, args?: list } }
+                ui = data.get("ui") or {}
+                ui_name = (ui.get("name") or "").strip()
+                ui_args = ui.get("args") or []
+                if not ui_name:
+                    return
+
+                include_host = bool(data.get("includeHost", True))
+                target = (data.get("target") or "all").strip().lower()
+                seats = [int(x) for x in (data.get("seats") or []) if str(x).isdigit()]
+                client_ids = [(str(x) or "").strip() for x in (data.get("clientIds") or []) if (str(x) or "").strip()]
+
+                targets: set[str] = set()
+                if target == "seats" and seats:
+                    seat_set = set(seats)
+                    for p in self._room.players:
+                        if p.seat in seat_set and p.ws is not None:
+                            targets.add(p.client_id)
+                elif target == "clients" and client_ids:
+                    targets.update(client_ids)
+                else:
+                    # all
+                    for p in self._room.players:
+                        if p.ws is not None:
+                            targets.add(p.client_id)
+
+                if not include_host and self._room.host_client_id:
+                    targets.discard(self._room.host_client_id)
+
+                payload = {"type": "ui_preview", "data": {"ui": {"name": ui_name, "args": ui_args}}}
+                for tid in targets:
+                    await self._send_to(tid, payload)
+                return
+
             if action == "unlock_scenario":
                 sid = (data.get("scenarioId") or "").strip()
                 if sid in self._scenarios:

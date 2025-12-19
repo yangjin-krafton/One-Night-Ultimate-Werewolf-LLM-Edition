@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <title>One Night Ultimate Werewolf (LAN)</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -44,7 +45,7 @@
                 <input id="nameInput" class="landing__input" maxlength="10" placeholder="당신의 이름은?" autocomplete="off" />
                 <div class="landing__input-border"></div>
               </div>
-              <button class="landing__btn" id="joinBtn">입장하기</button>
+              <button class="landing__btn btn btn--cta" id="joinBtn">입장하기</button>
               <div class="landing__hint">
                 Debug: <code>?debugClientId=U1&amp;debugName=Alice</code>
               </div>
@@ -90,7 +91,8 @@
           <div class="nightOverlay__body">
             <div class="nightOverlay__active" id="roleProfile"></div>
             <div class="nightOverlay__action" id="roleAction">
-              <button class="btn btn--primary" id="eyesClosedBtn">눈을 감아요 · 휴대폰 내려놓기</button>
+              <div class="roleAction__text" id="roleActionText"></div>
+              <button class="btn btn--cta btn--xl" id="eyesClosedBtn">휴대폰 화면을 다른 사람이 보이게 내려놓고, 눈을 감아요</button>
             </div>
           </div>
         </div>
@@ -184,7 +186,9 @@
     </div>
 
     <script src="/vendor/gsap.min.js"></script>
+    <script src="/ui/buttons.js"></script>
     <script src="/ui/cards.js"></script>
+    <script src="/ui/night_board.js"></script>
     <script src="/app.js"></script>
   </body>
 </html>

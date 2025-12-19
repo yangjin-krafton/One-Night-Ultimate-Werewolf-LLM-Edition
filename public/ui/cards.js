@@ -279,11 +279,19 @@
     return card;
   }
 
+  function setInteractive(node, enabled) {
+    if (!node) return;
+    const on = !!enabled;
+    node.toggleAttribute("disabled", !on);
+    node.setAttribute("aria-disabled", on ? "false" : "true");
+  }
+
   window.CardUI = {
     motion: { enter, emphasis, tap, installGlobalTapFeedback, staggerEnter, attachSwipeMotion, flip },
     createPlayerCard,
     createInfoCard,
     createRoleCard,
     createProfileCardLarge,
+    setInteractive,
   };
 })();
