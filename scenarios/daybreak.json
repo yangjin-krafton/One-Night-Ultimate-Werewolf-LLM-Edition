@@ -2,16 +2,16 @@
   "schemaVersion": 1,
   "generatedBy": "LLM",
   "scenarioType": "runtime",
-  "ttsSource": "scenarios_tts/basic_werewolf_tutorial.tts.json",
+  "ttsSource": "scenarios_tts/daybreak.tts.json",
   "scenarios": [
     {
-      "scenarioId": "basic_werewolf_tutorial",
-      "title": "초보자용 기본 한밤의 늑대인간",
+      "scenarioId": "daybreak",
+      "title": "데이브레이크 튜토리얼 A: 도구와 공개",
       "tags": [
         "tutorial",
-        "classic",
-        "werewolf",
-        "fog_village"
+        "daybreak",
+        "tokens",
+        "reveal"
       ],
       "recommendedPlayerCounts": [
         3,
@@ -26,33 +26,60 @@
       "episodes": [
         {
           "episodeId": "ep1",
-          "title": "EP1: 안개마을의 첫 밤",
+          "title": "EP1: 방패와 토큰",
           "variantByPlayerCount": {
             "10": {
+              "roleDeckSelectionPolicy": {
+                "mode": "random_pool",
+                "rules": [
+                  {
+                    "minPlayers": 3,
+                    "maxPlayers": 4,
+                    "fixedCards": [
+                      "werewolf"
+                    ],
+                    "minCounts": {
+                      "werewolf": 1
+                    }
+                  },
+                  {
+                    "minPlayers": 5,
+                    "maxPlayers": 10,
+                    "fixedCards": [
+                      "werewolf",
+                      "werewolf",
+                      "minion"
+                    ],
+                    "minCounts": {
+                      "werewolf": 2,
+                      "minion": 1
+                    }
+                  }
+                ]
+              },
               "roleDeck": [
                 "werewolf",
-                "seer",
-                "robber",
-                "villager",
-                "villager",
-                "villager",
                 "werewolf",
-                "troublemaker",
-                "drunk",
-                "insomniac",
                 "minion",
-                "mason",
-                "mason"
+                "apprentice_seer",
+                "witch",
+                "sentinel",
+                "revealer",
+                "curator",
+                "bodyguard",
+                "villager",
+                "villager",
+                "villager",
+                "villager"
               ],
               "roleWakeOrder": [
+                "sentinel",
                 "werewolf",
                 "minion",
-                "mason",
-                "seer",
-                "robber",
-                "troublemaker",
-                "drunk",
-                "insomniac"
+                "apprentice_seer",
+                "witch",
+                "revealer",
+                "curator"
               ],
               "narration": {
                 "playbackPolicy": {
@@ -69,6 +96,11 @@
                 "openingClipCount": 1,
                 "nightOutroClipCount": 1,
                 "roleClipCounts": {
+                  "sentinel": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
                   "werewolf": {
                     "before": 0,
                     "during": 1,
@@ -79,32 +111,22 @@
                     "during": 1,
                     "after": 0
                   },
-                  "mason": {
+                  "apprentice_seer": {
                     "before": 0,
                     "during": 1,
                     "after": 0
                   },
-                  "seer": {
+                  "witch": {
                     "before": 0,
                     "during": 1,
                     "after": 0
                   },
-                  "robber": {
+                  "revealer": {
                     "before": 0,
                     "during": 1,
                     "after": 0
                   },
-                  "troublemaker": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "drunk": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "insomniac": {
+                  "curator": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -116,33 +138,60 @@
         },
         {
           "episodeId": "ep2",
-          "title": "EP2: 안개 속 진술",
+          "title": "EP2: 공개 이후의 거짓",
           "variantByPlayerCount": {
             "10": {
+              "roleDeckSelectionPolicy": {
+                "mode": "random_pool",
+                "rules": [
+                  {
+                    "minPlayers": 3,
+                    "maxPlayers": 4,
+                    "fixedCards": [
+                      "werewolf"
+                    ],
+                    "minCounts": {
+                      "werewolf": 1
+                    }
+                  },
+                  {
+                    "minPlayers": 5,
+                    "maxPlayers": 10,
+                    "fixedCards": [
+                      "werewolf",
+                      "werewolf",
+                      "minion"
+                    ],
+                    "minCounts": {
+                      "werewolf": 2,
+                      "minion": 1
+                    }
+                  }
+                ]
+              },
               "roleDeck": [
                 "werewolf",
-                "seer",
-                "robber",
-                "villager",
-                "villager",
-                "villager",
                 "werewolf",
-                "troublemaker",
-                "drunk",
-                "insomniac",
                 "minion",
-                "mason",
-                "mason"
+                "apprentice_seer",
+                "witch",
+                "sentinel",
+                "revealer",
+                "curator",
+                "bodyguard",
+                "villager",
+                "villager",
+                "villager",
+                "villager"
               ],
               "roleWakeOrder": [
+                "sentinel",
                 "werewolf",
                 "minion",
-                "mason",
-                "seer",
-                "robber",
-                "troublemaker",
-                "drunk",
-                "insomniac"
+                "apprentice_seer",
+                "witch",
+                "revealer",
+                "curator"
               ],
               "narration": {
                 "playbackPolicy": {
@@ -159,6 +208,11 @@
                 "openingClipCount": 1,
                 "nightOutroClipCount": 1,
                 "roleClipCounts": {
+                  "sentinel": {
+                    "before": 0,
+                    "during": 1,
+                    "after": 0
+                  },
                   "werewolf": {
                     "before": 0,
                     "during": 1,
@@ -169,32 +223,22 @@
                     "during": 1,
                     "after": 0
                   },
-                  "mason": {
+                  "apprentice_seer": {
                     "before": 0,
                     "during": 1,
                     "after": 0
                   },
-                  "seer": {
+                  "witch": {
                     "before": 0,
                     "during": 1,
                     "after": 0
                   },
-                  "robber": {
+                  "revealer": {
                     "before": 0,
                     "during": 1,
                     "after": 0
                   },
-                  "troublemaker": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "drunk": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "insomniac": {
+                  "curator": {
                     "before": 0,
                     "during": 1,
                     "after": 0

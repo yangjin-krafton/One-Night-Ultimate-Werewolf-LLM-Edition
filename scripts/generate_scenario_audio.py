@@ -47,6 +47,38 @@ def _load_concat_module() -> Any:
     return module
 
 
+def _auto_wake_order_scenario_path(*, tts_scenario_path: Path) -> Path | None:
+    """
+    Try to locate a runtime scenario JSON (under scenarios/) that contains roleWakeOrder.
+
+    Convention:
+      scenarios_tts/<id>.tts.json  ->  scenarios/<id>.json
+      OR scenarios/<scenarioId>.json if scenarioId exists in the TTS JSON.
+    """
+    tts_scenario_path = Path(tts_scenario_path)
+
+    # 1) Filename convention: foo.tts.json -> foo.json
+    name = tts_scenario_path.name
+    if name.endswith(".tts.json"):
+        stem = name[: -len(".tts.json")]
+        candidate = ROOT / "scenarios" / f"{stem}.json"
+        if candidate.exists():
+            return candidate
+
+    # 2) Try by scenarioId inside the TTS JSON.
+    try:
+        raw = json.loads(tts_scenario_path.read_text(encoding="utf-8"))
+        scenario_id = str(raw.get("scenarioId") or "").strip()
+        if scenario_id:
+            candidate = ROOT / "scenarios" / f"{scenario_id}.json"
+            if candidate.exists():
+                return candidate
+    except Exception:
+        pass
+
+    return None
+
+
 def _iter_clips_from_variant(narration: dict[str, Any]) -> Iterable[tuple[str, str, str]]:
     """
     Yield tuples: (section_key, speakerId, text)
@@ -294,6 +326,14 @@ def main() -> int:
         help="Scenario JSON path.",
     )
     parser.add_argument(
+        "--wake-order-scenario",
+        default=os.environ.get("TTS_WAKE_ORDER_SCENARIO", ""),
+        help=(
+            "Optional JSON path to read roleWakeOrder from when concatenating episode wavs. "
+            "Useful when the TTS JSON doesn't include roleWakeOrder (e.g. use scenarios/<id>.json)."
+        ),
+    )
+    parser.add_argument(
         "--out-base",
         default=str(ROOT / "public" / "assets" / "voices"),
         help="Output base folder for voice assets.",
@@ -521,11 +561,16 @@ def main() -> int:
 
     if args.concat_episodes:
         concat_mod = _load_concat_module()
+        wake_src = Path(str(args.wake_order_scenario)).resolve() if str(args.wake_order_scenario).strip() else None
+        if wake_src is None:
+            wake_src = _auto_wake_order_scenario_path(tts_scenario_path=scenario_path)
+            if wake_src is not None:
+                print(f"[info] concat: auto wake-order scenario: {wake_src}")
         rc = concat_mod.concat_episode_wavs_from_jobs(
             jobs=jobs,
             scenario_json_path=scenario_path,
             voices_base=out_base,
-            wake_order_scenario_path=None,
+            wake_order_scenario_path=wake_src,
             out_dir_mode=str(args.concat_out_dir_mode),
             out_name_template=str(args.concat_out_name_template),
             out_filename="",

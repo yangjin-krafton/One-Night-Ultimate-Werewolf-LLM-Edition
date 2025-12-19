@@ -402,9 +402,63 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   overflow: hidden;
 }
 
+/* CardUI refresh layer (only for cards generated via public/ui/cards.js) */
+[data-cardui="1"].card{
+  --tap-outline: 0px;
+  --tap-outline-color: color-mix(in srgb, var(--p-color) 82%, white);
+  border-color: color-mix(in srgb, var(--p-color) 18%, rgba(255,255,255,0.08));
+  box-shadow:
+    0 14px 34px rgba(0,0,0,0.62),
+    0 0 0 1px rgba(255,255,255,0.06),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+  filter: drop-shadow(0 0 var(--tap-outline) var(--tap-outline-color));
+}
+[data-cardui="1"].card::after{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  background:
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--p-color) 22%, transparent) 0%, transparent 55%),
+    radial-gradient(circle at 86% 88%, rgba(255,255,255,0.06) 0%, transparent 58%),
+    linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.05) 28%, transparent 55%);
+  opacity: .85;
+  pointer-events:none;
+  transform: translateZ(0);
+}
+[data-cardui="1"].card__avatar{
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,0.42));
+}
+
+[data-cardui="1"].info-card__content{
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 45%, transparent 70%),
+    rgba(255, 255, 255, 0.05);
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: 0 18px 46px rgba(0,0,0,0.42);
+  transform-origin: center;
+  will-change: transform;
+}
+
+[data-cardui="1"].roleCard{
+  border-color: rgba(255,255,255,.20);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 45%, transparent 70%),
+    rgba(255,255,255,.06);
+  box-shadow: 0 18px 44px rgba(0,0,0,.42);
+}
+
+[data-cardui="1"].profileCardLarge{
+  box-shadow:
+    0 20px 50px rgba(0,0,0,0.62),
+    inset 0 0 0 1px rgba(255,255,255,0.10);
+}
+
 .card:active {
   transform: scale(0.98);
 }
+
+/* Prefer GSAP tap feedback for CardUI cards (avoid double-press scaling) */
+[data-cardui="1"].card:active{transform:none}
 
 /* Connected State: Glow Border */
 .card--connected {

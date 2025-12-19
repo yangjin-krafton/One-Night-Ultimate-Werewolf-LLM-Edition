@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "LLM",
+  "scenarioType": "runtime",
+  "ttsSource": "scenarios_tts/ultimatel.tts.json",
+  "scenarios": [
+    {
+      "scenarioId": "ultimate",
+      "title": "데이브레이크 + 기본판 올인원(다역할) 튜토리얼",
+      "tags": [
+        "tutorial",
+        "classic",
+        "daybreak",
+        "mixed_roles",
+        "sandbox"
+      ],
+      "recommendedPlayerCounts": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "episodes": [
+        {
+          "episodeId": "ep1",
+          "title": "EP1: 안개와 토큰, 그리고 바뀌는 정체",
+          "variantByPlayerCount": {
+            "10": {
+              "roleDeckSelectionPolicy": {
+                "mode": "random_pool",
+                "rules": [
+                  {
+                    "minPlayers": 3,
+                    "maxPlayers": 4,
+                    "fixedCards": [
+                      "werewolf",
+                      "seer"
+                    ],
+                    "minCounts": {
+                      "werewolf": 1,
+                      "seer": 1
+                    }
+                  },
+                  {
+                    "minPlayers": 5,
+                    "maxPlayers": 10,
+                    "fixedCards": [
+                      "werewolf",
+                      "werewolf",
+                      "seer"
+                    ],
+                    "minCounts": {
+                      "werewolf": 2,
+                      "seer": 1
+                    }
+                  }
+                ]
+              },
+              "roleDeck": [
+                "werewolf",
+                "werewolf",
+                "alpha_wolf",
+                "mystic_wolf",
+                "dream_wolf",
+                "minion",
+                "seer",
+                "apprentice_seer",
+                "paranormal_investigator",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "sentinel",
+                "witch",
+                "revealer",
+                "curator",
+                "bodyguard",
+                "mason",
+                "mason",
+                "villager",
+                "villager",
+                "villager"
+              ],
+              "roleWakeOrder": [
+                "sentinel",
+                "werewolf",
+                "alpha_wolf",
+                "mystic_wolf",
+                "minion",
+                "mason",
+                "paranormal_investigator",
+                "apprentice_seer",
+                "seer",
+                "robber",
+                "troublemaker",
+                "witch",
+                "drunk",
+                "revealer",
+                "curator",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "sentinel": { "before": 0, "during": 1, "after": 0 },
+                  "werewolf": { "before": 0, "during": 1, "after": 0 },
+                  "alpha_wolf": { "before": 0, "during": 1, "after": 0 },
+                  "mystic_wolf": { "before": 0, "during": 1, "after": 0 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "paranormal_investigator": { "before": 0, "during": 1, "after": 0 },
+                  "apprentice_seer": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 0 },
+                  "robber": { "before": 0, "during": 1, "after": 0 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 0 },
+                  "witch": { "before": 0, "during": 1, "after": 0 },
+                  "drunk": { "before": 0, "during": 1, "after": 0 },
+                  "revealer": { "before": 0, "during": 1, "after": 0 },
+                  "curator": { "before": 0, "during": 1, "after": 0 },
+                  "insomniac": { "before": 0, "during": 1, "after": 0 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "episodeId": "ep2",
+          "title": "EP2: 뒤집히는 단서",
+          "variantByPlayerCount": {
+            "10": {
+              "roleDeckSelectionPolicy": {
+                "mode": "random_pool",
+                "rules": [
+                  {
+                    "minPlayers": 3,
+                    "maxPlayers": 4,
+                    "fixedCards": [
+                      "werewolf",
+                      "seer"
+                    ],
+                    "minCounts": {
+                      "werewolf": 1,
+                      "seer": 1
+                    }
+                  },
+                  {
+                    "minPlayers": 5,
+                    "maxPlayers": 10,
+                    "fixedCards": [
+                      "werewolf",
+                      "werewolf",
+                      "seer"
+                    ],
+                    "minCounts": {
+                      "werewolf": 2,
+                      "seer": 1
+                    }
+                  }
+                ]
+              },
+              "roleDeck": [
+                "werewolf",
+                "werewolf",
+                "alpha_wolf",
+                "mystic_wolf",
+                "dream_wolf",
+                "minion",
+                "seer",
+                "apprentice_seer",
+                "paranormal_investigator",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "sentinel",
+                "witch",
+                "revealer",
+                "curator",
+                "bodyguard",
+                "mason",
+                "mason",
+                "villager",
+                "villager",
+                "villager"
+              ],
+              "roleWakeOrder": [
+                "sentinel",
+                "werewolf",
+                "alpha_wolf",
+                "mystic_wolf",
+                "minion",
+                "mason",
+                "paranormal_investigator",
+                "apprentice_seer",
+                "seer",
+                "robber",
+                "troublemaker",
+                "witch",
+                "drunk",
+                "revealer",
+                "curator",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": [
+                    "episode_start"
+                  ],
+                  "silentPhases": [
+                    "debate",
+                    "vote",
+                    "vote_result",
+                    "reveal"
+                  ]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "sentinel": { "before": 0, "during": 1, "after": 0 },
+                  "werewolf": { "before": 0, "during": 1, "after": 0 },
+                  "alpha_wolf": { "before": 0, "during": 1, "after": 0 },
+                  "mystic_wolf": { "before": 0, "during": 1, "after": 0 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "paranormal_investigator": { "before": 0, "during": 1, "after": 0 },
+                  "apprentice_seer": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 0 },
+                  "robber": { "before": 0, "during": 1, "after": 0 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 0 },
+                  "witch": { "before": 0, "during": 1, "after": 0 },
+                  "drunk": { "before": 0, "during": 1, "after": 0 },
+                  "revealer": { "before": 0, "during": 1, "after": 0 },
+                  "curator": { "before": 0, "during": 1, "after": 0 },
+                  "insomniac": { "before": 0, "during": 1, "after": 0 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

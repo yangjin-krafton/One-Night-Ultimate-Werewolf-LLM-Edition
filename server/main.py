@@ -180,6 +180,119 @@ def effective_role_deck(variant: dict[str, Any] | None, player_count: int) -> li
     return deck[: min(len(deck), need)]
 
 
+def select_role_deck_for_game(variant: dict[str, Any] | None, player_count: int) -> list[str]:
+    """
+    Build the actual deck used for the game (players + 3 center cards).
+
+    Default behavior preserves legacy semantics (prefix-truncation) unless the scenario opts in:
+      variant.roleDeckSelectionPolicy.mode == "random_pool"
+
+    In random_pool mode, the full roleDeck is treated as an unordered pool and we sample `player_count + 3`
+    cards, while enforcing optional fixed/minimum constraints under either:
+      - variant.roleDeckSelectionPolicy.fixedCards: [roleId, ...] (cards that must be included; duplicates allowed)
+      - variant.roleDeckSelectionPolicy.minCounts: { roleId: int }
+      - variant.roleDeckSelectionPolicy.rules: [{ minPlayers?: int, maxPlayers?: int, minCounts: { roleId: int } }]
+        (first matching rule wins; falls back to fixedCards/minCounts)
+    """
+    if not variant:
+        return []
+
+    need = max(0, int(player_count) + 3)
+    if need <= 0:
+        return []
+
+    raw_policy = variant.get("roleDeckSelectionPolicy")
+    policy = raw_policy if isinstance(raw_policy, dict) else {}
+    mode = str(policy.get("mode") or "").strip() or "prefix"
+
+    full_deck = list(variant.get("roleDeck") or [])
+    if len(full_deck) < need:
+        return []
+
+    if mode != "random_pool":
+        return full_deck[:need]
+
+    def _parse_fixed_cards(raw: Any) -> list[str]:
+        out: list[str] = []
+        if not isinstance(raw, list):
+            return out
+        for x in raw:
+            rid = str(x).strip()
+            if rid:
+                out.append(rid)
+        return out
+
+    def _parse_min_counts(raw: Any) -> dict[str, int]:
+        out: dict[str, int] = {}
+        if not isinstance(raw, dict):
+            return out
+        for role_id, count in raw.items():
+            rid = str(role_id).strip()
+            if not rid:
+                continue
+            try:
+                c = int(count)
+            except Exception:
+                continue
+            if c > 0:
+                out[rid] = c
+        return out
+
+    chosen_fixed_cards: list[str] = []
+    chosen_min_counts: dict[str, int] = {}
+    rules = policy.get("rules") or []
+    if isinstance(rules, list):
+        for raw_rule in rules:
+            if not isinstance(raw_rule, dict):
+                continue
+            try:
+                min_p = int(raw_rule.get("minPlayers")) if raw_rule.get("minPlayers") is not None else None
+            except Exception:
+                min_p = None
+            try:
+                max_p = int(raw_rule.get("maxPlayers")) if raw_rule.get("maxPlayers") is not None else None
+            except Exception:
+                max_p = None
+            if min_p is not None and int(player_count) < min_p:
+                continue
+            if max_p is not None and int(player_count) > max_p:
+                continue
+            chosen_fixed_cards = _parse_fixed_cards(raw_rule.get("fixedCards"))
+            chosen_min_counts = _parse_min_counts(raw_rule.get("minCounts"))
+            break
+
+    if not chosen_fixed_cards:
+        chosen_fixed_cards = _parse_fixed_cards(policy.get("fixedCards"))
+
+    if not chosen_min_counts:
+        chosen_min_counts = _parse_min_counts(policy.get("minCounts") or {})
+
+    pool = list(full_deck)
+    random.shuffle(pool)
+
+    picked: list[str] = []
+    for rid in chosen_fixed_cards:
+        try:
+            idx = pool.index(rid)
+        except ValueError:
+            return []
+        picked.append(pool.pop(idx))
+
+    for rid, c in chosen_min_counts.items():
+        for _ in range(c):
+            try:
+                idx = pool.index(rid)
+            except ValueError:
+                return []
+            picked.append(pool.pop(idx))
+
+    remaining = need - len(picked)
+    if remaining < 0:
+        return []
+    picked.extend(pool[:remaining])
+    return picked
+
+
 def scenario_can_start(scenario: dict[str, Any] | None, player_count: int) -> bool:
     return scenario_can_start_for_episode(scenario, player_count, episode_id=None)
 
@@ -264,6 +377,7 @@ class RoomState:
     votes: dict[str, int] = field(default_factory=dict)  # clientId -> targetSeat
     role_by_client_id: dict[str, str] = field(default_factory=dict)  # private: clientId -> roleId
     center_roles: list[str] = field(default_factory=list)  # private-ish: 3 cards
+    night_deck: list[str] = field(default_factory=list)  # private-ish: selected deck used for this game
 
     # Night step sequencing (host drives with step_done ack; server has a timeout fallback).
     night_step_id: int = 0
@@ -453,6 +567,7 @@ class GameServer:
         self._room.night_step_ends_at_ms = None
         self._room.night_episode_id = None
         self._room.night_variant_player_count = None
+        self._room.night_deck = []
         self._room.night_waiting_host_step_id = None
         self._room.night_waiting_actor_ids.clear()
         self._room.night_done_actor_ids.clear()
@@ -545,7 +660,7 @@ class GameServer:
         outro_count = int(narr.get("nightOutroClipCount") or 0)
         role_counts = narr.get("roleClipCounts") or {}
 
-        deck = effective_role_deck(variant, player_count)
+        deck = self._room.night_deck or effective_role_deck(variant, player_count)
         roles_in_deck = set(deck)
         wake_order = [r for r in (variant.get("roleWakeOrder") or []) if (not roles_in_deck) or (r in roles_in_deck)]
 
@@ -1022,9 +1137,10 @@ class GameServer:
         variant = select_variant_for_player_count(ep, player_count)
         if not variant:
             return False
-        deck = effective_role_deck(variant, player_count)
+        deck = select_role_deck_for_game(variant, player_count)
         if len(deck) < player_count + 3:
             return False
+        self._room.night_deck = list(deck)
         random.shuffle(deck)
         player_ids = [p.client_id for p in self._room.players if p.ws is not None and not p.is_spectator]
         if len(player_ids) != player_count:

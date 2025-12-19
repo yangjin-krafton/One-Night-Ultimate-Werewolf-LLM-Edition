@@ -2,16 +2,16 @@
   "schemaVersion": 1,
   "generatedBy": "LLM",
   "scenarioType": "runtime",
-  "ttsSource": "scenarios_tts/daybreak_wolves_tutorial.tts.json",
+  "ttsSource": "scenarios_tts/basic.tts.json",
   "scenarios": [
     {
-      "scenarioId": "daybreak_wolves_tutorial",
-      "title": "데이브레이크 튜토리얼 B: 늑대의 변형과 혼란",
+      "scenarioId": "basic",
+      "title": "초보자용 기본 한밤의 늑대인간",
       "tags": [
         "tutorial",
-        "daybreak",
-        "wolf_variants",
-        "chaos"
+        "classic",
+        "werewolf",
+        "fog_village"
       ],
       "recommendedPlayerCounts": [
         3,
@@ -26,34 +26,61 @@
       "episodes": [
         {
           "episodeId": "ep1",
-          "title": "EP1: 여러 종류의 늑대",
+          "title": "EP1: 안개마을의 첫 밤",
           "variantByPlayerCount": {
             "10": {
+              "roleDeckSelectionPolicy": {
+                "mode": "random_pool",
+                "rules": [
+                  {
+                    "minPlayers": 3,
+                    "maxPlayers": 4,
+                    "fixedCards": [
+                      "werewolf",
+                      "seer"
+                    ],
+                    "minCounts": {
+                      "werewolf": 1,
+                      "seer": 1
+                    }
+                  },
+                  {
+                    "minPlayers": 5,
+                    "maxPlayers": 10,
+                    "fixedCards": [
+                      "werewolf",
+                      "werewolf",
+                      "seer"
+                    ],
+                    "minCounts": {
+                      "werewolf": 2,
+                      "seer": 1
+                    }
+                  }
+                ]
+              },
               "roleDeck": [
-                "alpha_wolf",
-                "paranormal_investigator",
+                "werewolf",
+                "seer",
                 "robber",
+                "villager",
+                "villager",
+                "villager",
+                "werewolf",
                 "troublemaker",
                 "drunk",
                 "insomniac",
-                "villager",
-                "villager",
-                "mystic_wolf",
-                "dream_wolf",
-                "village_idiot",
-                "seer",
-                "minion"
+                "minion",
+                "mason",
+                "mason"
               ],
               "roleWakeOrder": [
-                "alpha_wolf",
-                "mystic_wolf",
-                "dream_wolf",
+                "werewolf",
                 "minion",
-                "paranormal_investigator",
+                "mason",
                 "seer",
                 "robber",
                 "troublemaker",
-                "village_idiot",
                 "drunk",
                 "insomniac"
               ],
@@ -72,17 +99,7 @@
                 "openingClipCount": 1,
                 "nightOutroClipCount": 1,
                 "roleClipCounts": {
-                  "alpha_wolf": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "mystic_wolf": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "dream_wolf": {
+                  "werewolf": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -92,7 +109,7 @@
                     "during": 1,
                     "after": 0
                   },
-                  "paranormal_investigator": {
+                  "mason": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -108,11 +125,6 @@
                     "after": 0
                   },
                   "troublemaker": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "village_idiot": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -134,34 +146,61 @@
         },
         {
           "episodeId": "ep2",
-          "title": "EP2: 기억을 뒤집는 밤",
+          "title": "EP2: 안개 속 진술",
           "variantByPlayerCount": {
             "10": {
+              "roleDeckSelectionPolicy": {
+                "mode": "random_pool",
+                "rules": [
+                  {
+                    "minPlayers": 3,
+                    "maxPlayers": 4,
+                    "fixedCards": [
+                      "werewolf",
+                      "seer"
+                    ],
+                    "minCounts": {
+                      "werewolf": 1,
+                      "seer": 1
+                    }
+                  },
+                  {
+                    "minPlayers": 5,
+                    "maxPlayers": 10,
+                    "fixedCards": [
+                      "werewolf",
+                      "werewolf",
+                      "seer"
+                    ],
+                    "minCounts": {
+                      "werewolf": 2,
+                      "seer": 1
+                    }
+                  }
+                ]
+              },
               "roleDeck": [
-                "alpha_wolf",
-                "paranormal_investigator",
+                "werewolf",
+                "seer",
                 "robber",
+                "villager",
+                "villager",
+                "villager",
+                "werewolf",
                 "troublemaker",
                 "drunk",
                 "insomniac",
-                "villager",
-                "villager",
-                "mystic_wolf",
-                "dream_wolf",
-                "village_idiot",
-                "seer",
-                "minion"
+                "minion",
+                "mason",
+                "mason"
               ],
               "roleWakeOrder": [
-                "alpha_wolf",
-                "mystic_wolf",
-                "dream_wolf",
+                "werewolf",
                 "minion",
-                "paranormal_investigator",
+                "mason",
                 "seer",
                 "robber",
                 "troublemaker",
-                "village_idiot",
                 "drunk",
                 "insomniac"
               ],
@@ -180,17 +219,7 @@
                 "openingClipCount": 1,
                 "nightOutroClipCount": 1,
                 "roleClipCounts": {
-                  "alpha_wolf": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "mystic_wolf": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "dream_wolf": {
+                  "werewolf": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -200,7 +229,7 @@
                     "during": 1,
                     "after": 0
                   },
-                  "paranormal_investigator": {
+                  "mason": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -216,11 +245,6 @@
                     "after": 0
                   },
                   "troublemaker": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "village_idiot": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -244,4 +268,3 @@
     }
   ]
 }
-

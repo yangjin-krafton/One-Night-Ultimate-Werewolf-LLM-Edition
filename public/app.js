@@ -1,6 +1,7 @@
 /* global speechSynthesis */
 
 const qs = (sel) => document.querySelector(sel);
+const CardUI = window.CardUI || null;
 
 let viewportFixInstalled = false;
 let viewportRaf = 0;
@@ -482,6 +483,8 @@ function render() {
   if (!room) return;
 
   const phase = room.phase || "WAIT";
+  const phaseChanged = state.uiLastPhase !== phase;
+  state.uiLastPhase = phase;
   const amHost = isHost();
   syncHostEndButton();
   const me = (room.players || []).find((p) => p.clientId === state.clientId) || null;
@@ -523,68 +526,30 @@ function render() {
   const players = room.players || [];
   gridEl.innerHTML = "";
   for (const p of players) {
-    const card = document.createElement("div");
-    card.className = "card";
-    if (p.clientId === state.clientId) card.classList.add("card--me");
-    if (p.isHost) card.classList.add("card--host");
-    if (p.connected) card.classList.add("card--connected");
-    
-    applyPlayerPalette(card, p.color || "#888");
+    const isMe = p.clientId === state.clientId;
+    const roleLabel = isMe && state.myRoleId ? getRoleDisplayName(state.myRoleId) : "";
+    const isVoted = !!state.room?.votes?.[p.clientId];
 
-    // Check if voted
-    if (state.room?.votes?.[p.clientId]) {
-      card.setAttribute("data-voted", "true");
-    }
+    const card = CardUI?.createPlayerCard
+      ? CardUI.createPlayerCard({
+          player: p,
+          isMe,
+          isHost: !!p.isHost,
+          isConnected: !!p.connected,
+          isVoted,
+          roleLabel,
+          applyPalette: applyPlayerPalette,
+        })
+      : (() => {
+          const fallback = document.createElement("div");
+          fallback.className = "card";
+          return fallback;
+        })();
 
-    // Top: Seat Number + Badge
-    const top = document.createElement("div");
-    top.className = "card__top";
-
-    const seat = document.createElement("div");
-    seat.className = "seat";
-    seat.textContent = String(p.seat);
-
-    const badgeGroup = document.createElement("div");
-    badgeGroup.className = "badgeGroup";
-
-    const badge = document.createElement("div");
-    badge.className = "badge";
-    badge.textContent = p.isHost ? "HOST" : p.connected ? "ON" : "OFF"; // Shorten badge text
-    badgeGroup.appendChild(badge);
-
-    if (p.clientId === state.clientId) {
-      const meBadge = document.createElement("div");
-      meBadge.className = "badge badge--me";
-      meBadge.textContent = "ME";
-      badgeGroup.appendChild(meBadge);
-    }
-
-    top.appendChild(seat);
-    top.appendChild(badgeGroup);
-
-    // Content: Avatar + Name
-    const content = document.createElement("div");
-    content.className = "card__content";
-
-    const avatar = document.createElement("div");
-    avatar.className = "card__avatar";
-    avatar.textContent = p.avatar || "👤";
-
-    const name = document.createElement("div");
-    name.className = "name";
-    name.textContent = p.name + (p.clientId === state.clientId && state.myRoleId ? ` · ${getRoleDisplayName(state.myRoleId)}` : "");
-
-    content.appendChild(avatar);
-    content.appendChild(name);
-
-    // Bottom Bar (Vote Indicator)
-    const bar = document.createElement("div");
-    bar.className = "card__bar";
-
-    card.appendChild(top);
-    card.appendChild(content);
-    card.appendChild(bar);
     gridEl.appendChild(card);
+
+    // Keep lobby/grid motion subtle; avoid re-animating every websocket tick.
+    if (phaseChanged && phase === "WAIT") CardUI?.motion?.enter?.(card, "playerGrid");
   }
 
   renderInfoDeck();
@@ -659,18 +624,23 @@ function renderDebateRoleStrip() {
     const displayName = getRoleDisplayName(roleId);
     const c = counts[roleId] || 0;
 
-    const card = document.createElement("div");
-    card.className = "roleCard";
-    card.innerHTML = `
-      <div class="roleCard__icon">${escapeHtml(def.icon || "🃏")}</div>
-      <div class="roleCard__name">${escapeHtml(displayName)}</div>
-      <div class="roleCard__count">${escapeHtml(String(c))}장</div>
-    `;
+    const card = CardUI?.createRoleCard
+      ? CardUI.createRoleCard({
+          icon: escapeHtml(def.icon || "🃏"),
+          name: escapeHtml(displayName),
+          countText: `${escapeHtml(String(c))}장`,
+        })
+      : (() => {
+          const node = document.createElement("div");
+          node.className = "roleCard";
+          return node;
+        })();
     scroller.appendChild(card);
   }
 
   roleStripEl.innerHTML = "";
   roleStripEl.appendChild(scroller);
+  CardUI?.motion?.staggerEnter?.(scroller.children, { preset: "stack", stagger: 0.04 });
 }
 
 function renderInfoDeck() {
@@ -688,16 +658,18 @@ function renderInfoDeck() {
 
   deckEl.innerHTML = "";
   indicatorEl.innerHTML = "";
+  deckEl.dataset.motionAttached = "0";
 
   if (!sid) {
-    deckEl.innerHTML = `
-      <div class="info-card">
-        <div class="info-card__content">
-          <div class="info-card__role-icon">⏳</div>
-          <h3>대기 중...</h3>
-          <p>호스트가 시나리오를 선택하고 있습니다.</p>
-        </div>
-      </div>`;
+    const card = CardUI?.createInfoCard
+      ? CardUI.createInfoCard({
+          tag: "",
+          icon: "⏳",
+          title: "대기 중...",
+          text: "호스트가 시나리오를 선택하고 있습니다.",
+        })
+      : null;
+    if (card) deckEl.appendChild(card);
     return;
   }
 
@@ -707,14 +679,16 @@ function renderInfoDeck() {
     // Render loading UI once per selected scenario, then wait for the detail fetch.
     if (deckEl.dataset.loadingFor !== sid) {
       deckEl.dataset.loadingFor = sid;
-      deckEl.innerHTML = `
-        <div class="info-card">
-          <div class="info-card__content">
-            <div class="info-card__role-icon">📥</div>
-            <h3>역할 정보를 불러오는 중...</h3>
-            <p>선택된 시나리오의 등장 역할/규칙 카드를 준비하고 있습니다.</p>
-          </div>
-        </div>`;
+      const card = CardUI?.createInfoCard
+        ? CardUI.createInfoCard({
+            tag: "",
+            icon: "📥",
+            title: "역할 정보를 불러오는 중...",
+            text: "선택된 시나리오의 등장 역할/규칙 카드를 준비하고 있습니다.",
+          })
+        : null;
+      deckEl.innerHTML = "";
+      if (card) deckEl.appendChild(card);
     }
     if (!scenarioDetailInflight.has(sid)) {
       ensureScenarioDetailLoaded(sid).then(() => renderInfoDeck());
@@ -801,16 +775,18 @@ function renderInfoDeck() {
 
   // Render Slides
   slides.forEach((s, idx) => {
-    const card = document.createElement("div");
-    card.className = "info-card";
-    card.innerHTML = `
-      <div class="info-card__content">
-        <span class="info-card__tag">${s.tag}</span>
-        <div class="info-card__role-icon">${s.icon}</div>
-        <h3>${escapeHtml(s.title)}</h3>
-        <p>${s.text}</p>
-      </div>
-    `;
+    const card = CardUI?.createInfoCard
+      ? CardUI.createInfoCard({
+          tag: s.tag,
+          icon: s.icon,
+          title: escapeHtml(s.title),
+          text: s.text,
+        })
+      : (() => {
+          const node = document.createElement("div");
+          node.className = "info-card";
+          return node;
+        })();
     deckEl.appendChild(card);
 
     const dot = document.createElement("div");
@@ -818,6 +794,9 @@ function renderInfoDeck() {
     if (idx === 0) dot.classList.add("active");
     indicatorEl.appendChild(dot);
   });
+
+  CardUI?.motion?.staggerEnter?.(deckEl.querySelectorAll(".info-card__content"), { preset: "fadeUp", stagger: 0.05 });
+  CardUI?.motion?.attachSwipeMotion?.(deckEl, { cardSelector: ".info-card", contentSelector: ".info-card__content" });
 
   // Update indicators on scroll
   deckEl.onscroll = () => {
@@ -872,16 +851,12 @@ function renderNightOverlay() {
   const bySeat = new Map(players.map((p) => [Number(p.seat), p]));
 
   const buildLargeCard = (p, badgeText) => {
-    const el = document.createElement("div");
-    el.className = "profileCardLarge";
-    applyPlayerPalette(el, p?.color || "#888");
-    el.innerHTML = `
-      <div class="profileCardLarge__badge">${escapeHtml(badgeText || "")}</div>
-      <div class="profileCardLarge__seat">${escapeHtml(String(p?.seat ?? ""))}</div>
-      <div class="profileCardLarge__avatar">${escapeHtml(p?.avatar || "👤")}</div>
-      <div class="profileCardLarge__name">${escapeHtml(p?.name || "")}</div>
-    `;
-    return el;
+    if (CardUI?.createProfileCardLarge) {
+      return CardUI.createProfileCardLarge({ player: p, badgeText, applyPalette: applyPlayerPalette });
+    }
+    const node = document.createElement("div");
+    node.className = "profileCardLarge";
+    return node;
   };
 
   const me = (state.room?.players || []).find((p) => p.clientId === state.clientId) || null;
@@ -891,12 +866,18 @@ function renderNightOverlay() {
 
   if (kind === "opening") {
     nightHint.textContent = "모두 눈을 감고 휴대폰을 내려놓으세요.";
-    if (myCard) nightActive.appendChild(myCard);
+    if (myCard) {
+      nightActive.appendChild(myCard);
+      CardUI?.motion?.enter?.(myCard, "profile");
+    }
     return;
   }
   if (kind === "outro") {
     nightHint.textContent = "밤이 끝났습니다. 모두 눈을 뜨세요.";
-    if (myCard) nightActive.appendChild(myCard);
+    if (myCard) {
+      nightActive.appendChild(myCard);
+      CardUI?.motion?.enter?.(myCard, "profile");
+    }
     return;
   }
 
@@ -909,7 +890,10 @@ function renderNightOverlay() {
   // Default (non-actor): keep my profile card fullscreen until day.
   if (!isActor) {
     nightHint.textContent = `${activeRoleName || "누군가"} 차례입니다. 계속 눈을 감고 기다리세요.`;
-    if (myCard) nightActive.appendChild(myCard);
+    if (myCard) {
+      nightActive.appendChild(myCard);
+      CardUI?.motion?.enter?.(myCard, "profile");
+    }
     return;
   }
 
@@ -919,6 +903,7 @@ function renderNightOverlay() {
   if (myCard) {
     myCard.classList.add("profileCardLarge--actorBg");
     nightActive.appendChild(myCard);
+    CardUI?.motion?.enter?.(myCard, "profile");
   }
 
   // Private hint payloads (server-sent).
@@ -1119,16 +1104,16 @@ function renderRoleOverlay() {
   roleProfile.innerHTML = "";
   const me = (state.room?.players || []).find((p) => p.clientId === state.clientId) || null;
   if (me) {
-    const card = document.createElement("div");
-    card.className = "profileCardLarge";
-    applyPlayerPalette(card, me.color || "#888");
-    card.innerHTML = `
-      <div class="profileCardLarge__badge">${state.roleReady ? "EYES CLOSED" : "READY?"}</div>
-      <div class="profileCardLarge__seat">${escapeHtml(String(me.seat || ""))}</div>
-      <div class="profileCardLarge__avatar">${escapeHtml(me.avatar || "👤")}</div>
-      <div class="profileCardLarge__name">${escapeHtml(me.name || "")}</div>
-    `;
+    const card = CardUI?.createProfileCardLarge
+      ? CardUI.createProfileCardLarge({
+          player: me,
+          badgeText: state.roleReady ? "EYES CLOSED" : "READY?",
+          applyPalette: applyPlayerPalette,
+        })
+      : document.createElement("div");
+    card.classList.add("profileCardLarge");
     roleProfile.appendChild(card);
+    CardUI?.motion?.enter?.(card, "profile");
   }
 }
 
@@ -1910,6 +1895,7 @@ async function ensureAudioUnlocked() {
 
 async function init() {
   installViewportFix();
+  CardUI?.motion?.installGlobalTapFeedback?.();
   showJoin();
   setConn(false);
   setBgGradient("WAIT");

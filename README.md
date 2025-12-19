@@ -219,6 +219,31 @@ docker run -p 8000:8000 werewolf-server
 - 시나리오 선택 후, **선택한 인원 수와 실제 입장 인원이 정확히 일치**하면 `[시나리오 선택]` 옆에 **[게임 시작]** 버튼이 활성화됩니다.
 - 호스트가 [게임 시작]을 누르면, 미리 준비된 TTS가 재생되며 게임 진행이 시작됩니다.
 
+#### 역할 덱 선택 정책(인원수 대응)
+
+기본 동작은 `roleDeck`을 **앞에서부터** `플레이어 수 + 3`장만 잘라 사용합니다(=배열 순서가 사실상 우선순위).
+이 방식은 소규모 인원(3~6인)에서 **뒤쪽 역할이 거의 등장하지 않는 편중**을 만들 수 있습니다.
+
+이를 피하려면, 해당 변형(variant)에 다음을 추가해 `roleDeck`을 “풀(pool)”로 취급하고, 인원수 구간별로 필수 역할 최소 보장을 줄 수 있습니다.
+
+```json
+{
+  "roleDeckSelectionPolicy": {
+    "mode": "random_pool",
+    "rules": [
+      { "minPlayers": 3, "maxPlayers": 4, "fixedCards": ["werewolf","seer"], "minCounts": { "werewolf": 1, "seer": 1 } },
+      { "minPlayers": 5, "maxPlayers": 10, "fixedCards": ["werewolf","werewolf","seer"], "minCounts": { "werewolf": 2, "seer": 1 } }
+    ]
+  }
+}
+```
+
+- `mode: "random_pool"`: `roleDeck`에서 정확히 `플레이어 수 + 3`장을 무작위로 뽑아 이번 판 덱으로 사용
+- `rules`: `{minPlayers,maxPlayers}`에 **처음 매칭되는 규칙**을 적용
+  - `fixedCards`: 반드시 포함되는 “고정 카드들”(중복 허용)
+  - `minCounts`: 역할별 최소 장수 보장(중복 허용, `fixedCards`와 함께 사용 가능)
+- 규칙이 없거나 매칭 실패 시 `minCounts`(있다면)로 폴백, 둘 다 없으면 기존(prefix) 방식 유지
+
 ### 5.5 에피소드(라운드) 기반 구성 (구 4.4)
 
 - 하나의 큰 사건(시나리오)을 **여러 에피소드(라운드)**로 나눠 진행합니다.
@@ -370,9 +395,8 @@ python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/
 
 #### 시나리오 JSON에서 일괄 생성
 ```bash
-
-python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club_10.tts.json `--tts gpt-sovits --characters-dir characters/Thema_01 `--character-local-ref-base "D:\GPT_SoVIT" --character-container-ref-base "/workspace/refs" `--api-base http://localhost:9880 `--sovits-http-method post --concat-episodes
-
+# 전체 생성 + (기본) 에피소드 wav 병합까지
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/daybreak.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\\GPT_SoVIT" --character-container-ref-base "/workspace/refs"  --api-base http://localhost:9880 --sovits-http-method post
 
 # 최대 인원 변형만 생성
 python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --variant-mode max-only --tts gpt-sovits --characters-dir characters/Thema_01
@@ -387,16 +411,12 @@ python scripts/check_character_refs.py --characters-dir characters/genshin --loc
 python scripts/check_character_refs.py --characters-dir characters/Thema_01 --local-ref-base "D:\GPT_SoVIT\refs" --fix
 ```
 
-#### 에피소드 wav 연결 (미리듣기용)
-```bash
-# 클립별 voice.wav를 에피소드 단위로 이어붙임
-python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club.tts.json --voices-base public/assets/voices
+#### 에피소드 wav 병합(미리듣기용)
+`generate_scenario_audio.py`는 기본적으로 클립별 `voice.wav` 생성 후, 에피소드 단위 wav까지 자동으로 병합합니다.
 
-python scripts/concat_episode_wavs.py --scenario scenarios_tts/basic_werewolf_tutorial.tts.json --voices-base public/assets/voices
-
-# 미리보기 모드
-python scripts/concat_episode_wavs.py --scenario scenarios_tts/ghost_survey_club.tts.json --voices-base public/assets/voices --dry-run
-```
+- 병합 끄기: `--no-concat-episodes`
+- 역할 진행 순서(밤 행동 순서)는 `scenarios/<id>.json`의 `roleWakeOrder`를 자동으로 찾아 반영합니다.
+  - 자동 탐색이 안 되면 `--wake-order-scenario scenarios/<id>.json`로 직접 지정
 
 #### Genshin 음성 샘플 다운로드 (옵션)
 ```bash
@@ -434,15 +454,9 @@ python3 -m pip install -r requirements.txt
 python3 -m pip install -r extra-req.txt
 ```
 
-`peft`/`transformers` 호환 이슈가 나면(예: `transformers.modeling_layers`):
-
-```bash
-python3 -m pip install -U "transformers>=4.56,<5" "peft>=0.12"
-```
-
 ### 3) RTX 5080(Blackwell) GPU 사용 시: torch nightly 필요
 
-`RuntimeError: CUDA error: no kernel image is available for execution on the device`가 나면, 현재 torch 빌드가 Blackwell을 지원하지 않는 상태입니다.
+`RuntimeError: CUDA error: no kernel image is available for execution on the device`가 나면, 현재 torch 빌드가 Blackwell을 지원하지 않는 상태입니다. (아래 “자주 겪는 문제” 참고)
 
 컨테이너 안에서:
 
@@ -607,3 +621,9 @@ nltk.download('punkt', download_dir=str(base))
 print('ok', base)
 PY
 ```
+
+#### 에피소드 오디오 병합(역할 진행 순서)
+에피소드 wav를 병합할 때 역할 진행 순서는 `scenarios_tts/*.tts.json`이 아니라, 런타임 시나리오(`scenarios/*.json`)의 `roleWakeOrder`를 기준으로 정렬합니다.
+
+- 기본 동작: `scenarios_tts/<id>.tts.json`를 처리하면 `scenarios/<id>.json`를 자동으로 찾아 `roleWakeOrder`를 사용합니다.
+- 자동 탐색이 안 되면 `--wake-order-scenario scenarios/<id>.json`로 직접 지정하세요.
