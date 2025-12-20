@@ -152,7 +152,7 @@ gameDebug.ui.nightOpening()
 gameDebug.ui.nightOutro()
 
 // 클라이언트에만 임시 더미 유저를 추가:
-gameDebug.ui.seedPlayers(5) (기본 5명)
+gameDebug.ui.seedPlayers(5)
 // 클라이언트에만 임시 더미 유저를 제거:
 gameDebug.ui.clearSeedPlayers()
 

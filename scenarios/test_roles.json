@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "dev",
+  "scenarioType": "runtime",
+  "ttsSource": "scenarios_tts/test_roles.tts.json",
+  "scenarios": [
+    {
+      "scenarioId": "test_roles",
+      "title": "TEST: Night Roles Sandbox",
+      "tags": ["dev", "test", "sandbox"],
+      "recommendedPlayerCounts": [3, 4, 5, 6, 7, 8, 9, 10],
+      "episodes": [
+        {
+          "episodeId": "ep1",
+          "title": "EP1: Quick Night Role Test",
+          "variantByPlayerCount": {
+            "10": {
+              "roleDeckSelectionPolicy": {
+                "mode": "random_pool",
+                "rules": [
+                  {
+                    "minPlayers": 3,
+                    "maxPlayers": 10,
+                    "fixedCards": ["werewolf", "seer","robber"],
+                    "minCounts": { "werewolf": 1, "seer": 1, "robber": 1 }
+                  }
+                ]
+              },
+              "roleDeck": [
+                "werewolf",
+                "werewolf",
+                "alpha_wolf",
+                "mystic_wolf",
+                "dream_wolf",
+                "minion",
+                "mason",
+                "mason",
+                "seer",
+                "apprentice_seer",
+                "robber",
+                "troublemaker",
+                "drunk",
+                "insomniac",
+                "sentinel",
+                "witch",
+                "revealer",
+                "curator",
+                "bodyguard",
+                "villager",
+                "villager"
+              ],
+              "roleWakeOrder": [
+                "sentinel",
+                "werewolf",
+                "alpha_wolf",
+                "mystic_wolf",
+                "minion",
+                "mason",
+                "apprentice_seer",
+                "seer",
+                "robber",
+                "troublemaker",
+                "witch",
+                "drunk",
+                "revealer",
+                "curator",
+                "insomniac"
+              ],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                },
+                "openingClipCount": 1,
+                "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "sentinel": { "before": 0, "during": 1, "after": 0 },
+                  "werewolf": { "before": 0, "during": 1, "after": 0 },
+                  "alpha_wolf": { "before": 0, "during": 1, "after": 0 },
+                  "mystic_wolf": { "before": 0, "during": 1, "after": 0 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "apprentice_seer": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 0 },
+                  "robber": { "before": 0, "during": 1, "after": 0 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 0 },
+                  "witch": { "before": 0, "during": 1, "after": 0 },
+                  "drunk": { "before": 0, "during": 1, "after": 0 },
+                  "revealer": { "before": 0, "during": 1, "after": 0 },
+                  "curator": { "before": 0, "during": 1, "after": 0 },
+                  "insomniac": { "before": 0, "during": 1, "after": 0 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

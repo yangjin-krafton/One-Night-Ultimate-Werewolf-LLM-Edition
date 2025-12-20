@@ -42,6 +42,7 @@ function installViewportFix() {
     window.visualViewport.addEventListener("scroll", scheduleAppViewportVars, { passive: true });
   }
 }
+
 const joinEl = qs("#join");
 const roomEl = qs("#room");
 const gridEl = qs("#grid");
@@ -118,7 +119,7 @@ const keepAwakeVideoParam = url.searchParams.get("keepAwakeVideo") || "";
 const CLIENT_INSTANCE_ID = (() => {
   try {
     return crypto?.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  } catch {
+  } catch (e) {
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 })();
@@ -155,12 +156,12 @@ function installClientIdCollisionGuard() {
   const post = (payload) => {
     try {
       bc?.postMessage?.(payload);
-    } catch {
+    } catch (e) {
       // ignore
     }
     try {
       localStorage.setItem(CLIENT_ID_ANNOUNCE_KEY, JSON.stringify(payload));
-    } catch {
+    } catch (e) {
       // ignore
     }
   };
@@ -169,7 +170,7 @@ function installClientIdCollisionGuard() {
     for (const fn of listeners) {
       try {
         fn(payload);
-      } catch {
+      } catch (e) {
         // ignore
       }
     }
@@ -196,7 +197,7 @@ function installClientIdCollisionGuard() {
       bc = new BroadcastChannel(CLIENT_ID_CHANNEL);
       bc.addEventListener("message", (ev) => handleIncoming(ev?.data));
     }
-  } catch {
+  } catch (e) {
     bc = null;
   }
 
@@ -205,7 +206,7 @@ function installClientIdCollisionGuard() {
     if (!ev.newValue) return;
     try {
       handleIncoming(JSON.parse(ev.newValue));
-    } catch {
+    } catch (e) {
       // ignore
     }
   };
@@ -377,6 +378,7 @@ const state = {
   keepAwakeAudioEnabled: localStorage.getItem("keepAwakeAudioEnabled") === "1",
   keepAwakeVideo: createKeepAwakeVideoEngine(),
   keepAwakeVideoEnabled: localStorage.getItem("keepAwakeVideoEnabled") === "1",
+  ttsPrimed: false,
   debugRolePreview: false,
   debugNightPreview: false,
   debugSeedClientIds: [],
@@ -385,9 +387,11 @@ const state = {
   nightRobberBoard: null,
   nightTroublemakerBoard: null,
   nightDrunkBoard: null,
+  nightWerewolfBoard: null,
   debugRoleBySeat: {},
   debugRoleByCenter: {},
   nightPreview: { active: false },
+  lastNightResultApplyKey: "",
   clientIdLocked: false,
 };
 
@@ -412,8 +416,15 @@ function setBgGradient(phase) {
     ENDING: "var(--grad-ending)",
   };
   const g = map[phase] || map.WAIT;
+  const dur = phase === "NIGHT" ? "22s" : "18s";
   document.body.style.backgroundImage = g;
-  document.body.style.animationDuration = phase === "NIGHT" ? "22s" : "18s";
+  document.body.style.animationDuration = dur;
+  // iOS can sometimes flatten body background; mirror it on the fixed #app root.
+  const appRoot = document.getElementById("app");
+  if (appRoot) {
+    appRoot.style.backgroundImage = g;
+    appRoot.style.animationDuration = dur;
+  }
 }
 
 function setConn(ok) {
@@ -464,7 +475,7 @@ async function requestWakeLock() {
       { once: true }
     );
     return true;
-  } catch {
+  } catch (e) {
     wakeLockSentinel = null;
     return false;
   }
@@ -473,7 +484,7 @@ async function requestWakeLock() {
 async function releaseWakeLock() {
   try {
     if (wakeLockSentinel) await wakeLockSentinel.release();
-  } catch {
+  } catch (e) {
     // ignore
   } finally {
     wakeLockSentinel = null;
@@ -554,6 +565,9 @@ function closeVoteResult() {
   if (voteResultSubtitleEl) voteResultSubtitleEl.textContent = "";
   if (voteResultTitleEl) voteResultTitleEl.textContent = "투표 결과";
   if (voteResultModal) closeModal(voteResultModal);
+  if ((state.room?.phase || "") === "RESULT" && isHost()) {
+    send({ type: "result_done", data: {} });
+  }
 }
 
 function closeLobbyNotice() {
@@ -770,6 +784,13 @@ function render() {
 
 function renderDebateRoleStrip() {
   if (!roleStripEl || !infoDeckEl || !deckIndicatorsEl) return;
+  // Unify UX: keep using the swipeable info deck in DEBATE/VOTE (no separate role strip).
+  roleStripEl.classList.add("hidden");
+  roleStripEl.innerHTML = "";
+  roleStripEl.dataset.cacheKey = "";
+  infoDeckEl.classList.remove("hidden");
+  deckIndicatorsEl.classList.remove("hidden");
+  return; /* legacy debate role strip disabled
   const phase = state.room?.phase || "WAIT";
   if (phase !== "DEBATE") {
     roleStripEl.classList.add("hidden");
@@ -851,6 +872,7 @@ function renderDebateRoleStrip() {
   roleStripEl.innerHTML = "";
   roleStripEl.appendChild(scroller);
   CardUI?.motion?.staggerEnter?.(scroller.children, { preset: "stack", stagger: 0.04 });
+  */
 }
 
 function renderInfoDeck() {
@@ -858,11 +880,14 @@ function renderInfoDeck() {
   const indicatorEl = qs("#deckIndicators");
   const sid = state.room?.selectedScenarioId;
   const connectedCount = (state.room?.players || []).filter((p) => p.connected).length || 0;
+  const phase = state.room?.phase || "WAIT";
+  const nightDeck = Array.isArray(state.room?.nightDeck) ? state.room.nightDeck.map((x) => String(x || "")) : [];
+  const nightDeckKey = nightDeck.length ? nightDeck.join(",") : "";
   
   // Re-render if scenario OR player count changes (to update role deck variant)
   const hasFull = !!state.scenarioById?.[sid]?.episodes;
   // While we only have list data (no episodes/roleDeck), don't churn the UI on every room update.
-  const cacheKey = hasFull ? `${sid}:${connectedCount}:full` : `${sid}:list`;
+  const cacheKey = hasFull ? `${sid}:${phase}:${connectedCount}:${nightDeckKey}:full` : `${sid}:${phase}:list`;
   if (deckEl.dataset.cacheKey === cacheKey && sid) return;
   deckEl.dataset.cacheKey = cacheKey;
 
@@ -937,12 +962,17 @@ function renderInfoDeck() {
     connectedCount > 0 ? connectedCount : Math.max(...(scenario.recommendedPlayerCounts || [5, 6, 7, 8, 9, 10]));
   const { variant } = selectVariantForPlayerCount(ep, fallbackCount); // Default to max recommended
   
-  if (variant && variant.roleDeck) {
+  const counts = {};
+  const useNightDeck = nightDeck.length && phase !== "WAIT";
+  if (useNightDeck) {
+    for (const r of nightDeck) counts[r] = (counts[r] || 0) + 1;
+  } else if (variant && variant.roleDeck) {
     const deck = effectiveRoleDeckForPlayerCount(variant, fallbackCount);
-    const counts = {};
     for (const r of deck) counts[r] = (counts[r] || 0) + 1;
-    const uniqueRoles = Object.keys(counts);
+  }
+  const uniqueRoles = Object.keys(counts);
 
+  if (uniqueRoles.length) {
     const wolfTeam = new Set(["werewolf", "alpha_wolf", "mystic_wolf", "dream_wolf", "minion"]);
     uniqueRoles.sort((a, b) => {
       const aw = wolfTeam.has(a) ? 0 : 1;
@@ -1036,6 +1066,7 @@ function renderNightOverlay() {
     state.nightRobberBoard = null;
     state.nightTroublemakerBoard = null;
     state.nightDrunkBoard = null;
+    state.nightWerewolfBoard = null;
     return;
   }
 
@@ -1045,7 +1076,10 @@ function renderNightOverlay() {
   const activeRole = String(step.roleId || "");
   const activeRoleName = activeRole ? getRoleDisplayName(activeRole) : "";
   const activeSeats = Array.isArray(step.activeSeats) ? step.activeSeats.map((n) => Number(n)) : [];
-  const isActor = !!state.mySeat && activeSeats.includes(Number(state.mySeat)) && !state.isSpectator;
+  const activeClientIds = Array.isArray(step.activeClientIds) ? step.activeClientIds.map((x) => String(x)) : [];
+  const isActor =
+    !state.isSpectator &&
+    ((!!state.mySeat && activeSeats.includes(Number(state.mySeat))) || activeClientIds.includes(String(state.clientId || "")));
   const useBgRuleCard = !!(isActor && kind === "role");
   nightOverlay.classList.toggle("nightOverlay--fullscreen", !isActor);
   nightOverlay.classList.toggle("nightOverlay--profileOnly", !isActor);
@@ -1134,6 +1168,23 @@ function renderNightOverlay() {
     else board.confirmBtn.textContent = board.ruleText || board.confirmBtn.textContent;
   };
 
+  const updateWerewolfOrbitSelection = () => {
+    const board = state.nightWerewolfBoard;
+    if (!board || board.stepId !== stepId) return;
+    const ui = state.nightUi || {};
+    const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
+
+    for (const [idx, el] of board.byCenter.entries()) {
+      el.classList.toggle("nightChoice--selected", selectedCenter.includes(idx));
+    }
+
+    const canConfirm = selectedCenter.length === 1;
+    board.confirmBtn.disabled = !canConfirm;
+    board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
+    if (state.debugNightPreview && board.preview?.active) board.confirmBtn.textContent = "원상 복구";
+    else board.confirmBtn.textContent = board.ruleText || board.confirmBtn.textContent;
+  };
+
   const stepLabel = `${String(step.stepIndex || 0)}/${String(step.stepCount || 0)}`;
   nightTitle.textContent = `NIGHT · ${stepLabel}`;
   if (!isActor) {
@@ -1151,6 +1202,8 @@ function renderNightOverlay() {
   const canReuseTroublemakerOrbit =
     !!(useBgRuleCard && roleId === "troublemaker" && state.nightTroublemakerBoard && state.nightTroublemakerBoard.stepId === stepId);
   const canReuseDrunkOrbit = !!(useBgRuleCard && roleId === "drunk" && state.nightDrunkBoard && state.nightDrunkBoard.stepId === stepId);
+  const canReuseWerewolfOrbit =
+    !!(useBgRuleCard && roleId === "werewolf" && state.nightWerewolfBoard && state.nightWerewolfBoard.stepId === stepId);
 
   // Reset containers (avoid full rebuild for seer orbit board; selection updates should be minimal)
   nightActive.innerHTML = "";
@@ -1159,7 +1212,7 @@ function renderNightOverlay() {
   nightAction.classList.remove("nightOverlay__action--centerRule");
   nightAction.classList.remove("nightOverlay__action--bottomBar");
   nightBody?.querySelectorAll?.(".nightCenterLayer")?.forEach?.((el) => el.remove());
-  if (!canReuseSeerOrbit && !canReuseRobberOrbit && !canReuseTroublemakerOrbit && !canReuseDrunkOrbit) {
+  if (!canReuseSeerOrbit && !canReuseRobberOrbit && !canReuseTroublemakerOrbit && !canReuseDrunkOrbit && !canReuseWerewolfOrbit) {
     nightAction.classList.add("hidden");
     nightAction.innerHTML = "";
     if (typeof state.nightOrbitCleanup === "function") state.nightOrbitCleanup();
@@ -1168,6 +1221,7 @@ function renderNightOverlay() {
     state.nightRobberBoard = null;
     state.nightTroublemakerBoard = null;
     state.nightDrunkBoard = null;
+    state.nightWerewolfBoard = null;
   } else {
     nightAction.classList.remove("hidden");
     nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
@@ -1176,6 +1230,73 @@ function renderNightOverlay() {
     if (canReuseRobberOrbit) updateRobberOrbitSelection();
     if (canReuseTroublemakerOrbit) updateTroublemakerOrbitSelection();
     if (canReuseDrunkOrbit) updateDrunkOrbitSelection();
+    if (canReuseWerewolfOrbit) updateWerewolfOrbitSelection();
+    if (canReuseSeerOrbit)
+      applyNightResultOnce("seer", (result) => {
+        const board = state.nightSeerBoard;
+        if (!board) return;
+        const r = result || {};
+        if (r && typeof r === "object" && r.role && r.seat) {
+          const el = board.bySeat?.get?.(Number(r.seat)) || null;
+          flipRevealRole(el, String(r.role || ""));
+        }
+        const center = Array.isArray(r.center) ? r.center : [];
+        center.forEach((x) => {
+          const idx = Number(x?.index);
+          const rid = String(x?.role || "");
+          if (!Number.isFinite(idx) || !rid) return;
+          const el = board.byCenter?.get?.(idx) || null;
+          flipRevealRole(el, rid);
+        });
+      });
+    if (canReuseRobberOrbit)
+      applyNightResultOnce("robber", (result) => {
+        const board = state.nightRobberBoard;
+        if (!board) return;
+        const r = result || {};
+        const mySeat = Number(state.mySeat || 0);
+        const mine = board.bySeat?.get?.(mySeat) || null;
+        const targetSeat = Number(r.targetSeat || 0);
+        const target = board.bySeat?.get?.(targetSeat) || null;
+        const newRole = String(r.newRole || "");
+        if (!mine || !newRole) return;
+        if (target && target !== mine) {
+          if (NightBoardUI?.swapEls) {
+            NightBoardUI.swapEls(mine, target, {
+              duration: 0.32,
+              onComplete: () => flipRevealRole(mine, newRole),
+            });
+          } else {
+            swapEls(mine, target);
+            flipRevealRole(mine, newRole);
+          }
+        } else {
+          flipRevealRole(mine, newRole);
+        }
+      });
+    if (canReuseTroublemakerOrbit)
+      applyNightResultOnce("troublemaker", (result) => {
+        const board = state.nightTroublemakerBoard;
+        if (!board) return;
+        const r = result || {};
+        const seats = Array.isArray(r.swappedSeats) ? r.swappedSeats.map(Number) : [];
+        if (seats.length !== 2 || seats[0] === seats[1]) return;
+        const aEl = board.bySeat?.get?.(seats[0]) || null;
+        const bEl = board.bySeat?.get?.(seats[1]) || null;
+        if (!aEl || !bEl) return;
+        swapEls(aEl, bEl);
+      });
+    if (canReuseWerewolfOrbit)
+      applyNightResultOnce("werewolf", (result) => {
+        const board = state.nightWerewolfBoard;
+        if (!board) return;
+        const r = result || {};
+        const idx = Number(r.centerIndex);
+        const rid = String(r.role || "");
+        if (!Number.isFinite(idx) || !rid) return;
+        const el = board.byCenter?.get?.(idx) || null;
+        flipRevealRole(el, rid);
+      });
     return;
   }
 
@@ -1246,10 +1367,46 @@ function renderNightOverlay() {
     CardUI?.motion?.enter?.(myCard, "profile");
   }
 
-  // Debug preview: werewolf UI using NightBoard style.
-  if (state.debugNightPreview && useBgRuleCard && roleId === "werewolf") {
-    ensureDebugRoles();
-    const canPeek = !!(state.nightPrivate?.payload && state.nightPrivate.payload.canPeekCenter);
+  const createNightBoardScaffold = () => {
+    const row = document.createElement("div");
+    row.className = "nightBoard";
+    row.innerHTML = `
+      <div class="nightBoard__arena">
+        <div class="nightBoard__center"></div>
+        <div class="nightBoard__orbit"></div>
+      </div>
+    `;
+    return {
+      row,
+      orbitArena: row.querySelector(".nightBoard__arena"),
+      centerEl: row.querySelector(".nightBoard__center"),
+      orbitEl: row.querySelector(".nightBoard__orbit"),
+    };
+  };
+
+  const assignOrbitBases = (orbitCards) => {
+    if (!Array.isArray(orbitCards) || !orbitCards.length) return;
+    const n = Math.max(1, orbitCards.length);
+    orbitCards.forEach((c, i) => {
+      if (!c) return;
+      c.dataset.orbitBase = String(i / n);
+    });
+  };
+
+  // Werewolf: lone-wolf can peek a center card; otherwise show rule-only UI.
+  if (useBgRuleCard && roleId === "werewolf") {
+    let canPeek = !!(state.nightPrivate?.payload && state.nightPrivate.payload.canPeekCenter);
+    if (state.debugNightPreview) {
+      ensureDebugRoles();
+      const playersNow = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
+      const seatsNow = new Set(playersNow.map((p) => Number(p.seat || 0)).filter(Boolean));
+      const werewolfCount = Object.entries(state.debugRoleBySeat || {}).filter(
+        ([seat, r]) => seatsNow.has(Number(seat)) && String(r) === "werewolf"
+      ).length;
+      if (!state.nightPrivate?.payload || typeof state.nightPrivate.payload.canPeekCenter !== "boolean") {
+        canPeek = werewolfCount === 1;
+      }
+    }
     const def = ROLE_DEFINITIONS[activeRole] || null;
     const ruleText = def?.desc || "늑대인간의 차례입니다.";
 
@@ -1270,20 +1427,13 @@ function renderNightOverlay() {
 	      return;
 	    }
 
-    const row = document.createElement("div");
-    row.className = "nightBoard";
-    row.innerHTML = `
-      <div class="nightBoard__arena">
-        <div class="nightBoard__center"></div>
-        <div class="nightBoard__orbit"></div>
-      </div>
-    `;
-    const orbitArena = row.querySelector(".nightBoard__arena");
-    const centerEl = row.querySelector(".nightBoard__center");
-    const orbitEl = row.querySelector(".nightBoard__orbit");
+    nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
+    const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
 
     // Center cards selectable (pick 1)
     const byCenter = new Map();
+    let confirmBtn = null;
+    const initialSelected = Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter.map(Number) : [];
     for (const idx of [0, 1, 2]) {
       const c = document.createElement("button");
       c.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
@@ -1294,16 +1444,22 @@ function renderNightOverlay() {
         <div class="nightChoiceCard__name">중앙 카드</div>
       `;
       applyPlayerPalette(c, me?.color || "#888");
+      if (initialSelected.includes(idx)) c.classList.add("nightChoice--selected");
       c.addEventListener("click", () => {
         selectBounce(c);
         pulseBgCard();
         const current = Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter.map(Number) : [];
         const next = current.includes(idx) ? [] : [idx];
         state.nightUi = { ...(state.nightUi || {}), selectedCenter: next, selectedSeats: [] };
-        for (const [k, el] of byCenter.entries()) el.classList.toggle("nightChoice--selected", next.includes(k));
-        const canConfirm = next.length === 1;
-        confirmBtn.disabled = !canConfirm;
-        confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
+        if (state.nightWerewolfBoard && state.nightWerewolfBoard.stepId === stepId) updateWerewolfOrbitSelection();
+        else {
+          for (const [k, el] of byCenter.entries()) el.classList.toggle("nightChoice--selected", next.includes(k));
+          const canConfirm = next.length === 1;
+          if (confirmBtn) {
+            confirmBtn.disabled = !canConfirm;
+            confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
+          }
+        }
       });
       byCenter.set(idx, c);
       centerEl.appendChild(c);
@@ -1327,32 +1483,41 @@ function renderNightOverlay() {
       orbitEl.appendChild(b);
       orbitCards.push(b);
     });
-    orbitCards.forEach((c, i) => (c.dataset.orbitBase = String(i / Math.max(1, orbitCards.length))));
+    assignOrbitBases(orbitCards);
 
-    const confirmBtn = submitBtn(ruleText, () => {
-      if (state.debugNightPreview && state.nightPreview?.active) {
-        const prev = state.nightPreview;
-        if (prev.type === "flip") (prev.els || []).forEach((el) => flipRevertRole(el));
-        state.nightPreview = { active: false };
-        confirmBtn.textContent = ruleText;
+    confirmBtn = submitBtn(ruleText, () => {
+      const board = state.nightWerewolfBoard;
+      if (state.debugNightPreview && board?.preview?.active) {
+        const prev = board.preview;
+        if (prev.type === "flip") (prev.els || []).forEach((x) => flipRevertRole(x));
+        board.preview = { active: false };
+        updateWerewolfOrbitSelection();
         return;
       }
       const idx = (state.nightUi?.selectedCenter || [])[0];
       if (idx === undefined || idx === null) return;
       const el = byCenter.get(Number(idx)) || null;
       if (!el) return;
-      const rid = state.debugRoleByCenter?.[Number(idx)] || "villager";
-      flipRevealRole(el, rid);
-      state.nightPreview = { active: true, type: "flip", els: [el] };
-      confirmBtn.textContent = "원상 복구";
+      pulseEl(el);
+      pulseBgCard();
+      submitNightAction("werewolf", { centerIndex: idx });
     });
     confirmBtn.classList.add("btn--nightConfirm");
-    const initial = Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter.map(Number) : [];
-    confirmBtn.disabled = !(initial.length === 1);
-    confirmBtn.setAttribute("aria-disabled", initial.length === 1 ? "false" : "true");
+    confirmBtn.disabled = !(initialSelected.length === 1);
+    confirmBtn.setAttribute("aria-disabled", initialSelected.length === 1 ? "false" : "true");
 
     nightAction.appendChild(row);
     nightAction.appendChild(confirmBtn);
+    state.nightWerewolfBoard = { stepId, byCenter, confirmBtn, preview: { active: false }, ruleText };
+    updateWerewolfOrbitSelection();
+    applyNightResultOnce("werewolf", (result) => {
+      const r = result || {};
+      const idx = Number(r.centerIndex);
+      const rid = String(r.role || "");
+      if (!Number.isFinite(idx) || !rid) return;
+      const el = byCenter.get(idx) || null;
+      flipRevealRole(el, rid);
+    });
     state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
     return;
   }
@@ -1470,6 +1635,106 @@ function renderNightOverlay() {
   function flipRevertRole(el) {
     if (!el) return;
     if (NightBoardUI?.flipRevertRole) NightBoardUI.flipRevertRole(el);
+  }
+
+  function applyNightResultOnce(expectedRoleId, applyFn) {
+    const nr = state.nightResult || null;
+    if (!nr || !nr.result) return false;
+    if (Number(nr.stepId || 0) !== Number(stepId || 0)) return false;
+    if (String(nr.roleId || "") !== String(expectedRoleId || "")) return false;
+    let key = "";
+    try {
+      key = `${Number(stepId || 0)}:${String(expectedRoleId || "")}:${JSON.stringify(nr.result)}`;
+    } catch (e) {
+      key = `${Number(stepId || 0)}:${String(expectedRoleId || "")}:*`;
+    }
+    if (state.lastNightResultApplyKey === key) return false;
+    state.lastNightResultApplyKey = key;
+    try {
+      applyFn(nr.result);
+    } catch (e) {
+      console.warn("[night_result] apply failed", e);
+    }
+    return true;
+  }
+
+  function submitNightAction(roleIdForAction, action) {
+    const rid = String(roleIdForAction || "");
+    const a = action || {};
+    if (!rid) return;
+
+    if (!state.debugNightPreview) {
+      send({ type: "night_action", data: { stepId, action: a } });
+      return;
+    }
+
+    ensureDebugRoles();
+    const mySeatNum = Number(state.mySeat || 0);
+
+    const asInt = (x, fallback = 0) => {
+      const n = Number(x);
+      return Number.isFinite(n) ? n : fallback;
+    };
+
+    let result = null;
+    if (rid === "seer") {
+      const mode = String(a.mode || "");
+      if (mode === "player") {
+        const seat = asInt(a.seat, 0);
+        const role = String(state.debugRoleBySeat?.[seat] || "villager");
+        if (seat) result = { seat, role };
+      } else if (mode === "center") {
+        const indices = Array.isArray(a.indices) ? a.indices.map((x) => asInt(x, -1)).filter((i) => i >= 0 && i <= 2) : [];
+        if (indices.length === 2 && indices[0] !== indices[1]) {
+          result = {
+            center: indices.map((i) => ({ index: i, role: String(state.debugRoleByCenter?.[i] || "villager") })),
+          };
+        }
+      }
+    } else if (rid === "robber") {
+      const seat = asInt(a.seat, 0);
+      if (seat && seat !== mySeatNum) {
+        const myRole = state.debugRoleBySeat?.[mySeatNum];
+        const targetRole = state.debugRoleBySeat?.[seat];
+        if (myRole != null && targetRole != null) {
+          state.debugRoleBySeat[mySeatNum] = targetRole;
+          state.debugRoleBySeat[seat] = myRole;
+        }
+        result = { newRole: String(targetRole || "villager"), targetSeat: seat };
+      }
+    } else if (rid === "troublemaker") {
+      const seats = Array.isArray(a.seats) ? a.seats.map((x) => asInt(x, 0)).filter(Boolean) : [];
+      if (seats.length === 2 && seats[0] !== seats[1]) {
+        const ra = state.debugRoleBySeat?.[seats[0]];
+        const rb = state.debugRoleBySeat?.[seats[1]];
+        if (ra != null && rb != null) {
+          state.debugRoleBySeat[seats[0]] = rb;
+          state.debugRoleBySeat[seats[1]] = ra;
+        }
+        result = { swappedSeats: seats };
+      }
+    } else if (rid === "drunk") {
+      const idx = asInt(a.centerIndex, -1);
+      if (idx >= 0 && idx <= 2 && mySeatNum) {
+        const myRole = state.debugRoleBySeat?.[mySeatNum];
+        const centerRole = state.debugRoleByCenter?.[idx];
+        if (myRole != null && centerRole != null) {
+          state.debugRoleBySeat[mySeatNum] = centerRole;
+          state.debugRoleByCenter[idx] = myRole;
+        }
+        result = { swapped: true };
+      }
+    } else if (rid === "werewolf") {
+      const idx = asInt(a.centerIndex, -1);
+      if (idx >= 0 && idx <= 2) {
+        result = { centerIndex: idx, role: String(state.debugRoleByCenter?.[idx] || "villager") };
+      }
+    }
+
+    if (!result) return;
+    state.lastNightResultApplyKey = "";
+    state.nightResult = { stepId, roleId: rid, result };
+    renderNightOverlay();
   }
 
   const swapEls = (a, b) => {
@@ -1665,15 +1930,6 @@ function renderNightOverlay() {
 	      const confirmBtn = submitBtn(seerRuleText, () => {
 	        const seat = (state.nightUi?.selectedSeats || [])[0];
 	        const indices = state.nightUi?.selectedCenter || [];
-	        const board = state.nightSeerBoard;
-	        if (state.debugNightPreview && board?.preview?.active) {
-	          // Revert last preview.
-	          const prev = board.preview;
-	          if (prev.type === "flip") (prev.els || []).forEach((el) => flipRevertRole(el));
-	          board.preview = { active: false };
-	          updateSeerOrbitSelection();
-	          return;
-	        }
 	        const canConfirm = !!seat || (Array.isArray(indices) && indices.length === 2);
 	        if (!canConfirm) {
 	          pulseBgCard();
@@ -1684,35 +1940,16 @@ function renderNightOverlay() {
 	          const el = bySeat.get(Number(seat)) || null;
 	          pulseEl(el);
 	          pulseBgCard();
-          if (state.debugNightPreview) {
-            const rid = state.debugRoleBySeat?.[Number(seat)] || "villager";
-            flipRevealRole(el, rid);
-            state.nightSeerBoard.preview = { active: true, type: "flip", els: [el] };
-            updateSeerOrbitSelection();
-            return;
-          }
-          send({ type: "night_action", data: { stepId, action: { mode: "player", seat } } });
+          submitNightAction("seer", { mode: "player", seat });
           return;
         }
         if (Array.isArray(indices) && indices.length === 2) {
           const a = byCenter.get(Number(indices[0])) || null;
           const b = byCenter.get(Number(indices[1])) || null;
           pulseBgCard();
-          if (state.debugNightPreview) {
-            // Preview reveal (seer center peek).
-            const r1 = state.debugRoleByCenter?.[Number(indices[0])] || "villager";
-            const r2 = state.debugRoleByCenter?.[Number(indices[1])] || "villager";
-            flipRevealRole(a, r1);
-            flipRevealRole(b, r2);
-            state.nightSeerBoard.preview = { active: true, type: "flip", els: [a, b] };
-            updateSeerOrbitSelection();
-            return;
-          }
-          for (const idx of indices) {
-            const el = byCenter.get(Number(idx)) || null;
-            flipEl(el);
-          }
-          send({ type: "night_action", data: { stepId, action: { mode: "center", indices } } });
+          pulseEl(a);
+          pulseEl(b);
+          submitNightAction("seer", { mode: "center", indices });
         }
 	      });
 	      confirmBtn.classList.add("btn--nightConfirm");
@@ -1722,6 +1959,21 @@ function renderNightOverlay() {
       state.nightSeerBoard = { stepId, bySeat, byCenter, confirmBtn, preview: { active: false }, ruleText: seerRuleText };
       ensureDebugRoles();
       updateSeerOrbitSelection();
+      applyNightResultOnce("seer", (result) => {
+        const r = result || {};
+        if (r && typeof r === "object" && r.role && r.seat) {
+          const el = bySeat.get(Number(r.seat)) || null;
+          flipRevealRole(el, String(r.role || ""));
+        }
+        const center = Array.isArray(r.center) ? r.center : [];
+        center.forEach((x) => {
+          const idx = Number(x?.index);
+          const rid = String(x?.role || "");
+          if (!Number.isFinite(idx) || !rid) return;
+          const el = byCenter.get(idx) || null;
+          flipRevealRole(el, rid);
+        });
+      });
       // Don't fall through to the generic confirm button below.
       return;
     } else {
@@ -1761,7 +2013,7 @@ function renderNightOverlay() {
             confirmBtn.textContent = "원상 복구";
             return;
           }
-          send({ type: "night_action", data: { stepId, action: { mode: "player", seat } } });
+          submitNightAction("seer", { mode: "player", seat });
           return;
         }
         if (Array.isArray(indices) && indices.length === 2) {
@@ -1782,7 +2034,7 @@ function renderNightOverlay() {
             const el = nightAction.querySelector(`.nightChoiceCard[data-center-index="${CSS.escape(String(idx))}"]`);
             flipEl(el);
           }
-          send({ type: "night_action", data: { stepId, action: { mode: "center", indices } } });
+          submitNightAction("seer", { mode: "center", indices });
         }
 	      });
 	    confirmBtn.classList.add("btn--nightConfirm");
@@ -1802,17 +2054,7 @@ function renderNightOverlay() {
       const def = ROLE_DEFINITIONS[activeRole] || null;
       const ruleText = def?.desc || "카드를 선택하세요.";
 
-      const row = document.createElement("div");
-      row.className = "nightBoard";
-      row.innerHTML = `
-        <div class="nightBoard__arena">
-          <div class="nightBoard__center"></div>
-          <div class="nightBoard__orbit"></div>
-        </div>
-      `;
-      const orbitArena = row.querySelector(".nightBoard__arena");
-      const centerEl = row.querySelector(".nightBoard__center");
-      const orbitEl = row.querySelector(".nightBoard__orbit");
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
 
       // Center stack (3 cards) - decorative in robber (still interactive for flip preview).
       const byCenter = new Map();
@@ -1866,17 +2108,9 @@ function renderNightOverlay() {
         bySeat.set(Number(p.seat), b);
         playerBySeat.set(Number(p.seat), p);
       });
-      orbitCards.forEach((c, i) => (c.dataset.orbitBase = String(i / Math.max(1, orbitCards.length))));
+      assignOrbitBases(orbitCards);
 
       const confirmBtn = submitBtn(ruleText, () => {
-        if (state.debugNightPreview && state.nightRobberBoard?.preview?.active) {
-          // revert preview
-          const prev = state.nightRobberBoard.preview;
-          if (prev.type === "flip") (prev.els || []).forEach((el) => NightBoardUI?.flipRevertRole?.(el));
-          state.nightRobberBoard.preview = { active: false };
-          updateRobberOrbitSelection();
-          return;
-        }
         const seat = (state.nightUi?.selectedSeats || [])[0];
         if (!seat) return;
         const target = bySeat.get(Number(seat)) || null;
@@ -1884,19 +2118,7 @@ function renderNightOverlay() {
         if (!target || !mine) return;
         pulseEl(target);
         pulseBgCard();
-        if (state.debugNightPreview) {
-          // Flip-preview instead of swap: both cards flip while staying on the moving track.
-          ensureDebugRoles();
-          const mePlayer = playerBySeat.get(Number(state.mySeat || 0)) || null;
-          const otherPlayer = playerBySeat.get(Number(seat)) || null;
-          // Swap-style flip: reveal player profiles (not roles).
-          NightBoardUI?.flipRevealProfile?.(mine, { player: otherPlayer, getRoleDisplayName, escapeHtml });
-          NightBoardUI?.flipRevealProfile?.(target, { player: mePlayer, getRoleDisplayName, escapeHtml });
-          state.nightRobberBoard.preview = { active: true, type: "flip", els: [mine, target] };
-          updateRobberOrbitSelection();
-          return;
-        }
-        send({ type: "night_action", data: { stepId, action: { seat } } });
+        submitNightAction("robber", { seat });
       });
       confirmBtn.classList.add("btn--nightConfirm");
 
@@ -1907,6 +2129,28 @@ function renderNightOverlay() {
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
       state.nightRobberBoard = { stepId, bySeat, byCenter, confirmBtn, preview: { active: false }, ruleText };
       updateRobberOrbitSelection();
+      applyNightResultOnce("robber", (result) => {
+        const r = result || {};
+        const mySeat = Number(state.mySeat || 0);
+        const mine = bySeat.get(mySeat) || null;
+        const targetSeat = Number(r.targetSeat || 0);
+        const target = bySeat.get(targetSeat) || null;
+        const newRole = String(r.newRole || "");
+        if (!mine || !newRole) return;
+        if (target && target !== mine) {
+          if (NightBoardUI?.swapEls) {
+            NightBoardUI.swapEls(mine, target, {
+              duration: 0.32,
+              onComplete: () => flipRevealRole(mine, newRole),
+            });
+          } else {
+            swapEls(mine, target);
+            flipRevealRole(mine, newRole);
+          }
+        } else {
+          flipRevealRole(mine, newRole);
+        }
+      });
       return;
     }
 
@@ -1923,7 +2167,7 @@ function renderNightOverlay() {
           setChoiceState({ selectedSeats: [], selectedCenter: [] });
           return;
         }
-        send({ type: "night_action", data: { stepId, action: { seat } } });
+        submitNightAction("robber", { seat });
       })
     );
   } else if (roleId === "troublemaker") {
@@ -1937,17 +2181,7 @@ function renderNightOverlay() {
 
       const selectedSeats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
 
-      const row = document.createElement("div");
-      row.className = "nightBoard";
-      row.innerHTML = `
-        <div class="nightBoard__arena">
-          <div class="nightBoard__center"></div>
-          <div class="nightBoard__orbit"></div>
-        </div>
-      `;
-      const orbitArena = row.querySelector(".nightBoard__arena");
-      const centerEl = row.querySelector(".nightBoard__center");
-      const orbitEl = row.querySelector(".nightBoard__orbit");
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
 
       // Center stack (3 cards) - decorative (disabled).
       for (const idx of [0, 1, 2]) {
@@ -2005,35 +2239,18 @@ function renderNightOverlay() {
         bySeat.set(Number(p.seat), b);
         playerBySeat.set(Number(p.seat), p);
       });
-      orbitCards.forEach((c, i) => (c.dataset.orbitBase = String(i / Math.max(1, orbitCards.length))));
+      assignOrbitBases(orbitCards);
 
       const confirmBtn = submitBtn(ruleText, () => {
-        const board = state.nightTroublemakerBoard;
-        if (state.debugNightPreview && board?.preview?.active) {
-          (board.preview.els || []).forEach((el) => NightBoardUI?.flipRevertRole?.(el));
-          board.preview = { active: false };
-          updateTroublemakerOrbitSelection();
-          return;
-        }
         const seats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
         if (seats.length !== 2) return;
         const aEl = bySeat.get(seats[0]) || null;
         const bEl = bySeat.get(seats[1]) || null;
-        const aP = playerBySeat.get(seats[0]) || null;
-        const bP = playerBySeat.get(seats[1]) || null;
         if (!aEl || !bEl) return;
         pulseBgCard();
-
-        if (state.debugNightPreview) {
-          // Swap-style flip: reveal swapped profiles while moving.
-          NightBoardUI?.flipRevealProfile?.(aEl, { player: bP, getRoleDisplayName, escapeHtml });
-          NightBoardUI?.flipRevealProfile?.(bEl, { player: aP, getRoleDisplayName, escapeHtml });
-          state.nightTroublemakerBoard.preview = { active: true, type: "flip", els: [aEl, bEl] };
-          updateTroublemakerOrbitSelection();
-          return;
-        }
-
-        send({ type: "night_action", data: { stepId, action: { seats } } });
+        pulseEl(aEl);
+        pulseEl(bEl);
+        submitNightAction("troublemaker", { seats });
       });
       confirmBtn.classList.add("btn--nightConfirm");
 
@@ -2044,6 +2261,15 @@ function renderNightOverlay() {
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
       state.nightTroublemakerBoard = { stepId, bySeat, confirmBtn, preview: { active: false }, ruleText };
       updateTroublemakerOrbitSelection();
+      applyNightResultOnce("troublemaker", (result) => {
+        const r = result || {};
+        const seats = Array.isArray(r.swappedSeats) ? r.swappedSeats.map(Number) : [];
+        if (seats.length !== 2 || seats[0] === seats[1]) return;
+        const aEl = bySeat.get(seats[0]) || null;
+        const bEl = bySeat.get(seats[1]) || null;
+        if (!aEl || !bEl) return;
+        swapEls(aEl, bEl);
+      });
       return;
     }
 
@@ -2063,7 +2289,7 @@ function renderNightOverlay() {
           setChoiceState({ selectedSeats: [], selectedCenter: [] });
           return;
         }
-        send({ type: "night_action", data: { stepId, action: { seats } } });
+        submitNightAction("troublemaker", { seats });
       })
     );
   } else if (roleId === "drunk") {
@@ -2078,17 +2304,7 @@ function renderNightOverlay() {
 
       const selectedCenter = Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter.map(Number) : [];
 
-      const row = document.createElement("div");
-      row.className = "nightBoard";
-      row.innerHTML = `
-        <div class="nightBoard__arena">
-          <div class="nightBoard__center"></div>
-          <div class="nightBoard__orbit"></div>
-        </div>
-      `;
-      const orbitArena = row.querySelector(".nightBoard__arena");
-      const centerEl = row.querySelector(".nightBoard__center");
-      const orbitEl = row.querySelector(".nightBoard__orbit");
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
 
       // Center stack (3 cards) - selectable (pick 1)
       const byCenter = new Map();
@@ -2136,7 +2352,7 @@ function renderNightOverlay() {
         orbitCards.push(b);
         bySeat.set(Number(p.seat), b);
       });
-      orbitCards.forEach((c, i) => (c.dataset.orbitBase = String(i / Math.max(1, orbitCards.length))));
+      assignOrbitBases(orbitCards);
 
       const confirmBtn = submitBtn(ruleText, () => {
         const board = state.nightDrunkBoard;
@@ -2164,7 +2380,7 @@ function renderNightOverlay() {
           updateDrunkOrbitSelection();
           return;
         }
-        send({ type: "night_action", data: { stepId, action: { centerIndex: idx } } });
+        submitNightAction("drunk", { centerIndex: idx });
       });
       confirmBtn.classList.add("btn--nightConfirm");
 
@@ -2191,7 +2407,7 @@ function renderNightOverlay() {
           setChoiceState({ selectedSeats: [], selectedCenter: [] });
           return;
         }
-	    send({ type: "night_action", data: { stepId, action: { centerIndex } } });
+	    submitNightAction("drunk", { centerIndex });
 	  })
 	);
   } else if (roleId === "insomniac") {
@@ -2293,7 +2509,7 @@ function renderNightOverlay() {
             return;
           }
           flipEl(el);
-          send({ type: "night_action", data: { stepId, action: { centerIndex } } });
+          submitNightAction("werewolf", { centerIndex });
         })
       );
     }
@@ -2470,7 +2686,7 @@ async function ensureScenarioDetailLoaded(scenarioId) {
     const idx = (state.scenarios || []).findIndex((x) => x?.scenarioId === sid);
     if (idx >= 0) state.scenarios[idx] = full;
     return full;
-  } catch {
+  } catch (e) {
     return null;
   } finally {
     scenarioDetailInflight.delete(sid);
@@ -2493,7 +2709,7 @@ async function ensureScenarioTtsLoaded(scenarioId, playerCount) {
     const tts = await res.json();
     state.scenarioTtsByKey[key] = tts;
     return tts;
-  } catch {
+  } catch (e) {
     return null;
   } finally {
     scenarioTtsInflight.delete(key);
@@ -2603,7 +2819,7 @@ function connect() {
     let msg;
     try {
       msg = JSON.parse(ev.data);
-    } catch {
+    } catch (e) {
       return;
     }
     handleMsg(msg);
@@ -2616,13 +2832,23 @@ function send(obj) {
 }
 
 function handleMsg(msg) {
+  if (msg.type === "join_denied") {
+    const reason = String(msg.data?.reason || "");
+    if (reason === "game_in_progress") {
+      window.alert("게임이 진행 중입니다. 다음 판부터 참가할 수 있어요.");
+    } else {
+      window.alert("입장이 거부되었습니다.");
+    }
+    showJoin();
+    return;
+  }
   if (msg.type === "hello") {
     state.debugEnabled = !!msg.debugEnabled;
     const assigned = String(msg.assignedClientId || "");
     if (assigned && assigned !== state.clientId) {
       try {
         sessionStorage.setItem("clientId", assigned);
-      } catch {
+      } catch (e) {
         // ignore
       }
       state.clientId = assigned;
@@ -2668,6 +2894,11 @@ function handleMsg(msg) {
     return;
   }
   if (msg.type === "phase_changed") {
+    // Keep local room state in sync even if a room_snapshot is delayed/dropped.
+    if (state.room) {
+      state.room.phase = msg.data?.phase || state.room.phase || "WAIT";
+      state.room.phaseEndsAtMs = msg.data?.phaseEndsAtMs ?? state.room.phaseEndsAtMs ?? null;
+    }
     setPhase(msg.data?.phase || "WAIT", msg.data?.phaseEndsAtMs ?? null);
     if ((msg.data?.phase || "") !== "RESULT") closeVoteResult();
     if ((msg.data?.phase || "") !== "WAIT") closeLobbyNotice();
@@ -2678,6 +2909,7 @@ function handleMsg(msg) {
     state.myRoleId = msg.data?.roleId || "";
     state.nightPrivate = null;
     state.nightResult = null;
+    state.lastNightResultApplyKey = "";
     state.roleReady = false;
     render();
     return;
@@ -2686,6 +2918,7 @@ function handleMsg(msg) {
     state.nightStep = msg.data || null;
     state.nightPrivate = null;
     state.nightResult = null;
+    state.lastNightResultApplyKey = "";
     state.nightUi = null;
     render();
     if (isHost()) playNightStepAsHost(state.nightStep).catch(() => {});
@@ -2937,7 +3170,7 @@ async function urlExists(urlPath) {
   try {
     const res = await fetch(urlPath, { method: "HEAD" });
     return res.ok;
-  } catch {
+  } catch (e) {
     return false;
   }
 }
@@ -2947,7 +3180,7 @@ async function playEpisodeStartNarration(scenarioId) {
   try {
     const res = await fetch(`/api/scenarios/${encodeURIComponent(scenarioId)}`);
     scenario = await res.json();
-  } catch {
+  } catch (e) {
     return;
   }
 
@@ -2998,17 +3231,86 @@ function speak(text) {
 
 function speakWithBrowserTts(text, { interrupt = true } = {}) {
   return new Promise((resolve) => {
-    if (!("speechSynthesis" in window)) return resolve();
-    const cleaned = String(text || "").replace(/\[[^\]]+\]|\{[^}]+\}/g, "").trim();
-    if (!cleaned) return resolve();
+    (async () => {
+      if (!("speechSynthesis" in window)) return resolve();
+      const cleaned = String(text || "").replace(/\[[^\]]+\]|\{[^}]+\}/g, "").trim();
+      if (!cleaned) return resolve();
 
-    const u = new SpeechSynthesisUtterance(cleaned);
-    u.lang = "ko-KR";
-    u.rate = 1.05;
-    u.onend = () => resolve();
-    u.onerror = () => resolve();
-    if (interrupt) speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+      const waitForVoices = async (timeoutMs = 800) => {
+        try {
+          if (typeof speechSynthesis.getVoices !== "function") return;
+          const existing = speechSynthesis.getVoices();
+          if (existing && existing.length) return;
+          await new Promise((r) => {
+            let done = false;
+            const t = setTimeout(() => {
+              if (done) return;
+              done = true;
+              speechSynthesis.onvoiceschanged = null;
+              r();
+            }, timeoutMs);
+            speechSynthesis.onvoiceschanged = () => {
+              if (done) return;
+              done = true;
+              clearTimeout(t);
+              speechSynthesis.onvoiceschanged = null;
+              r();
+            };
+            // Trigger load.
+            speechSynthesis.getVoices();
+          });
+        } catch (e) {
+          // ignore
+        }
+      };
+
+      await waitForVoices();
+
+      const u = new SpeechSynthesisUtterance(cleaned);
+      // iOS can fail silently when forcing a lang/voice that isn't available.
+      // Prefer an installed Korean voice if present; otherwise fall back to default voice.
+      try {
+        const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+        const koVoice =
+          (voices || []).find((v) => String(v.lang || "").toLowerCase().startsWith("ko")) ||
+          (voices || []).find((v) => /korean/i.test(String(v.name || "")));
+        if (koVoice) {
+          u.voice = koVoice;
+          u.lang = koVoice.lang || "ko-KR";
+        } else {
+          u.lang = "ko-KR";
+        }
+      } catch (e) {
+        u.lang = "ko-KR";
+      }
+      u.rate = 1.05;
+      u.onend = () => resolve();
+      u.onerror = (e) => {
+        console.warn("[tts] speechSynthesis error", e);
+        resolve();
+      };
+
+      try {
+        if (interrupt) speechSynthesis.cancel();
+        speechSynthesis.speak(u);
+        // iOS sometimes queues but doesn't start; retry once.
+        setTimeout(() => {
+          try {
+            if (!speechSynthesis.speaking && !speechSynthesis.pending) {
+              speechSynthesis.speak(u);
+            }
+          } catch {
+            // ignore
+          }
+        }, 120);
+      } catch (e) {
+        console.warn("[tts] speechSynthesis speak() threw", e);
+        resolve();
+      }
+    })().catch((e) => {
+      console.warn("[tts] failed", e);
+      resolve();
+    });
   });
 }
 
@@ -3176,19 +3478,132 @@ function createNarrationEngine() {
   const audio = new Audio();
   audio.preload = "auto";
 
-  async function playOne(url) {
+  let ctx = null;
+  let gain = null;
+  let currentSource = null;
+  let abortCtrl = null;
+
+  async function ensureCtx() {
+    if (ctx) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    ctx = new Ctx();
+    gain = ctx.createGain();
+    gain.gain.value = 1.0;
+    gain.connect(ctx.destination);
+  }
+
+  async function ensureRunning() {
+    await ensureCtx();
+    if (!ctx) return false;
+    if (ctx.state === "suspended") {
+      try {
+        await ctx.resume();
+      } catch (e) {
+        console.warn("[narration] AudioContext resume failed", e);
+        return false;
+      }
+    }
+    if (ctx.state !== "running") return false;
+    return true;
+  }
+
+  async function stop() {
+    try {
+      abortCtrl?.abort?.();
+    } catch (e) {
+      // ignore
+    }
+    abortCtrl = null;
+
+    try {
+      if (currentSource) currentSource.stop(0);
+    } catch (e) {
+      // ignore
+    }
+    try {
+      currentSource?.disconnect?.();
+    } catch (e) {
+      // ignore
+    }
+    currentSource = null;
+
+    try {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async function playOneWithWebAudio(url) {
+    const ok = await ensureRunning();
+    if (!ok || !ctx || !gain) throw new Error("audio_ctx_unavailable");
+
+    abortCtrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const res = await fetch(url, abortCtrl ? { signal: abortCtrl.signal, cache: "no-store" } : { cache: "no-store" });
+    if (!res.ok) throw new Error(`fetch_failed_${res.status}`);
+    const buf = await res.arrayBuffer();
+
+    const audioBuf = await new Promise((resolve, reject) => {
+      try {
+        // Safari requires callbacks sometimes; handle both promise/callback styles.
+        const p = ctx.decodeAudioData(buf, resolve, reject);
+        if (p && typeof p.then === "function") p.then(resolve, reject);
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    return new Promise((resolve) => {
+      const src = ctx.createBufferSource();
+      currentSource = src;
+      src.buffer = audioBuf;
+      src.connect(gain);
+      src.onended = () => {
+        if (currentSource === src) currentSource = null;
+        resolve();
+      };
+      try {
+        src.start(0);
+      } catch (e) {
+        if (currentSource === src) currentSource = null;
+        resolve();
+      }
+    });
+  }
+
+  async function playOneWithHtmlAudio(url) {
     return new Promise((resolve) => {
       const done = () => {
         audio.onended = null;
         audio.onerror = null;
+        audio.onloadedmetadata = null;
         resolve();
       };
       audio.onended = done;
       audio.onerror = done;
       audio.src = url;
       audio.load();
-      audio.play().catch(done);
+      audio
+        .play()
+        .catch((e) => {
+          console.warn("[narration] HTMLAudio play() blocked/failed", e);
+          done();
+        });
     });
+  }
+
+  async function playOne(url) {
+    await stop();
+    try {
+      await playOneWithWebAudio(url);
+      return;
+    } catch (e) {
+      console.warn("[narration] WebAudio failed, falling back to HTMLAudio", e);
+    }
+    await playOneWithHtmlAudio(url);
   }
 
   async function playList(urls) {
@@ -3198,15 +3613,7 @@ function createNarrationEngine() {
     }
   }
 
-  async function stop() {
-    try {
-      audio.pause();
-    } catch {
-      // ignore
-    }
-  }
-
-  return { playList, stop };
+  return { ensureCtx, playList, stop };
 }
 
 function createKeepAwakeAudioEngine() {
@@ -3234,7 +3641,7 @@ function createKeepAwakeAudioEngine() {
     try {
       osc.start();
       running = true;
-    } catch {
+    } catch (e) {
       running = false;
     }
   }
@@ -3243,12 +3650,12 @@ function createKeepAwakeAudioEngine() {
     if (!running) return;
     try {
       osc?.stop?.();
-    } catch {
+    } catch (e) {
       // ignore
     }
     try {
       osc?.disconnect?.();
-    } catch {
+    } catch (e) {
       // ignore
     }
     osc = null;
@@ -3305,7 +3712,7 @@ function createKeepAwakeVideoEngine() {
       try {
         stream = canvas.captureStream(1);
         video.srcObject = stream;
-      } catch {
+      } catch (e) {
         stream = null;
       }
     }
@@ -3327,7 +3734,7 @@ function createKeepAwakeVideoEngine() {
       await video.play();
       running = true;
       return true;
-    } catch {
+    } catch (e) {
       running = false;
       return false;
     }
@@ -3337,7 +3744,7 @@ function createKeepAwakeVideoEngine() {
     running = false;
     try {
       video?.pause?.();
-    } catch {
+    } catch (e) {
       // ignore
     }
   }
@@ -3348,8 +3755,39 @@ function createKeepAwakeVideoEngine() {
 async function ensureAudioUnlocked() {
   try {
     await state.bgm.ensureCtx();
+    await state.narration.ensureCtx?.();
     await state.keepAwakeAudio.ensureCtx();
-  } catch {
+  } catch (e) {
+    // ignore
+  }
+  // Prime iOS speech synthesis inside a user gesture; otherwise later calls may be silent/blocked.
+  try {
+    if ("speechSynthesis" in window) {
+      if (typeof speechSynthesis.getVoices === "function") speechSynthesis.getVoices();
+      if (!state.ttsPrimed) {
+        state.ttsPrimed = true;
+        const u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0; // try to stay inaudible
+        u.rate = 1.2;
+        u.onend = () => {};
+        u.onerror = () => {};
+        try {
+          speechSynthesis.cancel();
+          speechSynthesis.speak(u);
+          // Ensure we don't leave a long-running utterance around.
+          setTimeout(() => {
+            try {
+              speechSynthesis.cancel();
+            } catch {
+              // ignore
+            }
+          }, 200);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+  } catch (e) {
     // ignore
   }
   // Try to acquire wake lock / fallbacks while we are inside a user gesture.
@@ -3370,7 +3808,7 @@ async function init() {
     state.keepAwakeAudioEnabled = on;
     try {
       localStorage.setItem("keepAwakeAudioEnabled", on ? "1" : "0");
-    } catch {
+    } catch (e) {
       // ignore
     }
   }
@@ -3379,7 +3817,7 @@ async function init() {
     state.keepAwakeVideoEnabled = on;
     try {
       localStorage.setItem("keepAwakeVideoEnabled", on ? "1" : "0");
-    } catch {
+    } catch (e) {
       // ignore
     }
   }
@@ -3404,6 +3842,7 @@ async function init() {
 
   joinBtn.addEventListener("click", async () => {
     await ensureUniqueClientId();
+    await ensureAudioUnlocked();
     state.clientIdLocked = true;
     let name = (nameInput.value || "").trim();
     if (!name) name = `Player-${state.clientId.slice(0, 4)}`;
@@ -3456,6 +3895,14 @@ async function init() {
 
   if (voteResultBackdrop) voteResultBackdrop.addEventListener("click", () => closeVoteResult());
   if (voteResultClose) voteResultClose.addEventListener("click", () => closeVoteResult());
+  if (voteResultModal) {
+    voteResultModal.addEventListener("click", (e) => {
+      if (voteResultModal.classList.contains("hidden")) return;
+      const target = e?.target || null;
+      if (voteResultClose && (target === voteResultClose || voteResultClose.contains(target))) return;
+      closeVoteResult();
+    });
+  }
 
   if (lobbyNoticeBackdrop) lobbyNoticeBackdrop.addEventListener("click", () => closeLobbyNotice());
   if (lobbyNoticeClose) lobbyNoticeClose.addEventListener("click", () => closeLobbyNotice());
@@ -3480,12 +3927,12 @@ async function init() {
       if (!ok) return;
       try {
         send({ type: "leave", data: {} });
-      } catch {
+      } catch (e) {
         // ignore
       }
       try {
         state.ws?.close?.();
-      } catch {
+      } catch (e) {
         // ignore
       }
       state.room = null;
@@ -3619,6 +4066,7 @@ function initDebugApi() {
       kind: stepKind,
       roleId: rid,
       activeSeats: active ? [mySeat] : [],
+      activeClientIds: active ? [state.clientId] : [],
       requiresAction: stepKind === "role",
       sectionKey,
       scenarioId,
@@ -3635,16 +4083,18 @@ function initDebugApi() {
       // Only "lone wolf" can peek center; simulate based on debug roles.
       const roleIds = Object.keys(ROLE_DEFINITIONS || {});
       const pick = () => roleIds[Math.floor(Math.random() * roleIds.length)] || "villager";
-      const wolfOnly = new Set(["werewolf", "alpha_wolf", "mystic_wolf", "dream_wolf"]);
       const playersNow = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
+      const seatsNow = new Set(playersNow.map((p) => Number(p.seat || 0)).filter(Boolean));
       for (const p of playersNow) {
         const seat = Number(p.seat || 0);
         if (!seat) continue;
         if (!state.debugRoleBySeat[seat]) state.debugRoleBySeat[seat] = pick();
       }
       state.debugRoleBySeat[mySeat] = "werewolf";
-      const wolfCount = Object.values(state.debugRoleBySeat).filter((r) => wolfOnly.has(String(r))).length;
-      state.nightPrivate = { payload: { canPeekCenter: wolfCount === 1 } };
+      const werewolfCount = Object.entries(state.debugRoleBySeat || {}).filter(
+        ([seat, r]) => seatsNow.has(Number(seat)) && String(r) === "werewolf"
+      ).length;
+      state.nightPrivate = { payload: { canPeekCenter: werewolfCount === 1 } };
     }
 
     renderNightOverlay();
