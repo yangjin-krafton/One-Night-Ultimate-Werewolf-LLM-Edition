@@ -388,6 +388,7 @@ const state = {
   nightTroublemakerBoard: null,
   nightDrunkBoard: null,
   nightWerewolfBoard: null,
+  seatMarks: {},
   debugRoleBySeat: {},
   debugRoleByCenter: {},
   nightPreview: { active: false },
@@ -781,6 +782,11 @@ function render() {
           fallback.className = "card";
           return fallback;
         })();
+
+    // Apply persistent public marks (shield / artifacts etc).
+    const seatKey = String(p?.seat ?? "");
+    const marks = state.seatMarks?.[seatKey] || [];
+    if (CardUI?.setMarks) CardUI.setMarks(card, marks);
 
     gridEl.appendChild(card);
 
@@ -1289,6 +1295,7 @@ function renderNightOverlay() {
     if (canReuseWerewolfOrbit) updateWerewolfOrbitSelection();
     // Reuse-path returns early, so ensure "본인" tab is present on reused cards (including troublemaker).
     ensureNightMeTabs(nightOverlay);
+    ensureSeatMarks(nightOverlay);
     if (canReuseSeerOrbit)
       applyNightResultOnce("seer", (result) => {
         const board = state.nightSeerBoard;
@@ -1852,6 +1859,94 @@ function renderNightOverlay() {
       if (idx >= 0 && idx <= 2) {
         result = { centerIndex: idx, role: String(state.debugRoleByCenter?.[idx] || "villager") };
       }
+    } else if (rid === "sentinel") {
+      const seat = asInt(a.seat, 0);
+      if (seat) result = { seat };
+    } else if (rid === "bodyguard") {
+      const seat = asInt(a.seat, 0);
+      if (seat) result = { seat };
+    } else if (rid === "apprentice_seer") {
+      const idx = asInt(a.centerIndex, -1);
+      if (idx >= 0 && idx <= 2) {
+        result = { centerIndex: idx, role: String(state.debugRoleByCenter?.[idx] || "villager") };
+      }
+    } else if (rid === "mystic_wolf") {
+      const seat = asInt(a.seat, 0);
+      if (seat && seat !== mySeatNum) result = { seat, role: String(state.debugRoleBySeat?.[seat] || "villager") };
+    } else if (rid === "revealer") {
+      const seat = asInt(a.seat, 0);
+      if (seat && seat !== mySeatNum) {
+        const role = String(state.debugRoleBySeat?.[seat] || "villager");
+        const wolfTeam = new Set(["werewolf", "minion", "alpha_wolf", "mystic_wolf"]);
+        if (wolfTeam.has(role) || role === "tanner") result = { seat, blocked: true };
+        else result = { seat, role };
+      }
+    } else if (rid === "curator") {
+      const seat = asInt(a.seat, 0);
+      const artifact = String(state.nightPrivate?.payload?.artifact || "artifact");
+      if (seat) result = { seat, artifact };
+    } else if (rid === "pickpocket") {
+      const seat = asInt(a.seat, 0);
+      if (seat && seat !== mySeatNum) {
+        const myRole = state.debugRoleBySeat?.[mySeatNum];
+        const targetRole = state.debugRoleBySeat?.[seat];
+        if (myRole != null && targetRole != null) {
+          state.debugRoleBySeat[mySeatNum] = targetRole;
+          state.debugRoleBySeat[seat] = myRole;
+        }
+        result = { targetSeat: seat, swapped: true };
+      }
+    } else if (rid === "gremlin") {
+      const seats = Array.isArray(a.seats) ? a.seats.map((x) => asInt(x, 0)).filter(Boolean) : [];
+      if (seats.length === 2 && seats[0] !== seats[1]) {
+        const ra = state.debugRoleBySeat?.[seats[0]];
+        const rb = state.debugRoleBySeat?.[seats[1]];
+        if (ra != null && rb != null) {
+          state.debugRoleBySeat[seats[0]] = rb;
+          state.debugRoleBySeat[seats[1]] = ra;
+        }
+        result = { swappedSeats: seats };
+      }
+    } else if (rid === "marksman") {
+      const seats = Array.isArray(a.seats)
+        ? a.seats.map((x) => asInt(x, 0)).filter(Boolean)
+        : a.seat
+            ? [asInt(a.seat, 0)].filter(Boolean)
+            : [];
+      const uniq = [];
+      for (const s of seats) if (!uniq.includes(s)) uniq.push(s);
+      const picked = uniq.slice(0, 2);
+      if (picked.length) {
+        const roles = {};
+        for (const s of picked) roles[String(s)] = String(state.debugRoleBySeat?.[s] || "villager");
+        result = { seats: picked, roles };
+      }
+    } else if (rid === "alpha_wolf") {
+      const seat = asInt(a.seat, 0);
+      if (seat && seat !== mySeatNum) {
+        let idx = [0, 1, 2].find((i) => String(state.debugRoleByCenter?.[i] || "") === "werewolf");
+        if (idx == null) {
+          idx = 0;
+          state.debugRoleByCenter[0] = "werewolf";
+        }
+        const centerRole = state.debugRoleByCenter?.[idx];
+        const targetRole = state.debugRoleBySeat?.[seat];
+        if (centerRole != null && targetRole != null) {
+          state.debugRoleBySeat[seat] = centerRole;
+          state.debugRoleByCenter[idx] = targetRole;
+        }
+        result = { targetSeat: seat, centerIndex: idx };
+      }
+    } else if (rid === "village_idiot") {
+      const dir = String(a.dir || "left") === "right" ? "right" : "left";
+      const playersNow = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
+      const seats = playersNow.map((p) => Number(p.seat || 0)).filter(Boolean).sort((a, b) => a - b);
+      if (seats.length >= 2) {
+        const roles = seats.map((s) => state.debugRoleBySeat?.[s] || "villager");
+        const rotated = dir === "left" ? roles.slice(1).concat(roles.slice(0, 1)) : roles.slice(-1).concat(roles.slice(0, -1));
+        seats.forEach((s, i) => (state.debugRoleBySeat[s] = rotated[i]));
+        result = { dir };
+      }
     }
 
     if (!result) return;
@@ -2126,6 +2221,7 @@ function renderNightOverlay() {
       });
       // Don't fall through to the generic confirm button below.
       ensureNightMeTabs(nightOverlay);
+      ensureSeatMarks(nightOverlay);
       return;
     } else {
       // Flat board mode (grid)
@@ -2436,6 +2532,7 @@ function renderNightOverlay() {
         swapEls(aEl, bEl, { flip: true });
       });
       ensureNightMeTabs(nightOverlay);
+      ensureSeatMarks(nightOverlay);
       return;
     }
 
@@ -2643,6 +2740,544 @@ function renderNightOverlay() {
     confirmBtn.classList.add("btn--nightConfirm");
 
     nightAction.appendChild(confirmBtn);
+  } else if (roleId === "apprentice_seer") {
+    const useOrbitBoard = !!useBgRuleCard;
+    if (useOrbitBoard) {
+      ensureDebugRoles();
+      nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
+      nightAction.classList.remove("hidden");
+
+      const def = ROLE_DEFINITIONS[activeRole] || null;
+      const ruleText = def?.desc || "중앙 카드 1장을 확인합니다.";
+      const selectedCenter = Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter.map(Number) : [];
+
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
+
+      const byCenter = new Map();
+      for (const idx of [0, 1, 2]) {
+        const c = document.createElement("button");
+        c.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
+        c.setAttribute("data-center-index", String(idx));
+        c.innerHTML = `
+          <div class="nightChoiceCard__seat">C${idx + 1}</div>
+          <div class="nightChoiceCard__avatar">🂠</div>
+          <div class="nightChoiceCard__name">중앙 카드</div>
+        `;
+        applyPlayerPalette(c, me?.color || "#888");
+        if (selectedCenter.includes(idx)) c.classList.add("nightChoice--selected");
+        c.addEventListener("click", () => {
+          selectBounce(c);
+          pulseBgCard();
+          const current = Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter.map(Number) : [];
+          const next = current.includes(idx) ? [] : [idx];
+          setChoiceState({ selectedCenter: next, selectedSeats: [] });
+        });
+        byCenter.set(idx, c);
+        centerEl.appendChild(c);
+      }
+
+      const orbitCards = [];
+      const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
+      playersSorted.forEach((p) => {
+        const isMe = p.clientId === state.clientId;
+        const b = document.createElement("button");
+        b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
+        b.setAttribute("data-seat", String(p.seat || ""));
+        if (isMe) b.dataset.isMe = "1";
+        b.innerHTML = `
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+          <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+          <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "🙂")}</div>
+          <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
+        `;
+        applyPlayerPalette(b, p.color || "#888");
+        (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
+        NightBoardUI?.setBlockedBadge?.(b, true);
+        orbitEl.appendChild(b);
+        orbitCards.push(b);
+      });
+      assignOrbitBases(orbitCards);
+
+      const confirmBtn = submitBtn(ruleText, () => {
+        clearBlockedBadges(row);
+        const idx = (state.nightUi?.selectedCenter || [])[0];
+        if (idx === undefined || idx === null) return;
+        pulseBgCard();
+        submitNightAction("apprentice_seer", { centerIndex: idx });
+      });
+      confirmBtn.classList.add("btn--nightConfirm");
+      confirmBtn.disabled = !(selectedCenter.length === 1);
+      confirmBtn.setAttribute("aria-disabled", selectedCenter.length === 1 ? "false" : "true");
+
+      const board = { confirmBtn };
+      applyNightResultOnce("apprentice_seer", (result) => {
+        const r = result || {};
+        const idx = Number(r.centerIndex);
+        const rid = String(r.role || "");
+        const el = byCenter.get(idx) || null;
+        if (el && rid) flipRevealRole(el, rid);
+        const roleName = getRoleDisplayName(rid);
+        setBoardMessage(board, { text: `C${idx + 1} 카드 신분은 ${roleName}입니다.`, highlights: [`C${idx + 1}`, roleName] });
+      });
+
+      nightAction.appendChild(row);
+      nightAction.appendChild(confirmBtn);
+      CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
+      CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
+      state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
+      ensureNightMeTabs(nightOverlay);
+      ensureSeatMarks(nightOverlay);
+      return;
+    }
+  } else if (roleId === "mystic_wolf") {
+    const useOrbitBoard = !!useBgRuleCard;
+    if (useOrbitBoard) {
+      ensureDebugRoles();
+      nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
+      nightAction.classList.remove("hidden");
+
+      const def = ROLE_DEFINITIONS[activeRole] || null;
+      const ruleText = def?.desc || "플레이어 1명의 카드를 확인합니다.";
+      const selectedSeats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
+
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
+
+      for (const idx of [0, 1, 2]) {
+        const c = document.createElement("button");
+        c.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
+        c.setAttribute("data-center-index", String(idx));
+        c.innerHTML = `
+          <div class="nightChoiceCard__seat">C${idx + 1}</div>
+          <div class="nightChoiceCard__avatar">🂠</div>
+          <div class="nightChoiceCard__name">중앙 카드</div>
+        `;
+        applyPlayerPalette(c, me?.color || "#888");
+        (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(c, false);
+        NightBoardUI?.setBlockedBadge?.(c, true);
+        centerEl.appendChild(c);
+      }
+
+      const bySeat = new Map();
+      const orbitCards = [];
+      const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
+      playersSorted.forEach((p) => {
+        const isMe = p.clientId === state.clientId;
+        const b = document.createElement("button");
+        b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
+        b.setAttribute("data-seat", String(p.seat || ""));
+        if (isMe) b.dataset.isMe = "1";
+        b.innerHTML = `
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+          <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+          <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "🙂")}</div>
+          <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
+        `;
+        applyPlayerPalette(b, p.color || "#888");
+        if (isMe) {
+          (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
+          NightBoardUI?.setBlockedBadge?.(b, true);
+        } else if (selectedSeats.includes(Number(p.seat))) {
+          b.classList.add("nightChoice--selected");
+        }
+        b.addEventListener("click", () => {
+          if (isMe) return;
+          selectBounce(b);
+          pulseBgCard();
+          const seat = Number(p.seat);
+          let next = [...selectedSeats];
+          if (next.includes(seat)) next = next.filter((x) => x !== seat);
+          else next = [seat];
+          setChoiceState({ selectedSeats: next, selectedCenter: [] });
+        });
+        orbitEl.appendChild(b);
+        orbitCards.push(b);
+        bySeat.set(Number(p.seat), b);
+      });
+      assignOrbitBases(orbitCards);
+
+      const confirmBtn = submitBtn(ruleText, () => {
+        clearBlockedBadges(row);
+        const seat = (state.nightUi?.selectedSeats || [])[0];
+        if (!seat) return;
+        const el = bySeat.get(Number(seat)) || null;
+        pulseEl(el);
+        pulseBgCard();
+        submitNightAction("mystic_wolf", { seat });
+      });
+      confirmBtn.classList.add("btn--nightConfirm");
+      confirmBtn.disabled = !(selectedSeats.length === 1);
+      confirmBtn.setAttribute("aria-disabled", selectedSeats.length === 1 ? "false" : "true");
+
+      const board = { confirmBtn };
+      applyNightResultOnce("mystic_wolf", (result) => {
+        const r = result || {};
+        const seat = Number(r.seat || 0);
+        const rid = String(r.role || "");
+        const el = bySeat.get(seat) || null;
+        if (el && rid) flipRevealRole(el, rid);
+        const roleName = getRoleDisplayName(rid);
+        setBoardMessage(board, { text: `${seat}번 신분은 ${roleName}입니다.`, highlights: [`${seat}번`, roleName] });
+      });
+
+      nightAction.appendChild(row);
+      nightAction.appendChild(confirmBtn);
+      CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
+      CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
+      state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
+      ensureNightMeTabs(nightOverlay);
+      ensureSeatMarks(nightOverlay);
+      return;
+    }
+  } else if (roleId === "revealer") {
+    const useOrbitBoard = !!useBgRuleCard;
+    if (useOrbitBoard) {
+      ensureDebugRoles();
+      nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
+      nightAction.classList.remove("hidden");
+
+      const def = ROLE_DEFINITIONS[activeRole] || null;
+      const ruleText = def?.desc || "플레이어 1명의 카드를 공개합니다(조건부).";
+      const selectedSeats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
+
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
+
+      for (const idx of [0, 1, 2]) {
+        const c = document.createElement("button");
+        c.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
+        c.setAttribute("data-center-index", String(idx));
+        c.innerHTML = `
+          <div class="nightChoiceCard__seat">C${idx + 1}</div>
+          <div class="nightChoiceCard__avatar">🂠</div>
+          <div class="nightChoiceCard__name">중앙 카드</div>
+        `;
+        applyPlayerPalette(c, me?.color || "#888");
+        (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(c, false);
+        NightBoardUI?.setBlockedBadge?.(c, true);
+        centerEl.appendChild(c);
+      }
+
+      const bySeat = new Map();
+      const orbitCards = [];
+      const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
+      playersSorted.forEach((p) => {
+        const isMe = p.clientId === state.clientId;
+        const b = document.createElement("button");
+        b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
+        b.setAttribute("data-seat", String(p.seat || ""));
+        if (isMe) b.dataset.isMe = "1";
+        b.innerHTML = `
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+          <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+          <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "🙂")}</div>
+          <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
+        `;
+        applyPlayerPalette(b, p.color || "#888");
+        if (isMe) {
+          (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
+          NightBoardUI?.setBlockedBadge?.(b, true);
+        } else if (selectedSeats.includes(Number(p.seat))) {
+          b.classList.add("nightChoice--selected");
+        }
+        b.addEventListener("click", () => {
+          if (isMe) return;
+          selectBounce(b);
+          pulseBgCard();
+          const seat = Number(p.seat);
+          let next = [...selectedSeats];
+          if (next.includes(seat)) next = next.filter((x) => x !== seat);
+          else next = [seat];
+          setChoiceState({ selectedSeats: next, selectedCenter: [] });
+        });
+        orbitEl.appendChild(b);
+        orbitCards.push(b);
+        bySeat.set(Number(p.seat), b);
+      });
+      assignOrbitBases(orbitCards);
+
+      const confirmBtn = submitBtn(ruleText, () => {
+        clearBlockedBadges(row);
+        const seat = (state.nightUi?.selectedSeats || [])[0];
+        if (!seat) return;
+        const el = bySeat.get(Number(seat)) || null;
+        pulseEl(el);
+        pulseBgCard();
+        submitNightAction("revealer", { seat });
+      });
+      confirmBtn.classList.add("btn--nightConfirm");
+      confirmBtn.disabled = !(selectedSeats.length === 1);
+      confirmBtn.setAttribute("aria-disabled", selectedSeats.length === 1 ? "false" : "true");
+
+      const board = { confirmBtn };
+      applyNightResultOnce("revealer", (result) => {
+        const r = result || {};
+        const seat = Number(r.seat || 0);
+        const rid = String(r.role || "");
+        const blocked = !!r.blocked;
+        const el = bySeat.get(seat) || null;
+        if (!blocked && el && rid) flipRevealRole(el, rid);
+        if (blocked) {
+          setBoardMessage(board, { text: `${seat}번 신분은 공개할 수 없습니다.`, highlights: [`${seat}번`] });
+        } else {
+          const roleName = getRoleDisplayName(rid);
+          setBoardMessage(board, { text: `${seat}번 신분은 ${roleName}입니다.`, highlights: [`${seat}번`, roleName] });
+        }
+      });
+
+      nightAction.appendChild(row);
+      nightAction.appendChild(confirmBtn);
+      CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
+      CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
+      state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
+      ensureNightMeTabs(nightOverlay);
+      ensureSeatMarks(nightOverlay);
+      return;
+    }
+  } else if (
+    roleId === "sentinel" ||
+    roleId === "bodyguard" ||
+    roleId === "curator" ||
+    roleId === "alpha_wolf" ||
+    roleId === "pickpocket" ||
+    roleId === "gremlin" ||
+    roleId === "marksman"
+  ) {
+    const useOrbitBoard = !!useBgRuleCard;
+    if (useOrbitBoard) {
+      ensureDebugRoles();
+      nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
+      nightAction.classList.remove("hidden");
+
+      const def = ROLE_DEFINITIONS[activeRole] || null;
+      let ruleText = def?.desc || "플레이어를 선택하세요.";
+      if (roleId === "curator") {
+        const artifact = String(state.nightPrivate?.payload?.artifact || "");
+        if (artifact) ruleText = `${ruleText} (아이템: ${artifact})`;
+      }
+
+      const max = roleId === "gremlin" || roleId === "marksman" ? 2 : 1;
+      const allowSelf = roleId === "sentinel" || roleId === "bodyguard" || roleId === "curator" || roleId === "gremlin";
+      const selectedSeats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
+
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
+
+      const alphaCenterIdx = roleId === "alpha_wolf" ? state.nightPrivate?.payload?.centerWerewolfIndex : null;
+      const byCenter = new Map();
+      for (const idx of [0, 1, 2]) {
+        const c = document.createElement("button");
+        c.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
+        c.setAttribute("data-center-index", String(idx));
+        const isAlphaWolfCenter = Number(alphaCenterIdx) === idx;
+        c.innerHTML = `
+          <div class="nightChoiceCard__seat">C${idx + 1}</div>
+          <div class="nightChoiceCard__avatar">${isAlphaWolfCenter ? "🐺" : "🂠"}</div>
+          <div class="nightChoiceCard__name">${isAlphaWolfCenter ? "늑대 카드" : "중앙 카드"}</div>
+        `;
+        applyPlayerPalette(c, me?.color || "#888");
+        (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(c, false);
+        NightBoardUI?.setBlockedBadge?.(c, true);
+        centerEl.appendChild(c);
+        byCenter.set(idx, c);
+      }
+
+      const bySeat = new Map();
+      const orbitCards = [];
+      const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
+      playersSorted.forEach((p) => {
+        const isMe = p.clientId === state.clientId;
+        const b = document.createElement("button");
+        b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
+        b.setAttribute("data-seat", String(p.seat || ""));
+        if (isMe) b.dataset.isMe = "1";
+        b.innerHTML = `
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+          <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+          <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "🙂")}</div>
+          <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
+        `;
+        applyPlayerPalette(b, p.color || "#888");
+
+        const seatNum = Number(p.seat || 0);
+        const selectable = allowSelf ? true : !isMe;
+        if (!selectable) {
+          (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
+          NightBoardUI?.setBlockedBadge?.(b, true);
+        } else if (selectedSeats.includes(seatNum)) {
+          b.classList.add("nightChoice--selected");
+        }
+
+        b.addEventListener("click", () => {
+          if (!selectable) return;
+          selectBounce(b);
+          pulseBgCard();
+          let next = [...selectedSeats];
+          if (next.includes(seatNum)) next = next.filter((x) => x !== seatNum);
+          else if (max === 1) next = [seatNum];
+          else if (next.length < max) next.push(seatNum);
+          else next = [next[1], seatNum];
+          setChoiceState({ selectedSeats: next, selectedCenter: [] });
+        });
+
+        orbitEl.appendChild(b);
+        orbitCards.push(b);
+        bySeat.set(seatNum, b);
+      });
+      assignOrbitBases(orbitCards);
+
+      const canConfirm = roleId === "marksman" ? selectedSeats.length >= 1 && selectedSeats.length <= 2 : selectedSeats.length === max;
+      const confirmBtn = submitBtn(ruleText, () => {
+        clearBlockedBadges(row);
+        const seatsNow = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
+        if (roleId === "gremlin") {
+          if (seatsNow.length !== 2) return;
+          const aEl = bySeat.get(seatsNow[0]) || null;
+          const bEl = bySeat.get(seatsNow[1]) || null;
+          pulseEl(aEl);
+          pulseEl(bEl);
+          pulseBgCard();
+          submitNightAction("gremlin", { seats: seatsNow });
+          return;
+        }
+        if (roleId === "marksman") {
+          if (!seatsNow.length || seatsNow.length > 2) return;
+          pulseBgCard();
+          submitNightAction("marksman", { seats: seatsNow });
+          return;
+        }
+        const seat = seatsNow[0];
+        if (!seat) return;
+        const el = bySeat.get(Number(seat)) || null;
+        pulseEl(el);
+        pulseBgCard();
+        if (roleId === "pickpocket") submitNightAction("pickpocket", { seat });
+        else if (roleId === "sentinel") submitNightAction("sentinel", { seat });
+        else if (roleId === "bodyguard") submitNightAction("bodyguard", { seat });
+        else if (roleId === "curator") submitNightAction("curator", { seat });
+        else if (roleId === "alpha_wolf") submitNightAction("alpha_wolf", { seat });
+      });
+      confirmBtn.classList.add("btn--nightConfirm");
+      confirmBtn.disabled = !canConfirm;
+      confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
+
+      const board = { confirmBtn };
+      applyNightResultOnce("sentinel", (result) => {
+        const seat = Number(result?.seat || 0);
+        setBoardMessage(board, { text: `${seat}번에게 방패를 주었습니다.`, highlights: [`${seat}번`] });
+      });
+      applyNightResultOnce("bodyguard", (result) => {
+        const seat = Number(result?.seat || 0);
+        setBoardMessage(board, { text: `${seat}번을 보호합니다.`, highlights: [`${seat}번`] });
+      });
+      applyNightResultOnce("curator", (result) => {
+        const seat = Number(result?.seat || 0);
+        const artifact = String(result?.artifact || "");
+        setBoardMessage(board, { text: `${seat}번에게 ${artifact}을(를) 주었습니다.`, highlights: [`${seat}번`, artifact] });
+      });
+      applyNightResultOnce("pickpocket", (result) => {
+        const seat = Number(result?.targetSeat || 0);
+        const mySeat = Number(state.mySeat || 0);
+        const mine = bySeat.get(mySeat) || null;
+        const target = bySeat.get(seat) || null;
+        if (mine && target) swapEls(mine, target, { flip: true });
+        setBoardMessage(board, { text: `${seat}번과 신분 카드를 교환했습니다. (확인 불가)`, highlights: [`${seat}번`] });
+      });
+      applyNightResultOnce("gremlin", (result) => {
+        const seats = Array.isArray(result?.swappedSeats) ? result.swappedSeats.map(Number) : [];
+        if (seats.length !== 2 || seats[0] === seats[1]) return;
+        const aEl = bySeat.get(seats[0]) || null;
+        const bEl = bySeat.get(seats[1]) || null;
+        if (aEl && bEl) swapEls(aEl, bEl, { flip: true });
+        setBoardMessage(board, { text: `${seats[0]}번과 ${seats[1]}번 신분 카드가 서로 교환됐었습니다.`, highlights: [`${seats[0]}번`, `${seats[1]}번`] });
+      });
+      applyNightResultOnce("marksman", (result) => {
+        const seats = Array.isArray(result?.seats) ? result.seats.map(Number) : [];
+        const roles = result?.roles || {};
+        for (const s of seats) {
+          const rid = String(roles?.[String(s)] || "");
+          const el = bySeat.get(Number(s)) || null;
+          if (el && rid) flipRevealRole(el, rid);
+        }
+        if (seats.length === 1) {
+          const rid = String(roles?.[String(seats[0])] || "");
+          const roleName = getRoleDisplayName(rid);
+          setBoardMessage(board, { text: `${seats[0]}번 신분은 ${roleName}입니다.`, highlights: [`${seats[0]}번`, roleName] });
+        } else if (seats.length === 2) {
+          const ra = getRoleDisplayName(String(roles?.[String(seats[0])] || ""));
+          const rb = getRoleDisplayName(String(roles?.[String(seats[1])] || ""));
+          setBoardMessage(board, {
+            text: `${seats[0]}번(${ra}), ${seats[1]}번(${rb}) 신분을 확인했습니다.`,
+            highlights: [`${seats[0]}번`, ra, `${seats[1]}번`, rb],
+          });
+        }
+      });
+      applyNightResultOnce("alpha_wolf", (result) => {
+        const seat = Number(result?.targetSeat || 0);
+        const idx = Number(result?.centerIndex);
+        const target = bySeat.get(seat) || null;
+        const center = byCenter.get(idx) || null;
+        if (target && center) swapEls(target, center, { flip: true });
+        setBoardMessage(board, { text: `중앙 C${idx + 1} 카드가 ${seat}번과 교환됐었습니다.`, highlights: [`C${idx + 1}`, `${seat}번`] });
+      });
+
+      nightAction.appendChild(row);
+      nightAction.appendChild(confirmBtn);
+      CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
+      CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
+      state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
+      ensureNightMeTabs(nightOverlay);
+      ensureSeatMarks(nightOverlay);
+      return;
+    }
+  } else if (roleId === "village_idiot") {
+    const def = ROLE_DEFINITIONS[activeRole] || null;
+    const ruleText = def?.desc || "방향을 선택하세요.";
+    const selectedDir = String(state.nightUi?.dir || "");
+    nightAction.classList.remove("hidden");
+    nightAction.classList.add("nightOverlay__action--bottomBar");
+    nightAction.innerHTML = "";
+
+    const row = document.createElement("div");
+    row.className = "nightAction__row";
+
+    const mk = (dir, label, icon) => {
+      const b = document.createElement("button");
+      b.className = "nightChoice nightChoiceCard nightChoiceCard--center";
+      b.innerHTML = `
+        <div class="nightChoiceCard__seat">${escapeHtml(label)}</div>
+        <div class="nightChoiceCard__avatar">${escapeHtml(icon)}</div>
+        <div class="nightChoiceCard__name">회전</div>
+      `;
+      b.classList.toggle("nightChoice--selected", selectedDir === dir);
+      b.addEventListener("click", () => {
+        selectBounce(b);
+        pulseBgCard();
+        setChoiceState({ dir, selectedSeats: [], selectedCenter: [] });
+      });
+      return b;
+    };
+
+    row.appendChild(mk("left", "왼쪽", "⬅️"));
+    row.appendChild(mk("right", "오른쪽", "➡️"));
+
+    const confirmBtn = submitBtn(ruleText, () => {
+      const dir = String(state.nightUi?.dir || "");
+      if (dir !== "left" && dir !== "right") return;
+      pulseBgCard();
+      submitNightAction("village_idiot", { dir });
+    });
+    confirmBtn.classList.add("btn--nightConfirm");
+    confirmBtn.disabled = !(selectedDir === "left" || selectedDir === "right");
+    confirmBtn.setAttribute("aria-disabled", confirmBtn.disabled ? "true" : "false");
+
+    const board = { confirmBtn };
+    applyNightResultOnce("village_idiot", (result) => {
+      const dir = String(result?.dir || "");
+      const label = dir === "right" ? "오른쪽" : "왼쪽";
+      setBoardMessage(board, { text: `${label}으로 회전했습니다.`, highlights: [label] });
+    });
+
+    nightAction.appendChild(row);
+    nightAction.appendChild(confirmBtn);
+    return;
   } else if (roleId === "minion") {
     const def = ROLE_DEFINITIONS[activeRole] || null;
     const ruleText = def?.desc || "미니언의 차례입니다.";
@@ -2709,6 +3344,7 @@ function renderNightOverlay() {
 
   // Ensure "본인" tab is present on my player cards in night UI (even if templates differ by role).
   ensureNightMeTabs(nightOverlay);
+  ensureSeatMarks(nightOverlay);
 
   // Show last private result (actor-only)
   if (state.nightResult?.result) {
@@ -3056,10 +3692,16 @@ function handleMsg(msg) {
   }
   if (msg.type === "room_snapshot") {
     state.room = msg.data;
+    state.seatMarks = msg.data?.seatMarks || {};
     showRoom();
     render();
     setPhase(state.room.phase || "WAIT", state.room.phaseEndsAtMs);
     if ((state.room.phase || "") === "WAIT" && state.lobbyNotice) renderLobbyNotice();
+    return;
+  }
+  if (msg.type === "seat_marks") {
+    state.seatMarks = msg.data?.seatMarks || {};
+    render();
     return;
   }
   if (msg.type === "host_changed") {
@@ -3168,6 +3810,17 @@ function ensureNightMeTabs(rootEl) {
     tab.className = "meTab meTab--night";
     tab.textContent = "본인";
     card.insertBefore(tab, card.firstChild);
+  });
+}
+
+function ensureSeatMarks(rootEl) {
+  if (!rootEl || !rootEl.querySelectorAll) return;
+  if (!window.CardUI?.setMarks) return;
+  rootEl.querySelectorAll("[data-seat]").forEach((el) => {
+    const seat = String(el.getAttribute("data-seat") || "");
+    if (!seat) return;
+    const marks = state.seatMarks?.[seat] || [];
+    window.CardUI.setMarks(el, marks);
   });
 }
 

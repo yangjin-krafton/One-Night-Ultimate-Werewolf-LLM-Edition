@@ -487,6 +487,32 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
 .card--me{overflow: visible;}
 .profileCardLarge--me{overflow: visible;}
 
+/* Profile card marks (shield / artifacts etc) */
+.cardMarks{
+  position:absolute;
+  top: 8px;
+  right: 8px;
+  display:flex;
+  gap: 6px;
+  z-index: 25;
+  pointer-events: none;
+}
+.cardMark{
+  width: 28px;
+  height: 28px;
+  display:grid;
+  place-items:center;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.36);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.35);
+  font-size: 18px;
+  line-height: 1;
+}
+.profileCardLarge .cardMarks{top: 10px; right: 10px}
+.nightChoiceCard .cardMarks{top: 10px; right: 10px; z-index: 60}
+.nightChoiceCard .cardMark{width: 30px; height: 30px; font-size: 18px}
+
 .card__kick{
   position: absolute;
   left: 50%;

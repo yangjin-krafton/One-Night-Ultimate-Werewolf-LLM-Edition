@@ -409,6 +409,13 @@ class RoomState:
     night_waiting_role_id: str | None = None
     night_ready_ids: set[str] = field(default_factory=set)
 
+    # Night-only side effects / items (kept private; not included in snapshots).
+    sentinel_shield_seat: int | None = None
+    bodyguard_protect_seat: int | None = None
+    curator_artifact_by_client_id: dict[str, str] = field(default_factory=dict)  # curator actor -> artifactId
+    artifacts_by_client_id: dict[str, str] = field(default_factory=dict)  # target client -> artifactId (for future effects)
+    seat_marks: dict[int, list[str]] = field(default_factory=dict)  # public: seat -> mark ids (e.g. shield, artifact:mask)
+
     # If True, when an episode naturally completes and returns to WAIT, auto-advance to next episode (if any).
     advance_episode_on_return: bool = True
 
@@ -455,10 +462,24 @@ class RoomState:
             "votes": vote_status,
             # Public: role IDs used for this round (no assignments). Useful for in-game role reference UI.
             "nightDeck": list(self.night_deck or []),
+            "seatMarks": {str(k): list(v or []) for k, v in (self.seat_marks or {}).items()},
         }
 
 
 class GameServer:
+    async def _broadcast_seat_marks_locked(self) -> None:
+        await self.broadcast({"type": "seat_marks", "data": {"seatMarks": {str(k): list(v or []) for k, v in (self._room.seat_marks or {}).items()}}})
+
+    def _add_seat_mark_locked(self, seat: int, mark_id: str) -> None:
+        s = int(seat)
+        mid = str(mark_id or "").strip()
+        if not mid or s <= 0:
+            return
+        cur = self._room.seat_marks.get(s) or []
+        if mid not in cur:
+            cur.append(mid)
+        self._room.seat_marks[s] = cur
+
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
         self._room = RoomState()
@@ -685,6 +706,10 @@ class GameServer:
         self._room.night_done_actor_ids.clear()
         self._room.night_waiting_role_id = None
         self._room.night_ready_ids.clear()
+        self._room.sentinel_shield_seat = None
+        self._room.bodyguard_protect_seat = None
+        self._room.curator_artifact_by_client_id.clear()
+        self._room.artifacts_by_client_id.clear()
 
     async def _begin_night_locked(self, *, reason: str) -> None:
         # Called from ROLE phase when everyone is ready (or timeout).
@@ -712,7 +737,23 @@ class GameServer:
 
     def _role_action_required_locked(self, role_id: str, actor_ids: list[str]) -> bool:
         rid = (role_id or "").strip()
-        if rid in {"seer", "robber", "troublemaker", "drunk"}:
+        if rid in {
+            "seer",
+            "robber",
+            "troublemaker",
+            "drunk",
+            "sentinel",
+            "alpha_wolf",
+            "mystic_wolf",
+            "apprentice_seer",
+            "revealer",
+            "curator",
+            "bodyguard",
+            "pickpocket",
+            "gremlin",
+            "marksman",
+            "village_idiot",
+        }:
             return True
         if rid == "werewolf":
             # Only lone wolf needs an action (optional center peek).
@@ -734,17 +775,32 @@ class GameServer:
             return out
 
         if rid == "minion":
-            wolf_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == "werewolf"]
+            wolf_ids = [cid for cid, r in self._room.role_by_client_id.items() if r in {"werewolf", "alpha_wolf", "mystic_wolf"}]
             payload = {"wolfSeats": _seats(wolf_ids)}
         elif rid == "mason":
             mason_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == "mason"]
             payload = {"masonSeats": _seats([cid for cid in mason_ids if cid in actor_ids]) or _seats(mason_ids)}
-        elif rid == "werewolf":
-            wolf_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == "werewolf"]
-            payload = {"wolfSeats": _seats(wolf_ids), "lone": len(wolf_ids) == 1, "canPeekCenter": len(wolf_ids) == 1}
+        elif rid in {"werewolf", "alpha_wolf", "mystic_wolf"}:
+            wolf_ids = [cid for cid, r in self._room.role_by_client_id.items() if r in {"werewolf", "alpha_wolf", "mystic_wolf"}]
+            payload = {"wolfSeats": _seats(wolf_ids), "lone": len(wolf_ids) == 1}
+            if rid == "werewolf":
+                payload["canPeekCenter"] = len(wolf_ids) == 1
+            if rid == "alpha_wolf":
+                try:
+                    idx = next((i for i, r in enumerate(self._room.center_roles or []) if str(r or "") == "werewolf"), None)
+                except Exception:
+                    idx = None
+                payload["centerWerewolfIndex"] = idx
         elif rid == "insomniac":
             # Will also be sent as night_result on action-less step start.
             payload = {"currentRole": self._room.role_by_client_id.get(actor_ids[0], "")}
+        elif rid == "curator":
+            # Curator receives a random artifact to give away.
+            artifacts = ["claw", "mask", "amulet", "ring"]
+            artifact = random.choice(artifacts)
+            for cid in actor_ids:
+                self._room.curator_artifact_by_client_id[cid] = artifact
+            payload = {"artifact": artifact}
         else:
             return
 
@@ -1068,6 +1124,158 @@ class GameServer:
                             "type": "night_result",
                             "data": {"stepId": step_id, "roleId": "werewolf", "result": {"centerIndex": idx, "role": self._room.center_roles[idx]}},
                         },
+                    )
+            elif role_id == "sentinel":
+                seat = int(action.get("seat") or 0)
+                tid = self._client_id_by_seat_locked(seat)
+                if tid:
+                    self._room.sentinel_shield_seat = int(seat)
+                    self._add_seat_mark_locked(int(seat), "shield")
+                    await self._send_to(
+                        client_id,
+                        {"type": "night_result", "data": {"stepId": step_id, "roleId": "sentinel", "result": {"seat": seat}}},
+                    )
+                    await self._broadcast_seat_marks_locked()
+            elif role_id == "bodyguard":
+                seat = int(action.get("seat") or 0)
+                tid = self._client_id_by_seat_locked(seat)
+                if tid:
+                    self._room.bodyguard_protect_seat = int(seat)
+                    self._add_seat_mark_locked(int(seat), "protect")
+                    await self._send_to(
+                        client_id,
+                        {"type": "night_result", "data": {"stepId": step_id, "roleId": "bodyguard", "result": {"seat": seat}}},
+                    )
+                    await self._broadcast_seat_marks_locked()
+            elif role_id == "apprentice_seer":
+                idx = int(action.get("centerIndex") or -1)
+                if 0 <= idx <= 2 and len(self._room.center_roles) >= 3:
+                    await self._send_to(
+                        client_id,
+                        {
+                            "type": "night_result",
+                            "data": {"stepId": step_id, "roleId": "apprentice_seer", "result": {"centerIndex": idx, "role": self._room.center_roles[idx]}},
+                        },
+                    )
+            elif role_id == "mystic_wolf":
+                seat = int(action.get("seat") or 0)
+                tid = self._client_id_by_seat_locked(seat)
+                if tid and tid != client_id:
+                    await self._send_to(
+                        client_id,
+                        {"type": "night_result", "data": {"stepId": step_id, "roleId": "mystic_wolf", "result": {"seat": seat, "role": self._room.role_by_client_id.get(tid, "")}}},
+                    )
+            elif role_id == "revealer":
+                seat = int(action.get("seat") or 0)
+                tid = self._client_id_by_seat_locked(seat)
+                if tid and tid != client_id:
+                    rid = str(self._room.role_by_client_id.get(tid, "") or "")
+                    wolf_team = {"werewolf", "minion", "alpha_wolf", "mystic_wolf"}
+                    blocked = (rid in wolf_team) or (rid == "tanner")
+                    result = {"seat": seat, "blocked": True} if blocked else {"seat": seat, "role": rid}
+                    await self._send_to(
+                        client_id,
+                        {"type": "night_result", "data": {"stepId": step_id, "roleId": "revealer", "result": result}},
+                    )
+            elif role_id == "curator":
+                seat = int(action.get("seat") or 0)
+                tid = self._client_id_by_seat_locked(seat)
+                artifact = str(self._room.curator_artifact_by_client_id.get(client_id, "") or "")
+                if tid and artifact:
+                    self._room.artifacts_by_client_id[tid] = artifact
+                    self._room.curator_artifact_by_client_id.pop(client_id, None)
+                    self._add_seat_mark_locked(int(seat), f"artifact:{artifact}")
+                    await self._send_to(
+                        client_id,
+                        {"type": "night_result", "data": {"stepId": step_id, "roleId": "curator", "result": {"seat": seat, "artifact": artifact}}},
+                    )
+                    await self._broadcast_seat_marks_locked()
+            elif role_id == "pickpocket":
+                seat = int(action.get("seat") or 0)
+                tid = self._client_id_by_seat_locked(seat)
+                if tid and tid != client_id:
+                    a = self._room.role_by_client_id.get(client_id)
+                    b = self._room.role_by_client_id.get(tid)
+                    if a is not None and b is not None:
+                        self._room.role_by_client_id[client_id], self._room.role_by_client_id[tid] = b, a
+                        await self._send_to(
+                            client_id,
+                            {"type": "night_result", "data": {"stepId": step_id, "roleId": "pickpocket", "result": {"targetSeat": seat, "swapped": True}}},
+                        )
+            elif role_id == "gremlin":
+                seats = action.get("seats") or []
+                try:
+                    seats = [int(x) for x in list(seats)][:2]
+                except Exception:
+                    seats = []
+                seats = [s for s in seats if s > 0]
+                if len(seats) == 2 and seats[0] != seats[1]:
+                    a_id = self._client_id_by_seat_locked(seats[0])
+                    b_id = self._client_id_by_seat_locked(seats[1])
+                    if a_id and b_id and a_id != b_id:
+                        ra = self._room.role_by_client_id.get(a_id)
+                        rb = self._room.role_by_client_id.get(b_id)
+                        if ra is not None and rb is not None:
+                            self._room.role_by_client_id[a_id], self._room.role_by_client_id[b_id] = rb, ra
+                            await self._send_to(
+                                client_id,
+                                {"type": "night_result", "data": {"stepId": step_id, "roleId": "gremlin", "result": {"swappedSeats": seats}}},
+                            )
+            elif role_id == "marksman":
+                seats = action.get("seats") or action.get("seat") or []
+                if not isinstance(seats, list):
+                    seats = [seats]
+                try:
+                    seats = [int(x) for x in list(seats)][:2]
+                except Exception:
+                    seats = []
+                seats = [s for s in seats if s > 0]
+                seats = list(dict.fromkeys(seats))  # dedupe keep order
+                roles: dict[str, str] = {}
+                for s in seats:
+                    tid = self._client_id_by_seat_locked(int(s))
+                    if tid:
+                        roles[str(s)] = str(self._room.role_by_client_id.get(tid, "") or "")
+                if seats and roles:
+                    await self._send_to(
+                        client_id,
+                        {"type": "night_result", "data": {"stepId": step_id, "roleId": "marksman", "result": {"seats": seats, "roles": roles}}},
+                    )
+            elif role_id == "alpha_wolf":
+                seat = int(action.get("seat") or 0)
+                tid = self._client_id_by_seat_locked(seat)
+                if tid and tid != client_id and len(self._room.center_roles) >= 3:
+                    try:
+                        idx = next((i for i, r in enumerate(self._room.center_roles or []) if str(r or "") == "werewolf"), None)
+                    except Exception:
+                        idx = None
+                    if idx is not None:
+                        target_role = self._room.role_by_client_id.get(tid)
+                        if target_role is not None:
+                            self._room.role_by_client_id[tid], self._room.center_roles[idx] = self._room.center_roles[idx], target_role
+                            await self._send_to(
+                                client_id,
+                                {"type": "night_result", "data": {"stepId": step_id, "roleId": "alpha_wolf", "result": {"targetSeat": seat, "centerIndex": idx}}},
+                            )
+            elif role_id == "village_idiot":
+                dir_ = str(action.get("dir") or "")
+                if dir_ not in {"left", "right"}:
+                    dir_ = "left"
+                players = [p for p in self._room.players if p.ws is not None and not p.is_spectator]
+                players.sort(key=lambda p: int(p.seat))
+                cids = [p.client_id for p in players]
+                if len(cids) >= 2:
+                    roles = [self._room.role_by_client_id.get(cid) for cid in cids]
+                    if dir_ == "left":
+                        roles = roles[1:] + roles[:1]
+                    else:
+                        roles = roles[-1:] + roles[:-1]
+                    for cid, r in zip(cids, roles):
+                        if r is not None:
+                            self._room.role_by_client_id[cid] = r
+                    await self._send_to(
+                        client_id,
+                        {"type": "night_result", "data": {"stepId": step_id, "roleId": "village_idiot", "result": {"dir": dir_}}},
                     )
 
             self._room.night_done_actor_ids.add(client_id)
@@ -1551,6 +1759,12 @@ class GameServer:
                 return
             self._room.votes.clear()
             self._room.advance_episode_on_return = True
+            # Clear any prior-night side effects/items.
+            self._room.sentinel_shield_seat = None
+            self._room.bodyguard_protect_seat = None
+            self._room.curator_artifact_by_client_id.clear()
+            self._room.artifacts_by_client_id.clear()
+            self._room.seat_marks.clear()
             # Assign roles and start night sequencer.
             ok = await self._assign_roles_locked(scenario=scenario, player_count=self._room.connected_player_count())
             if not ok:

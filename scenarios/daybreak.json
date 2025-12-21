@@ -62,24 +62,17 @@
                 "werewolf",
                 "minion",
                 "apprentice_seer",
-                "witch",
-                "sentinel",
                 "revealer",
-                "curator",
-                "bodyguard",
                 "villager",
                 "villager",
                 "villager",
                 "villager"
               ],
               "roleWakeOrder": [
-                "sentinel",
                 "werewolf",
                 "minion",
                 "apprentice_seer",
-                "witch",
-                "revealer",
-                "curator"
+                "revealer"
               ],
               "narration": {
                 "playbackPolicy": {
@@ -96,11 +89,6 @@
                 "openingClipCount": 1,
                 "nightOutroClipCount": 1,
                 "roleClipCounts": {
-                  "sentinel": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
                   "werewolf": {
                     "before": 0,
                     "during": 1,
@@ -116,17 +104,7 @@
                     "during": 1,
                     "after": 0
                   },
-                  "witch": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
                   "revealer": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "curator": {
                     "before": 0,
                     "during": 1,
                     "after": 0
@@ -174,24 +152,17 @@
                 "werewolf",
                 "minion",
                 "apprentice_seer",
-                "witch",
-                "sentinel",
                 "revealer",
-                "curator",
-                "bodyguard",
                 "villager",
                 "villager",
                 "villager",
                 "villager"
               ],
               "roleWakeOrder": [
-                "sentinel",
                 "werewolf",
                 "minion",
                 "apprentice_seer",
-                "witch",
-                "revealer",
-                "curator"
+                "revealer"
               ],
               "narration": {
                 "playbackPolicy": {
@@ -208,11 +179,6 @@
                 "openingClipCount": 1,
                 "nightOutroClipCount": 1,
                 "roleClipCounts": {
-                  "sentinel": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
                   "werewolf": {
                     "before": 0,
                     "during": 1,
@@ -228,17 +194,7 @@
                     "during": 1,
                     "after": 0
                   },
-                  "witch": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
                   "revealer": {
-                    "before": 0,
-                    "during": 1,
-                    "after": 0
-                  },
-                  "curator": {
                     "before": 0,
                     "during": 1,
                     "after": 0

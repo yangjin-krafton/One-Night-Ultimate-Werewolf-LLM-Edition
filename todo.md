@@ -20,11 +20,26 @@
 - `troublemaker` (플레이어 2명 카드 교환)
 - `drunk` (중앙 1장과 교환, 본인 확인 없음)
 - `werewolf` (늑대가 **1명일 때만** 중앙 1장 확인 UI 표시 / 2명 이상이면 규칙 가이드만 표시)
+- `insomniac` (현재 내 역할 1회 확인)
+- `apprentice_seer` (중앙 1장 확인)
+- `mystic_wolf` (플레이어 1장 확인)
+- `revealer` (플레이어 1장 공개/차단)
+- `marksman` (플레이어 1~2장 확인)
+- `pickpocket` (본인 ↔ 대상 카드 교환, 확인 없음)
+- `gremlin` (플레이어 2명 카드 교환, 본인 포함 가능)
+- `alpha_wolf` (중앙 늑대 카드 ↔ 플레이어 1명 교환)
+- `sentinel` (방패 대상 선택)
+- `curator` (아이템 받기 → 대상 선택)
+- `bodyguard` (보호 대상 선택)
+- `village_idiot` (전체 회전 방향 선택)
 
 정보만 표시(조작 UI는 없음)로 동작하는 역할:
 - `minion` (늑대 좌석 힌트)
 - `mason` (다른 메이슨 좌석 힌트)
-- `insomniac` (현재 내 역할 1회 확인)
+
+리뉴얼 완료(밤 행동 카드 UI/UX):
+- `seer`, `robber`, `troublemaker`, `drunk`, `werewolf`, `insomniac`
+- `apprentice_seer`, `mystic_wolf`, `revealer`, `marksman`, `pickpocket`, `gremlin`, `alpha_wolf`, `sentinel`, `curator`, `bodyguard`, `village_idiot`
 
 ### 토론/투표(DEBATE/VOTE) 단계 UI
 - 상단은 로비처럼 플레이어 프로필 카드가 유지됩니다.
@@ -39,36 +54,183 @@
 아래 역할들은 현재 기준으로 “UI에서 카드 조작을 해야 하는 역할”이지만,
 서버 `night_action` 처리 및/또는 `night_board` 기반 조작 UI가 아직 구현되지 않았습니다.
 
-### Daybreak/확장 역할
-- `sentinel` (방패 줄 대상 선택)
-- `alpha_wolf` (중앙 늑대 카드와 교환)
-- `mystic_wolf` (플레이어 1명 카드 확인)
-- `apprentice_seer` (중앙 1장 확인)
+### Daybreak/확장 역할 (남은 미구현)
 - `paranormal_investigator` (플레이어 카드 확인 + 조건부 역할 변화 처리)
 - `witch` (중앙 1장 확인 후 플레이어에게 줄지 선택/교환)
-- `village_idiot` (전체 카드 회전 방향 선택/적용)
-- `revealer` (플레이어 카드 공개/조건부 처리)
-- `curator` (아이템/유물 지급 대상 선택 및 효과 적용)
-- `bodyguard` (보호 대상 선택 및 투표 결과 반영)
 
 ### Bonus/Epic
 - `doppelganger` (플레이어 1명 확인 후, 그 역할 액션까지 이어서 수행)
 - `copycat` (중앙 1장 확인 후, 그 역할 액션까지 이어서 수행)
 
 ### 기타(정의는 있으나 액션/룰 연동 미완)
-- `pickpocket`
-- `gremlin`
 - `assassin`
 - `vampire`
 - `count`
 - `renfield`
-- `marksman`
 - `thing`
 
 ## 다음 작업 제안(우선순위)
 - [ ] 게임 진행 중 “새 닉네임 신규 입장” 차단/대기실 분리(재접속은 허용)
-- [ ] `sentinel` → `alpha_wolf` → `mystic_wolf` → `apprentice_seer` 순으로 단순 액션 역할부터 UI/서버 구현
+- [ ] `witch` → `paranormal_investigator` 순으로 2단계 역할 UI/서버 구현
 - [ ] `doppelganger`/`copycat`처럼 “다단계 역할”은 액션 파이프라인(연속 step) 설계 후 구현
+
+## 미구현 역할 구현 지침(실전 체크리스트)
+
+목표: 앞으로 역할을 추가할 때 **“UI/선택 규칙/서버 처리/결과 연출”**을 같은 방식으로 빠르게 붙일 수 있도록, 공통 절차 + 역할별 설계를 명확히 합니다.
+
+### 0) 구현 전 확인(역할 분류)
+- **A. 선택만 하면 끝(단일 액션)**: (현재 주요 단일 액션 역할은 구현 완료) — 신규 역할 추가 시 동일 패턴 적용
+- **B. 선택 + 추가 확인/추가 선택(2단계)**: `witch`, `paranormal_investigator`
+- **C. “다른 역할 액션을 이어서 수행”(연속 step 필요)**: `doppelganger`, `copycat`
+
+역할이 A/B/C 중 어디인지부터 확정하고 시작합니다(특히 C는 서버/클라 구조부터 바꿔야 함).
+
+---
+
+### 1) 서버 구현 흐름(필수)
+파일: `server/main.py`
+
+#### 1-1. “액션이 필요한 역할인지” 판정
+함수: `_role_action_required_locked(role_id, actor_ids)`
+- 단일 역할이지만 “조건부 액션”인 경우(예: `werewolf`처럼 1명일 때만) 여기에서 분기
+- `sentinel`처럼 항상 선택이 필요한 역할은 `True`
+
+#### 1-2. 밤 힌트/조건 payload 전달(필요한 경우)
+함수: `_send_night_private_locked(step_id, role_id, actor_ids)`
+- UI 분기/선택 가능 여부가 서버 판단인 경우(예: 늑대 혼자 여부, 특정 아이템 보유 여부 등) 반드시 `night_private.payload`로 내려줍니다.
+- 클라는 이 payload만 보고 UI를 바꿀 수 있어야 합니다(클라 추측 금지).
+
+권장 payload 예시(역할별로 하나만):
+- `sentinel`: `{ "allowedSeats": [..], "shieldedSeat": null }` (이미 사용중이면 현재 상태도 포함)
+- `curator`: `{ "artifacts": ["claw","mask",...], "alreadyGiven": false }`
+- `bodyguard`: `{ "allowedSeats": [..] }`
+
+#### 1-3. 액션 처리(상태 변경)
+함수: `handle_night_action()` 내부의 역할별 분기
+- 입력 검증(좌석 유효성, 중복 선택 금지, 본인 선택 가능 여부 등)
+- 결과 적용(좌석-역할 교환, 중앙-좌석 교환, 아이템 부여, 보호 상태 저장 등)
+- 결과로 **클라에 보낼 요약**을 `night_result`로 만듭니다.
+
+`night_result` 설계 원칙:
+- “클라 연출에 필요한 최소정보”만 포함(비밀 정보는 포함하지 않음)
+- 역할에 따라 공개가 필요한 정보만 포함(예: `apprentice_seer`는 본인이 본 중앙카드 1장만 공개)
+
+---
+
+### 2) 클라이언트 구현 흐름(필수)
+파일: `public/app.js`, `public/ui/night_board.js`
+
+#### 2-1. UI 분기 위치
+`renderNightOverlay()`의 `// ROLE steps` 아래 역할별 분기 패턴을 따릅니다.
+- 이미 리뉴얼된 역할들은 “orbit board 방식”과 “rule-only 패널”을 섞어 씁니다.
+- **조건부 UI**가 필요하면(예: 특정 조건이면 선택 UI, 아니면 규칙만) `night_private.payload` 기준으로 분기합니다.
+
+#### 2-2. 선택 상태(state.nightUi) 규칙
+권장 규칙:
+- 플레이어 선택은 `selectedSeats` (좌석 배열)
+- 중앙 선택은 `selectedCenter` (0~2 인덱스 배열)
+- 역할마다 `max`(선택 수)를 명시하고, 클릭 시 “토글 + 최대치 유지” 로직으로 통일
+
+#### 2-3. Confirm 버튼
+- 버튼 활성화 조건을 `updateXxxOrbitSelection()` 같은 함수로 분리(구현된 역할들처럼)
+- Confirm 버튼 눌렀을 때:
+  - 선택 불가 뱃지/마크 제거가 필요한 역할은 `clearBlockedBadges(row)` 같이 먼저 처리
+  - `submitNightAction(roleId, payload)` 호출
+
+#### 2-4. 결과 연출(applyNightResultOnce)
+- `applyNightResultOnce(expectedRoleId, (result)=>{ ... })` 안에서만 1회 적용
+- 카드 연출은 `NightBoardUI` 유틸만 사용:
+  - 공개(역할 보여주기): `flipRevealRole(el, roleId)`
+  - 중앙카드 뒷면 연출: `flipRevealBack(el, { label })`
+  - 교환(모션): `swapEls(a,b,{ flip:true, onComplete })`
+
+---
+
+### 3) 역할별 “권장 사양”(서버 payload / 입력 / 결과)
+아래는 “미구현 리스트”를 실제 구현 가능한 형태로 쪼갠 최소 요구사항입니다.
+
+#### `sentinel` (방패)
+- UI: 플레이어 1명 선택(본인 선택 가능 여부는 룰에 따라 결정) + Confirm
+- 서버 입력: `{ seat }`
+- 서버 상태: `shieldedSeat` 저장(에피소드/라운드 단위)
+- 결과: `night_result`는 보통 공개 필요 없음(본인에게만 “선택 완료” 정도의 UI 메시지로 충분)
+
+#### `alpha_wolf` (중앙 늑대와 교환)
+- UI: 중앙 1장 선택 + Confirm
+- 서버 입력: `{ centerIndex }`
+- 서버 처리: 내 역할과 중앙 선택 카드 교환
+- 결과: (공개 정책에 따라) 본인에게만 “교환 완료” 메시지, 필요 시 `newRole` 제공
+
+#### `mystic_wolf` (플레이어 1명 확인)
+- UI: 플레이어 1명 선택 + Confirm
+- 서버 입력: `{ seat }`
+- 결과: `{ seat, role }` (본인만)
+
+#### `apprentice_seer` (중앙 1장 확인)
+- UI: 중앙 1장 선택 + Confirm
+- 서버 입력: `{ centerIndex }`
+- 결과: `{ centerIndex, role }` (본인만)
+
+#### `witch` (중앙 1장 확인 후 플레이어에게 주기/교환)
+- 2단계 UI 권장:
+  1) 중앙 1장 선택 → 공개(본인만) → “이 카드를 줄 대상 선택” 단계로 전환
+  2) 플레이어 1명 선택 → 교환/부여 적용
+- 서버 입력(권장 1회로 묶기): `{ centerIndex, targetSeat }` 또는 단계형 `{ stage:1... }` (둘 중 하나로 통일)
+- 결과: 공개 정책 엄격(본인만 무엇을 봤는지 / 누구에게 줬는지)
+
+#### `paranormal_investigator` (연속 확인 + 조건부 역할 변화)
+- UI(2단계 이상): 플레이어 1명 확인 → 조건 만족 시 다음 플레이어 확인 가능
+- 서버가 조건과 진행 상태를 가진 “세션형” 액션으로 관리하는 편이 안전
+- 구현 난이도 높으므로, 먼저 `mystic_wolf`/`seer` 패턴 완성 후 착수 권장
+
+#### `village_idiot` (전체 회전)
+- UI: 방향 선택(좌/우) + Confirm (플레이어 카드 클릭 대신 토글 UI)
+- 서버 입력: `{ dir: "left" | "right" }`
+- 서버 처리: 전체 좌석 역할 회전(또는 중앙 포함 룰이면 명시)
+- 결과: 공개 없음(연출은 “교환 모션”을 여러 장에 적용할지 결정 필요)
+
+#### `revealer` (조건부 공개)
+- UI: 플레이어 1명 선택
+- 서버 입력: `{ seat }`
+- 결과: 공개 가능하면 `{ seat, role }`, 불가하면 `{ seat, blocked: true }`
+
+#### `curator` (아이템/유물 지급)
+- UI: “아이템 카드(랜덤)” + 플레이어 1명 선택
+- 서버 입력: `{ seat }` (아이템은 서버가 정해줘야 공정)
+- `night_private.payload`로 `{ artifact: "..." }`를 먼저 내려주고, 선택만 받는 방식 권장
+
+#### `bodyguard` (보호 + 결과 반영)
+- UI: 플레이어 1명 선택
+- 서버 입력: `{ seat }`
+- 서버 상태: 보호 대상 저장, 투표 결과 반영 로직에 연결
+
+#### 기타(정의는 있으나 액션/룰 연동 미완)
+아래 역할들은 `ROLE_DEFINITIONS`에 설명은 있으나, 아직 “어느 단계에서 무엇을 선택하고 어떤 정보를 공개하는지”가 정리/구현되지 않았습니다.
+먼저 **룰(선택 대상/공개 범위/적용 시점)**을 확정하고, 그 다음 UI/서버를 붙입니다.
+
+- `pickpocket` (소매치기): 밤에 “나 ↔ 대상 1명” 카드 교환(확인 없음) 형태로 `robber`/`troublemaker` 패턴 재사용 권장
+- `gremlin` (그렘린): 밤에 플레이어 2명 선택 후 교환(본인 포함 가능) 형태로 `troublemaker` 패턴 재사용 권장
+- `marksman` (명사수): “1명 확인” 또는 “2명에게 서로 확인시키기” 중 어떤 모드로 구현할지 확정 필요(모드형 action 권장)
+- `assassin` (암살자): “지목”이 언제/어떻게 이뤄지는지(토론 중? 투표 후? 결과 화면?) 확정 후, 결과 판정(승리 조건)을 `RESULT` 단계에 연결
+- `vampire` / `count` / `renfield`: 팀/정보/승리 조건이 투표 결과와 연결될 가능성이 높아, 밤 액션 UI보다 **결과 판정 로직**부터 확정 권장
+- `thing`: 감염 규칙(전파 조건/표시/영향)을 확정한 뒤 `night_private`(개인 힌트)와 공개 범위를 설계
+
+---
+
+### 4) 다단계 역할(`doppelganger`, `copycat`) 구현 지침(구조 먼저)
+이 둘은 “한 역할 액션을 수행한 뒤, 다른 역할의 액션까지 연속으로 수행”해야 합니다.
+즉, **클라에서 2개 UI를 한 화면에 억지로 합치기**보다, 서버가 `night_step`을 추가 발행해서 흐름을 끌고 가는 방식이 안전합니다.
+
+권장 설계(안정적인 순서):
+1) 서버가 `night_step` 큐를 동적으로 확장(현재 step 완료 시 다음 step을 삽입)
+2) `doppelganger/copycat` 액션 결과로 “변신한 역할”을 서버가 확정
+3) 서버가 다음 `night_step.roleId`를 그 역할로 발행하고, 해당 역할의 `night_private`도 함께 발행
+4) 클라는 기존 역할 UI를 그대로 재사용(새로운 UI 최소화)
+
+필수 체크:
+- 연속 step에서 `stepId`가 바뀌므로, 클라의 `state.nightUi` 초기화/보존 규칙을 명확히
+- private 정보(`night_private`)는 “해당 stepId+roleId”에 귀속되게 유지(레이스 방지)
+- “복사된 역할”이 액션이 없는 역할이면 step을 즉시 완료 처리(서버)
 
 ## 카드 조작 UI/UX 상세 스펙 (비주얼/모션/연출)
 

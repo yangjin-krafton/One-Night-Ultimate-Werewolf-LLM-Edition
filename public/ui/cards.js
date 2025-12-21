@@ -11,6 +11,68 @@
     node.textContent = text == null ? "" : String(text);
   }
 
+  function normalizeMarkId(markId) {
+    const s = String(markId || "").trim();
+    if (!s) return "";
+    // Accept both "artifact:mask" and "artifact_mask" variants.
+    if (s.startsWith("artifact_")) return `artifact:${s.slice("artifact_".length)}`;
+    return s;
+  }
+
+  function markToBadge(markId) {
+    const id = normalizeMarkId(markId);
+    if (!id) return null;
+    if (id === "shield") return { id, emoji: "🛡️", title: "방패" };
+    if (id === "protect") return { id, emoji: "🛡️", title: "보호" };
+    if (id.startsWith("artifact:")) {
+      const a = id.slice("artifact:".length);
+      const map = {
+        claw: { emoji: "🐾", title: "유물(발톱)" },
+        mask: { emoji: "🎭", title: "유물(가면)" },
+        amulet: { emoji: "🧿", title: "유물(부적)" },
+        ring: { emoji: "💍", title: "유물(반지)" },
+      };
+      const def = map[a] || { emoji: "🎁", title: "유물" };
+      return { id, emoji: def.emoji, title: def.title };
+    }
+    // Fallback: render as a small dot with the id.
+    return { id, emoji: "•", title: id };
+  }
+
+  function ensureMarksLayer(cardEl) {
+    if (!cardEl) return null;
+    const existing = cardEl.querySelector(":scope > .cardMarks");
+    if (existing) return existing;
+    const layer = el("div", "cardMarks");
+    cardEl.appendChild(layer);
+    return layer;
+  }
+
+  function setCardMarks(cardEl, markIds = []) {
+    if (!cardEl) return;
+    const marks = Array.isArray(markIds) ? markIds.map(normalizeMarkId).filter(Boolean) : [];
+    // Store for debug / future reuse.
+    if (marks.length) cardEl.dataset.marks = marks.join(",");
+    else delete cardEl.dataset.marks;
+
+    const layer = ensureMarksLayer(cardEl);
+    if (!layer) return;
+    layer.innerHTML = "";
+    const uniq = [];
+    for (const m of marks) if (!uniq.includes(m)) uniq.push(m);
+    for (const id of uniq) {
+      const badge = markToBadge(id);
+      if (!badge) continue;
+      const chip = el("div", `cardMark cardMark--${badge.id.replace(/[^a-z0-9:_-]/gi, "_")}`);
+      chip.setAttribute("role", "img");
+      chip.setAttribute("aria-label", badge.title || badge.id);
+      chip.title = badge.title || badge.id;
+      chip.textContent = badge.emoji || "";
+      layer.appendChild(chip);
+    }
+    layer.classList.toggle("hidden", !layer.childElementCount);
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
   }
@@ -188,6 +250,7 @@
   }) {
     const card = el("div", "card");
     card.setAttribute("data-cardui", "1");
+    if (player?.seat != null) card.setAttribute("data-seat", String(player.seat));
     if (isMe) card.classList.add("card--me");
     if (isHost) card.classList.add("card--host");
     if (isConnected) card.classList.add("card--connected");
@@ -368,6 +431,7 @@
   function createProfileCardLarge({ player, badgeText, applyPalette, extraClass, isMe } = {}) {
     const card = el("div", "profileCardLarge");
     card.setAttribute("data-cardui", "1");
+    if (player?.seat != null) card.setAttribute("data-seat", String(player.seat));
     if (extraClass) card.classList.add(extraClass);
     if (isMe) card.classList.add("profileCardLarge--me");
     if (typeof applyPalette === "function") applyPalette(card, player?.color || "#888");
@@ -409,6 +473,7 @@
     createRoleCard,
     createNightPlayerCard,
     createProfileCardLarge,
+    setMarks: setCardMarks,
     setInteractive,
   };
 })();
