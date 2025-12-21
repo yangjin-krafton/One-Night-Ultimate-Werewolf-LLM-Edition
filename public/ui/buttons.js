@@ -1,5 +1,6 @@
 (function () {
   const hasGsap = () => typeof window !== "undefined" && !!window.gsap;
+  const LOCK_ATTR = "data-btn-locked-label";
 
   function tap(el) {
     if (!el) return;
@@ -45,5 +46,49 @@
     );
   }
 
-  window.ButtonUI = { installGlobalButtonFeedback };
+  function setLabel(btn, label, { lock = false, force = false } = {}) {
+    if (!btn) return;
+    if (!force && btn.getAttribute(LOCK_ATTR) === "1") return;
+    const plain = String(label ?? "");
+    (window.TextHighlight?.replaceChildrenSafe || ((el, ch) => el.replaceChildren(...ch)))(btn, [document.createTextNode(plain)]);
+    if (lock) btn.setAttribute(LOCK_ATTR, "1");
+  }
+
+  function setHighlightedLabel(btn, text, highlights, { lock = false, force = false } = {}) {
+    if (!btn) return;
+    if (!force && btn.getAttribute(LOCK_ATTR) === "1") return;
+    const plainText = String(text ?? "");
+    if (window.TextHighlight?.applyHighlightedText) {
+      window.TextHighlight.applyHighlightedText(btn, plainText, highlights, {
+        defaultClassName: "btn__hl",
+        plainTextAttr: "data-btn-plain-label",
+      });
+    } else {
+      btn.textContent = plainText;
+      btn.setAttribute("data-btn-plain-label", plainText);
+    }
+    if (lock) btn.setAttribute(LOCK_ATTR, "1");
+  }
+
+  function lockLabel(btn, label) {
+    setLabel(btn, label, { lock: true, force: true });
+  }
+
+  function lockHighlightedLabel(btn, text, highlights) {
+    setHighlightedLabel(btn, text, highlights, { lock: true, force: true });
+  }
+
+  function unlockLabel(btn) {
+    if (!btn) return;
+    btn.removeAttribute(LOCK_ATTR);
+  }
+
+  window.ButtonUI = {
+    installGlobalButtonFeedback,
+    setLabel,
+    setHighlightedLabel,
+    lockLabel,
+    lockHighlightedLabel,
+    unlockLabel,
+  };
 })();

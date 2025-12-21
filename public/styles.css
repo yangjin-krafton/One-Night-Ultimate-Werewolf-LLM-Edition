@@ -1,6 +1,7 @@
 :root{
   --fg:#ffeaea;
   --muted:rgba(255, 234, 234, 0.65);
+  --hl: #ffd166;
   --shadow: 0 12px 30px rgba(0,0,0,.65);
   --app-height: 100vh;
   --app-width: 100vw;
@@ -194,6 +195,21 @@ body::after{
   overflow: hidden;
   --btn-glow: 0;
   --btn-fill: 0;
+  --btn-hl: var(--hl);
+}
+.hl{
+  color: var(--hl);
+  font-weight: 1000;
+  text-shadow:
+    0 0 10px color-mix(in srgb, var(--hl) 55%, transparent),
+    0 2px 0 rgba(0,0,0,0.22);
+}
+.btn__hl{
+  color: var(--hl, var(--btn-hl));
+  font-weight: 1000;
+  text-shadow:
+    0 0 10px color-mix(in srgb, var(--hl, var(--btn-hl)) 55%, transparent),
+    0 2px 0 rgba(0,0,0,0.22);
 }
 .btn::before{
   content:"";
@@ -406,6 +422,9 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
 .room__top .grid {
   grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   gap: 8px;
+  /* Space for floating elements like the "본인" tab / kick button. */
+  padding-top: 28px;
+  padding-bottom: 18px;
 }
 
 .room__top .card {
@@ -418,6 +437,55 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
 .room__top .seat { font-size: 18px; }
 .room__top .badge { font-size: 9px; padding: 2px 4px; }
 .room__top .name { font-size: 11px; }
+
+.meTab{
+  position: absolute;
+  top: -22px;
+  left: 12px;
+  right: 12px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 16px 16px 0 0;
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: -0.02em;
+  color: rgba(0,0,0,0.92);
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.80) 0%, rgba(255,255,255,0.30) 55%, transparent 75%),
+    linear-gradient(180deg, color-mix(in srgb, var(--p-color) 82%, white) 0%, color-mix(in srgb, var(--p-color) 72%, rgba(0,0,0,0.15)) 100%);
+  border: 1px solid color-mix(in srgb, var(--p-color) 44%, rgba(255,255,255,0.22));
+  border-bottom: none;
+  box-shadow: 0 10px 18px rgba(0,0,0,0.34);
+  z-index: 20;
+  pointer-events: none;
+}
+.nightChoiceCard .meTab{
+  top: -20px;
+  left: 10px;
+  right: 10px;
+  height: 20px;
+  font-size: 11px;
+  transform: translateZ(24px);
+}
+.nightAction__row--dense .nightChoiceCard .meTab{
+  top: -18px;
+  height: 18px;
+  font-size: 10px;
+}
+.profileCardLarge--me .meTab{
+  top: -28px;
+  left: 18px;
+  right: 18px;
+  height: 26px;
+  font-size: 14px;
+  border-radius: 18px 18px 0 0;
+}
+
+.card--me{overflow: visible;}
+.profileCardLarge--me{overflow: visible;}
 
 .card__kick{
   position: absolute;
@@ -795,10 +863,13 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   z-index: 0;
 }
 
-.card--me > *{
+.card--me > :not(.meTab):not(.card__kick):not(.card__bar){
   position: relative;
   z-index: 1;
 }
+.card--me > .meTab{position:absolute; z-index: 20;}
+.card--me > .card__kick{position:absolute; z-index: 19;}
+.card--me > .card__bar{position:absolute; z-index: 2;}
 
 .card--me .name{
   background: linear-gradient(135deg,
@@ -1590,11 +1661,28 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   line-height: 1.18;
   white-space: pre-line;
   text-align: center;
+  text-wrap: balance;
+  word-break: keep-all;
 }
 .btn--nightConfirm.btn--softDisabled{
   opacity: 0.55;
   filter: grayscale(0.15) saturate(0.75);
 }
+.nightActionMsg{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
+  color: rgba(255,255,255,0.92);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+  text-wrap: balance;
+}
+.nightActionMsg:empty{display:none;}
 .nightAction__row{
   display:grid;
   width: 100%;
@@ -1644,6 +1732,7 @@ body[data-phase="DEBATE"] .room__top .name{font-size: 13px}
   min-width: 0;
   width: 100%;
   height: 148px;
+  position: relative;
   display:flex;
   flex-direction:column;
   align-items:center;

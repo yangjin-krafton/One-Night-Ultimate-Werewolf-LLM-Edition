@@ -585,24 +585,27 @@ function renderLobbyNotice() {
 
   const kind = String(n.kind || "");
   if (kind === "episode_advanced") {
-    lobbyNoticeTitleEl.textContent = "다음 에피소드로 이동";
-    lobbyNoticeSubtitleEl.textContent = `${String(n.scenarioId || "")} · ${String(n.fromEpisodeId || "")} → ${String(n.toEpisodeId || "")}`;
+    setTextHighlighted(lobbyNoticeTitleEl, "다음 에피소드로 이동");
+    setTextHighlighted(
+      lobbyNoticeSubtitleEl,
+      `${String(n.scenarioId || "")} · ${String(n.fromEpisodeId || "")} → ${String(n.toEpisodeId || "")}`
+    );
     lobbyNoticeBodyEl.innerHTML = `
       <div class="hint">로비로 돌아왔습니다. 다음 에피소드를 시작할 수 있어요.</div>
     `;
   } else if (kind === "scenario_ended") {
-    lobbyNoticeTitleEl.textContent = "시나리오 종료";
-    lobbyNoticeSubtitleEl.textContent = String(n.title || n.scenarioId || "");
+    setTextHighlighted(lobbyNoticeTitleEl, "시나리오 종료");
+    setTextHighlighted(lobbyNoticeSubtitleEl, String(n.title || n.scenarioId || ""));
     lobbyNoticeBodyEl.innerHTML = `
       <div class="hint">모든 에피소드가 끝났습니다. 다른 시나리오를 선택해 주세요.</div>
     `;
   } else if (kind === "start_blocked") {
     const reason = String(n.reason || "");
-    lobbyNoticeTitleEl.textContent = "게임 시작 불가";
+    setTextHighlighted(lobbyNoticeTitleEl, "게임 시작 불가");
 
     const hostId = String(n.hostClientId || "");
     const hostPlayer = hostId ? (state.room?.players || []).find((p) => p.clientId === hostId) : null;
-    lobbyNoticeSubtitleEl.textContent = hostPlayer ? `현재 호스트: ${hostPlayer.seat}번 ${hostPlayer.name || ""}` : "";
+    setTextHighlighted(lobbyNoticeSubtitleEl, hostPlayer ? `현재 호스트: ${hostPlayer.seat}번 ${hostPlayer.name || ""}` : "");
 
     if (reason === "not_host") {
       lobbyNoticeBodyEl.innerHTML = `
@@ -625,14 +628,14 @@ function renderLobbyNotice() {
     }
   } else if (kind === "reconnected") {
     const replaced = !!n.replaced;
-    lobbyNoticeTitleEl.textContent = "재접속됨";
-    lobbyNoticeSubtitleEl.textContent = escapeHtml(String(n.name || ""));
+    setTextHighlighted(lobbyNoticeTitleEl, "재접속됨");
+    setTextHighlighted(lobbyNoticeSubtitleEl, String(n.name || ""));
     lobbyNoticeBodyEl.innerHTML = replaced
       ? `<div class="hint">같은 이름으로 다시 접속해서 기존 연결을 교체했습니다.</div>`
       : `<div class="hint">같은 이름으로 다시 접속했습니다.</div>`;
   } else {
-    lobbyNoticeTitleEl.textContent = "알림";
-    lobbyNoticeSubtitleEl.textContent = "";
+    setTextHighlighted(lobbyNoticeTitleEl, "알림");
+    setTextHighlighted(lobbyNoticeSubtitleEl, "");
     lobbyNoticeBodyEl.innerHTML = `<div class="hint">${escapeHtml(JSON.stringify(n))}</div>`;
   }
 
@@ -1044,7 +1047,7 @@ function renderInfoDeck() {
       ? CardUI.createInfoCard({
           tag: s.tag,
           icon: s.icon,
-          title: escapeHtml(s.title),
+          title: s.title,
           text: s.text,
         })
       : (() => {
@@ -1119,6 +1122,11 @@ function renderNightOverlay() {
   const updateSeerOrbitSelection = () => {
     const board = state.nightSeerBoard;
     if (!board || board.stepId !== stepId) return;
+    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
+      board.confirmBtn.disabled = true;
+      board.confirmBtn.setAttribute("aria-disabled", "true");
+      return;
+    }
     const ui = state.nightUi || {};
     const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
     const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
@@ -1138,15 +1146,20 @@ function renderNightOverlay() {
 
     // Toggle label for preview/revert in debug mode.
     if (state.debugNightPreview && board.preview?.active) {
-      board.confirmBtn.textContent = "원상 복구";
+      setButtonLabelWithDict(board.confirmBtn, "원상 복구", { force: true });
     } else if (state.debugNightPreview) {
-      board.confirmBtn.textContent = board.ruleText || board.confirmBtn.textContent;
+      setButtonLabelWithDict(board.confirmBtn, board.ruleText || board.confirmBtn.textContent, { force: true });
     }
   };
 
   const updateRobberOrbitSelection = () => {
     const board = state.nightRobberBoard;
     if (!board || board.stepId !== stepId) return;
+    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
+      board.confirmBtn.disabled = true;
+      board.confirmBtn.setAttribute("aria-disabled", "true");
+      return;
+    }
     const ui = state.nightUi || {};
     const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
     for (const [seat, el] of board.bySeat.entries()) {
@@ -1155,13 +1168,18 @@ function renderNightOverlay() {
     const canConfirm = selectedSeats.length === 1;
     board.confirmBtn.disabled = !canConfirm;
     board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-    if (state.debugNightPreview && board.preview?.active) board.confirmBtn.textContent = "원상 복구";
-    else board.confirmBtn.textContent = board.ruleText || board.confirmBtn.textContent;
+    if (state.debugNightPreview && board.preview?.active) setButtonLabelWithDict(board.confirmBtn, "원상 복구", { force: true });
+    else setButtonLabelWithDict(board.confirmBtn, board.ruleText || board.confirmBtn.textContent, { force: true });
   };
 
   const updateTroublemakerOrbitSelection = () => {
     const board = state.nightTroublemakerBoard;
     if (!board || board.stepId !== stepId) return;
+    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
+      board.confirmBtn.disabled = true;
+      board.confirmBtn.setAttribute("aria-disabled", "true");
+      return;
+    }
     const ui = state.nightUi || {};
     const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
 
@@ -1172,13 +1190,18 @@ function renderNightOverlay() {
     const canConfirm = selectedSeats.length === 2;
     board.confirmBtn.disabled = !canConfirm;
     board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-    if (state.debugNightPreview && board.preview?.active) board.confirmBtn.textContent = "원상 복구";
-    else board.confirmBtn.textContent = board.ruleText || board.confirmBtn.textContent;
+    if (state.debugNightPreview && board.preview?.active) setButtonLabelWithDict(board.confirmBtn, "원상 복구", { force: true });
+    else setButtonLabelWithDict(board.confirmBtn, board.ruleText || board.confirmBtn.textContent, { force: true });
   };
 
   const updateDrunkOrbitSelection = () => {
     const board = state.nightDrunkBoard;
     if (!board || board.stepId !== stepId) return;
+    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
+      board.confirmBtn.disabled = true;
+      board.confirmBtn.setAttribute("aria-disabled", "true");
+      return;
+    }
     const ui = state.nightUi || {};
     const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
 
@@ -1196,6 +1219,11 @@ function renderNightOverlay() {
   const updateWerewolfOrbitSelection = () => {
     const board = state.nightWerewolfBoard;
     if (!board || board.stepId !== stepId) return;
+    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
+      board.confirmBtn.disabled = true;
+      board.confirmBtn.setAttribute("aria-disabled", "true");
+      return;
+    }
     const ui = state.nightUi || {};
     const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
 
@@ -1206,20 +1234,23 @@ function renderNightOverlay() {
     const canConfirm = selectedCenter.length === 1;
     board.confirmBtn.disabled = !canConfirm;
     board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-    if (state.debugNightPreview && board.preview?.active) board.confirmBtn.textContent = "원상 복구";
-    else board.confirmBtn.textContent = board.ruleText || board.confirmBtn.textContent;
+    if (state.debugNightPreview && board.preview?.active) setButtonLabelWithDict(board.confirmBtn, "원상 복구", { force: true });
+    else setButtonLabelWithDict(board.confirmBtn, board.ruleText || board.confirmBtn.textContent, { force: true });
   };
 
   const stepLabel = `${String(step.stepIndex || 0)}/${String(step.stepCount || 0)}`;
   nightTitle.textContent = `NIGHT · ${stepLabel}`;
   if (!isActor) {
-    nightRole.textContent = state.isSpectator ? "관전 중" : "";
+    setTextHighlighted(nightRole, state.isSpectator ? "관전 중" : "");
   } else {
-    nightRole.textContent = state.isSpectator
-      ? "관전 중"
-      : state.myRoleId
-          ? `내 역할: ${getRoleDisplayName(state.myRoleId)}`
-          : "내 역할: (미정)";
+    setTextHighlighted(
+      nightRole,
+      state.isSpectator
+        ? "관전 중"
+        : state.myRoleId
+            ? `내 역할: ${getRoleDisplayName(state.myRoleId)}`
+            : "내 역할: (미정)"
+    );
   }
 
   const canReuseSeerOrbit = !!(useBgRuleCard && roleId === "seer" && state.nightSeerBoard && state.nightSeerBoard.stepId === stepId);
@@ -1250,12 +1281,14 @@ function renderNightOverlay() {
   } else {
     nightAction.classList.remove("hidden");
     nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
-    nightHint.textContent = `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`;
+    setTextHighlighted(nightHint, `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`);
     if (canReuseSeerOrbit) updateSeerOrbitSelection();
     if (canReuseRobberOrbit) updateRobberOrbitSelection();
     if (canReuseTroublemakerOrbit) updateTroublemakerOrbitSelection();
     if (canReuseDrunkOrbit) updateDrunkOrbitSelection();
     if (canReuseWerewolfOrbit) updateWerewolfOrbitSelection();
+    // Reuse-path returns early, so ensure "본인" tab is present on reused cards (including troublemaker).
+    ensureNightMeTabs(nightOverlay);
     if (canReuseSeerOrbit)
       applyNightResultOnce("seer", (result) => {
         const board = state.nightSeerBoard;
@@ -1285,6 +1318,8 @@ function renderNightOverlay() {
         const target = board.bySeat?.get?.(targetSeat) || null;
         const newRole = String(r.newRole || "");
         if (!mine || !newRole) return;
+        const roleName = getRoleDisplayName(newRole);
+        setBoardMessage(board, { text: `이제 당신의 신분은 ${roleName}로 교환됐습니다.`, highlights: [roleName] });
         if (target && target !== mine) {
           if (NightBoardUI?.swapEls) {
             NightBoardUI.swapEls(mine, target, {
@@ -1306,10 +1341,14 @@ function renderNightOverlay() {
         const r = result || {};
         const seats = Array.isArray(r.swappedSeats) ? r.swappedSeats.map(Number) : [];
         if (seats.length !== 2 || seats[0] === seats[1]) return;
+        setBoardMessage(board, {
+          text: `${seats[0]}번 ${seats[1]}번 신분 카드가 서로 교환됐었습니다.`,
+          highlights: [`${seats[0]}번`, `${seats[1]}번`],
+        });
         const aEl = board.bySeat?.get?.(seats[0]) || null;
         const bEl = board.bySeat?.get?.(seats[1]) || null;
         if (!aEl || !bEl) return;
-        swapEls(aEl, bEl);
+        swapEls(aEl, bEl, { flip: true });
       });
     if (canReuseWerewolfOrbit)
       applyNightResultOnce("werewolf", (result) => {
@@ -1330,7 +1369,12 @@ function renderNightOverlay() {
 
   const buildLargeCard = (p, badgeText) => {
     if (CardUI?.createProfileCardLarge) {
-      return CardUI.createProfileCardLarge({ player: p, badgeText, applyPalette: applyPlayerPalette });
+      return CardUI.createProfileCardLarge({
+        player: p,
+        badgeText,
+        applyPalette: applyPlayerPalette,
+        isMe: String(p?.clientId || "") === String(state.clientId || ""),
+      });
     }
     const node = document.createElement("div");
     node.className = "profileCardLarge";
@@ -1343,7 +1387,7 @@ function renderNightOverlay() {
   const myCard = me ? buildLargeCard(me, "눈 감아요") : null;
 
   if (kind === "opening") {
-    nightHint.textContent = "모두 눈을 감고 휴대폰을 내려놓으세요.";
+    setTextHighlighted(nightHint, "모두 눈을 감고 휴대폰을 내려놓으세요.");
     if (myCard) {
       nightActive.appendChild(myCard);
       CardUI?.motion?.enter?.(myCard, "profile");
@@ -1351,7 +1395,7 @@ function renderNightOverlay() {
     return;
   }
   if (kind === "outro") {
-    nightHint.textContent = "밤이 끝났습니다. 모두 눈을 뜨세요.";
+    setTextHighlighted(nightHint, "밤이 끝났습니다. 모두 눈을 뜨세요.");
     if (myCard) {
       nightActive.appendChild(myCard);
       CardUI?.motion?.enter?.(myCard, "profile");
@@ -1361,13 +1405,13 @@ function renderNightOverlay() {
 
   // ROLE steps
   if (kind !== "role") {
-    nightHint.textContent = "밤 진행 중...";
+    setTextHighlighted(nightHint, "밤 진행 중...");
     return;
   }
 
   // Default (non-actor): keep my profile card fullscreen until day.
   if (!isActor) {
-    nightHint.textContent = `${activeRoleName || "누군가"} 차례입니다. 계속 눈을 감고 기다리세요.`;
+    setTextHighlighted(nightHint, `${activeRoleName || "누군가"} 차례입니다. 계속 눈을 감고 기다리세요.`);
     if (myCard) {
       nightActive.appendChild(myCard);
       CardUI?.motion?.enter?.(myCard, "profile");
@@ -1378,7 +1422,7 @@ function renderNightOverlay() {
   // Actor device: show interaction UI (and keep brightness the same).
   // Reset logic may have hidden this; actor steps always use the action area (board or rule-only).
   nightAction.classList.remove("hidden");
-  nightHint.textContent = `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`;
+  setTextHighlighted(nightHint, `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`);
 
   if (useBgRuleCard) {
     const card = document.createElement("div");
@@ -1494,15 +1538,24 @@ function renderNightOverlay() {
     const orbitCards = [];
     const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
     playersSorted.forEach((p) => {
+      const isMe = p.clientId === state.clientId;
       const b = document.createElement("button");
       b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
       b.setAttribute("data-seat", String(p.seat || ""));
+      if (isMe) b.dataset.isMe = "1";
       b.innerHTML = `
+        ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+        ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+        ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
         <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
         <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "👤")}</div>
         <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
       `;
       applyPlayerPalette(b, p.color || "#888");
+      if (isMe) {
+        (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
+        NightBoardUI?.setBlockedBadge?.(b, true);
+      }
       (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
       NightBoardUI?.setBlockedBadge?.(b, true);
       orbitEl.appendChild(b);
@@ -1683,6 +1736,53 @@ function renderNightOverlay() {
     return true;
   }
 
+  function clearBlockedBadges(rootEl) {
+    if (!rootEl || !rootEl.querySelectorAll) return;
+    rootEl.querySelectorAll(".nightChoice--blocked").forEach((el) => el.classList.remove("nightChoice--blocked"));
+  }
+
+  function setButtonLabelWithDict(btn, text, { force = false, lock = false } = {}) {
+    if (!btn) return;
+    const s = String(text ?? "");
+    if (window.TextHighlight?.pickDictionaryHighlights && window.ButtonUI?.setHighlightedLabel) {
+      const highlights = window.TextHighlight.pickDictionaryHighlights(s, { defaultClassName: "btn__hl" });
+      if (highlights.length) {
+        window.ButtonUI.setHighlightedLabel(btn, s, highlights, { force, lock });
+        return;
+      }
+    }
+    (window.ButtonUI?.setLabel || ((b, x) => (b.textContent = String(x ?? ""))))(btn, s, { force, lock });
+  }
+
+  function ensureActionMessageEl(afterEl) {
+    if (!afterEl || !afterEl.parentNode) return null;
+    const el = document.createElement("div");
+    el.className = "nightActionMsg";
+    afterEl.insertAdjacentElement("afterend", el);
+    return el;
+  }
+
+  function setBoardMessage(board, msg) {
+    if (!board || !board.confirmBtn) return;
+    const payload =
+      msg && typeof msg === "object"
+        ? { text: String(msg.text || ""), highlights: Array.isArray(msg.highlights) ? msg.highlights : [] }
+        : { text: String(msg || ""), highlights: [] };
+    board.lockedLabel = payload.text;
+
+    if (payload.highlights.length) {
+      (window.ButtonUI?.lockHighlightedLabel || window.ButtonUI?.setHighlightedLabel)?.(board.confirmBtn, payload.text, payload.highlights, {
+        lock: true,
+        force: true,
+      });
+    } else {
+      (window.ButtonUI?.lockLabel || window.ButtonUI?.setLabel)?.(board.confirmBtn, payload.text, { lock: true, force: true });
+      if (!window.ButtonUI?.lockLabel && !window.ButtonUI?.setLabel) board.confirmBtn.textContent = payload.text;
+    }
+    board.confirmBtn.disabled = true;
+    board.confirmBtn.setAttribute("aria-disabled", "true");
+  }
+
   function submitNightAction(roleIdForAction, action) {
     const rid = String(roleIdForAction || "");
     const a = action || {};
@@ -1762,10 +1862,20 @@ function renderNightOverlay() {
     renderNightOverlay();
   }
 
-  const swapEls = (a, b) => {
+  function swapEls(a, b, opts = {}) {
     if (!a || !b || a === b) return;
-    if (NightBoardUI?.swapEls) return NightBoardUI.swapEls(a, b, { duration: 0.32 });
-  };
+    if (NightBoardUI?.swapEls) return NightBoardUI.swapEls(a, b, { duration: 0.32, ...(opts || {}) });
+
+    // Fallback (no animation): keep behavior consistent in case NightBoardUI is unavailable.
+    const aNext = a.nextSibling;
+    const bNext = b.nextSibling;
+    const pa = a.parentNode;
+    const pb = b.parentNode;
+    if (!pa || !pb) return;
+    pa.insertBefore(b, aNext);
+    pb.insertBefore(a, bNext);
+    if (typeof opts?.onComplete === "function") opts.onComplete();
+  }
 
   function startOrbit(arenaEl, itemEls, { speed = 0.035 } = {}) {
     return NightBoardUI?.startTrackMotion ? NightBoardUI.startTrackMotion(arenaEl, itemEls, { speed }) : () => {};
@@ -1776,15 +1886,23 @@ function renderNightOverlay() {
     row.className = "nightAction__row";
     row.classList.toggle("nightAction__row--dense", players.length >= 11);
     for (const p of players) {
-      const b = document.createElement("button");
-      b.className = "nightChoice nightChoiceCard";
-      b.setAttribute("data-seat", String(p.seat || ""));
-      b.innerHTML = `
-        <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
-        <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "?‘¤")}</div>
-        <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
-      `;
-      applyPlayerPalette(b, p.color || "#888");
+      const isMe = p.clientId === state.clientId;
+      const b = CardUI?.createNightPlayerCard
+        ? CardUI.createNightPlayerCard({ player: p, isMe, applyPalette: applyPlayerPalette })
+        : (() => {
+            const el = document.createElement("button");
+            el.className = "nightChoice nightChoiceCard";
+            el.setAttribute("data-seat", String(p.seat || ""));
+            if (isMe) el.dataset.isMe = "1";
+            el.innerHTML = `
+              ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+              <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+              <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "?‘¤")}</div>
+              <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
+            `;
+            applyPlayerPalette(el, p.color || "#888");
+            return el;
+          })();
       if (selectedSeats.includes(Number(p.seat))) b.classList.add("nightChoice--selected");
       b.addEventListener("click", () => {
         pulseEl(b);
@@ -1833,7 +1951,7 @@ function renderNightOverlay() {
   function submitBtn(label, onClick) {
     const b = document.createElement("button");
     b.className = "btn btn--cta";
-    b.textContent = label;
+    setButtonLabelWithDict(b, label, { force: true });
     b.addEventListener("click", onClick);
     return b;
   }
@@ -1873,6 +1991,7 @@ function renderNightOverlay() {
       applyPlayerPalette(b, me?.color || "#888");
       if (selectedCenter.includes(idx)) b.classList.add("nightChoice--selected");
       b.addEventListener("click", () => {
+        if (isMe) return; // Seer: cannot target self.
         selectBounce(b);
         pulseBgCard();
         let next = [...(Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter : selectedCenter)];
@@ -1887,9 +2006,11 @@ function renderNightOverlay() {
     };
 
     const mkPlayerCard = (p) => {
+      const isMe = p.clientId === state.clientId;
       const b = document.createElement("button");
       b.className = useOrbitBoard ? "nightChoice nightChoiceCard nightBoard__orbitCard" : "nightChoice nightChoiceCard";
       b.setAttribute("data-seat", String(p.seat || ""));
+      if (isMe) b.dataset.isMe = "1";
       b.style.setProperty("--tilt-deg", `${mkCardTilt(p.seat)}deg`);
       b.innerHTML = `
         <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
@@ -1897,8 +2018,13 @@ function renderNightOverlay() {
         <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
       `;
       applyPlayerPalette(b, p.color || "#888");
+      if (isMe) {
+        (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
+        NightBoardUI?.setBlockedBadge?.(b, true);
+      }
       if (selectedSeats.includes(Number(p.seat))) b.classList.add("nightChoice--selected");
       b.addEventListener("click", () => {
+        if (isMe) return; // Seer: cannot target self.
         selectBounce(b);
         pulseBgCard();
         const seat = Number(p.seat);
@@ -1953,6 +2079,7 @@ function renderNightOverlay() {
 
 	      // Confirm button is shared and updates without rerender.
 	      const confirmBtn = submitBtn(seerRuleText, () => {
+	        clearBlockedBadges(row);
 	        const seat = (state.nightUi?.selectedSeats || [])[0];
 	        const indices = state.nightUi?.selectedCenter || [];
 	        const canConfirm = !!seat || (Array.isArray(indices) && indices.length === 2);
@@ -2000,6 +2127,7 @@ function renderNightOverlay() {
         });
       });
       // Don't fall through to the generic confirm button below.
+      ensureNightMeTabs(nightOverlay);
       return;
     } else {
       // Flat board mode (grid)
@@ -2011,6 +2139,7 @@ function renderNightOverlay() {
     nightAction.appendChild(row);
 
 	    const confirmBtn = submitBtn(seerRuleText, () => {
+	        clearBlockedBadges(row);
 	        const seat = (state.nightUi?.selectedSeats || [])[0];
 	        const indices = state.nightUi?.selectedCenter || [];
 	        if (state.debugNightPreview && state.nightPreview?.active) {
@@ -2106,16 +2235,20 @@ function renderNightOverlay() {
       const orbitCards = [];
       const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
       playersSorted.forEach((p) => {
+        const isMe = p.clientId === state.clientId;
         const b = document.createElement("button");
         b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
         b.setAttribute("data-seat", String(p.seat || ""));
+        if (isMe) b.dataset.isMe = "1";
         b.innerHTML = `
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
           <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
           <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "👤")}</div>
           <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
         `;
         applyPlayerPalette(b, p.color || "#888");
-        const isMe = p.clientId === state.clientId;
         if (isMe) {
           (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
           NightBoardUI?.setBlockedBadge?.(b, true);
@@ -2136,6 +2269,7 @@ function renderNightOverlay() {
       assignOrbitBases(orbitCards);
 
       const confirmBtn = submitBtn(ruleText, () => {
+        clearBlockedBadges(row);
         const seat = (state.nightUi?.selectedSeats || [])[0];
         if (!seat) return;
         const target = bySeat.get(Number(seat)) || null;
@@ -2162,6 +2296,8 @@ function renderNightOverlay() {
         const target = bySeat.get(targetSeat) || null;
         const newRole = String(r.newRole || "");
         if (!mine || !newRole) return;
+        const roleName = getRoleDisplayName(newRole);
+        setBoardMessage(state.nightRobberBoard, { text: `이제 당신의 신분은 ${roleName}로 교환됐습니다.`, highlights: [roleName] });
         if (target && target !== mine) {
           if (NightBoardUI?.swapEls) {
             NightBoardUI.swapEls(mine, target, {
@@ -2229,16 +2365,17 @@ function renderNightOverlay() {
       const orbitCards = [];
       const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
       playersSorted.forEach((p) => {
+        const isMe = p.clientId === state.clientId;
         const b = document.createElement("button");
         b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
         b.setAttribute("data-seat", String(p.seat || ""));
+        if (isMe) b.dataset.isMe = "1";
         b.innerHTML = `
           <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
           <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "👤")}</div>
           <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
         `;
         applyPlayerPalette(b, p.color || "#888");
-        const isMe = p.clientId === state.clientId;
         if (isMe) {
           (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
           NightBoardUI?.setBlockedBadge?.(b, true);
@@ -2267,6 +2404,7 @@ function renderNightOverlay() {
       assignOrbitBases(orbitCards);
 
       const confirmBtn = submitBtn(ruleText, () => {
+        clearBlockedBadges(row);
         const seats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
         if (seats.length !== 2) return;
         const aEl = bySeat.get(seats[0]) || null;
@@ -2293,8 +2431,13 @@ function renderNightOverlay() {
         const aEl = bySeat.get(seats[0]) || null;
         const bEl = bySeat.get(seats[1]) || null;
         if (!aEl || !bEl) return;
-        swapEls(aEl, bEl);
+        setBoardMessage(state.nightTroublemakerBoard, {
+          text: `${seats[0]}번 ${seats[1]}번 신분 카드가 서로 교환됐었습니다.`,
+          highlights: [`${seats[0]}번`, `${seats[1]}번`],
+        });
+        swapEls(aEl, bEl, { flip: true });
       });
+      ensureNightMeTabs(nightOverlay);
       return;
     }
 
@@ -2310,7 +2453,7 @@ function renderNightOverlay() {
         if (state.debugNightPreview) {
           const a = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(seats[0]))}"]`);
           const b = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(seats[1]))}"]`);
-          swapEls(a, b);
+          swapEls(a, b, { flip: true });
           setChoiceState({ selectedSeats: [], selectedCenter: [] });
           return;
         }
@@ -2370,6 +2513,7 @@ function renderNightOverlay() {
           <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
         `;
         applyPlayerPalette(b, p.color || "#888");
+        if (p.clientId === state.clientId) b.dataset.isMe = "1";
         // Drunk: you may not choose players; only center. Show blocked badge on orbit cards.
         (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
         NightBoardUI?.setBlockedBadge?.(b, true);
@@ -2380,6 +2524,7 @@ function renderNightOverlay() {
       assignOrbitBases(orbitCards);
 
       const confirmBtn = submitBtn(ruleText, () => {
+        clearBlockedBadges(row);
         const board = state.nightDrunkBoard;
         if (state.debugNightPreview && board?.preview?.active) {
           const prev = board.preview;
@@ -2447,7 +2592,9 @@ function renderNightOverlay() {
     const card = document.createElement("button");
     card.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
     card.setAttribute("data-seat", String(state.mySeat || ""));
+    card.dataset.isMe = "1";
     card.innerHTML = `
+      <div class="meTab meTab--night">본인</div>
       <div class="nightChoiceCard__seat">${escapeHtml(String(state.mySeat || ""))}</div>
       <div class="nightChoiceCard__avatar">${escapeHtml(me?.avatar || "👤")}</div>
       <div class="nightChoiceCard__name">${escapeHtml(me?.name || "")}</div>
@@ -2488,6 +2635,12 @@ function renderNightOverlay() {
       }
 
       flipRevealRole(card, rid);
+      const roleName = getRoleDisplayName(rid);
+      const msg = `현재 당신의 신분은 ${roleName}로 확인됐습니다.`;
+      (window.ButtonUI?.lockHighlightedLabel || window.ButtonUI?.setHighlightedLabel)?.(confirmBtn, msg, [roleName], { lock: true, force: true });
+      if (!window.ButtonUI?.lockHighlightedLabel && !window.ButtonUI?.setHighlightedLabel) confirmBtn.textContent = msg;
+      confirmBtn.disabled = true;
+      confirmBtn.setAttribute("aria-disabled", "true");
     });
     confirmBtn.classList.add("btn--nightConfirm");
 
@@ -2556,6 +2709,9 @@ function renderNightOverlay() {
     nightAction.appendChild(panel);
   }
 
+  // Ensure "본인" tab is present on my player cards in night UI (even if templates differ by role).
+  ensureNightMeTabs(nightOverlay);
+
   // Show last private result (actor-only)
   if (state.nightResult?.result) {
     nightPrivate.classList.remove("hidden");
@@ -2580,16 +2736,17 @@ function renderRoleOverlay() {
   roleTitle.textContent = "ROLE · 역할 확인";
 
   if (state.isSpectator) {
-    roleName.textContent = "관전 중";
-    roleDesc.textContent = "이 라운드는 관전합니다. 휴대폰을 내려놓고 눈을 감아주세요. 모두 준비되면 밤이 시작됩니다.";
+    setTextHighlighted(roleName, "관전 중");
+    setTextHighlighted(roleDesc, "이 라운드는 관전합니다. 휴대폰을 내려놓고 눈을 감아주세요. 모두 준비되면 밤이 시작됩니다.");
     roleAction.classList.add("hidden");
   } else {
     const rid = state.myRoleId || "";
-    roleName.textContent = rid ? getRoleDisplayName(rid) : "(역할을 받는 중...)";
+    setTextHighlighted(roleName, rid ? getRoleDisplayName(rid) : "(역할을 받는 중...)");
     const def = ROLE_DEFINITIONS[rid];
-    roleDesc.textContent =
-      (def?.desc || "자신의 역할을 확인하세요.") +
-      " 준비되면 아래 버튼을 누르고, 휴대폰을 테이블에 내려놓은 채 눈을 감아주세요.";
+    setTextHighlighted(
+      roleDesc,
+      (def?.desc || "자신의 역할을 확인하세요.") + " 준비되면 아래 버튼을 누르고, 휴대폰을 테이블에 내려놓은 채 눈을 감아주세요."
+    );
 
     // Keep bottom instruction visible (also in profile-only view).
     roleAction.classList.remove("hidden");
@@ -2982,6 +3139,28 @@ function handleMsg(msg) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+}
+
+function setTextHighlighted(el, text, { categories = null, defaultClassName = "hl" } = {}) {
+  if (!el) return;
+  const s = String(text ?? "");
+  if (window.TextHighlight?.applyHighlightedText && window.TextHighlight?.pickDictionaryHighlights) {
+    const highlights = window.TextHighlight.pickDictionaryHighlights(s, { categories, defaultClassName });
+    window.TextHighlight.applyHighlightedText(el, s, highlights, { defaultClassName });
+    return;
+  }
+  el.textContent = s;
+}
+
+function ensureNightMeTabs(rootEl) {
+  if (!rootEl || !rootEl.querySelectorAll) return;
+  rootEl.querySelectorAll('.nightChoiceCard[data-is-me="1"]').forEach((card) => {
+    if (card.querySelector(".meTab")) return;
+    const tab = document.createElement("div");
+    tab.className = "meTab meTab--night";
+    tab.textContent = "본인";
+    card.insertBefore(tab, card.firstChild);
+  });
 }
 
 function clamp01(x) {

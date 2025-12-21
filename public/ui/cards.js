@@ -11,6 +11,10 @@
     node.textContent = text == null ? "" : String(text);
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+  }
+
   function enter(node, preset = "fadeUp") {
     if (!node) return;
     if (hasGsap()) {
@@ -190,6 +194,13 @@
     if (isVoted) card.setAttribute("data-voted", "true");
     if (typeof applyPalette === "function") applyPalette(card, player?.color || "#888");
 
+    const attachMeTab = () => {
+      const tab = el("div", "meTab");
+      setText(tab, "본인");
+      card.insertBefore(tab, card.firstChild);
+    };
+    if (isMe) attachMeTab();
+
     if (showKick) {
       const kickBtn = el("button", "card__kick");
       kickBtn.type = "button";
@@ -211,11 +222,6 @@
     const badge = el("div", "badge");
     setText(badge, isHost ? "HOST" : isConnected ? "ON" : "OFF");
     badgeGroup.appendChild(badge);
-    if (isMe) {
-      const meBadge = el("div", "badge badge--me");
-      setText(meBadge, "ME");
-      badgeGroup.appendChild(meBadge);
-    }
 
     top.appendChild(seat);
     top.appendChild(badgeGroup);
@@ -280,13 +286,31 @@
     const content = el("div", "info-card__content");
 
     const tagEl = el("span", "info-card__tag");
-    tagEl.innerHTML = tag == null ? "" : String(tag);
+    const tagText = tag == null ? "" : String(tag);
+    if (window.TextHighlight?.applyHighlightedText && window.TextHighlight?.pickDictionaryHighlights) {
+      const highlights = window.TextHighlight.pickDictionaryHighlights(tagText);
+      window.TextHighlight.applyHighlightedText(tagEl, tagText, highlights, { defaultClassName: "hl" });
+    } else {
+      tagEl.textContent = tagText;
+    }
     const iconEl = el("div", "info-card__role-icon");
     iconEl.innerHTML = icon == null ? "" : String(icon);
     const h3 = el("h3");
-    h3.innerHTML = title == null ? "" : String(title);
+    const titleText = title == null ? "" : String(title);
+    if (window.TextHighlight?.applyHighlightedText && window.TextHighlight?.pickDictionaryHighlights) {
+      const highlights = window.TextHighlight.pickDictionaryHighlights(titleText);
+      window.TextHighlight.applyHighlightedText(h3, titleText, highlights, { defaultClassName: "hl" });
+    } else {
+      h3.textContent = titleText;
+    }
     const p = el("p");
-    p.innerHTML = text == null ? "" : String(text);
+    const body = text == null ? "" : String(text);
+    if (window.TextHighlight?.applyHighlightedHtml && window.TextHighlight?.pickDictionaryHighlights && window.TextHighlight?.stripHtmlToText) {
+      const highlights = window.TextHighlight.pickDictionaryHighlights(window.TextHighlight.stripHtmlToText(body));
+      window.TextHighlight.applyHighlightedHtml(p, body, highlights, { defaultClassName: "hl" });
+    } else {
+      p.innerHTML = body;
+    }
 
     content.appendChild(tagEl);
     content.appendChild(iconEl);
@@ -302,20 +326,57 @@
     const iconEl = el("div", "roleCard__icon");
     iconEl.innerHTML = icon == null ? "" : String(icon);
     const nameEl = el("div", "roleCard__name");
-    nameEl.innerHTML = name == null ? "" : String(name);
+    const nm = name == null ? "" : String(name);
+    if (window.TextHighlight?.applyHighlightedText && window.TextHighlight?.pickDictionaryHighlights) {
+      const highlights = window.TextHighlight.pickDictionaryHighlights(nm);
+      window.TextHighlight.applyHighlightedText(nameEl, nm, highlights, { defaultClassName: "hl" });
+    } else {
+      nameEl.textContent = nm;
+    }
     const countEl = el("div", "roleCard__count");
-    countEl.innerHTML = countText == null ? "" : String(countText);
+    const ct = countText == null ? "" : String(countText);
+    if (window.TextHighlight?.applyHighlightedText && window.TextHighlight?.pickDictionaryHighlights) {
+      const highlights = window.TextHighlight.pickDictionaryHighlights(ct);
+      window.TextHighlight.applyHighlightedText(countEl, ct, highlights, { defaultClassName: "hl" });
+    } else {
+      countEl.textContent = ct;
+    }
     card.appendChild(iconEl);
     card.appendChild(nameEl);
     card.appendChild(countEl);
     return card;
   }
 
-  function createProfileCardLarge({ player, badgeText, applyPalette, extraClass }) {
+  function createNightPlayerCard({ player, isMe, extraClass, applyPalette } = {}) {
+    const b = document.createElement("button");
+    b.className = "nightChoice nightChoiceCard";
+    if (extraClass) b.classList.add(...String(extraClass).split(/\s+/).filter(Boolean));
+    b.setAttribute("data-seat", String(player?.seat || ""));
+    if (isMe) b.dataset.isMe = "1";
+
+    b.innerHTML = `
+      ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+      <div class="nightChoiceCard__seat">${escapeHtml(String(player?.seat || ""))}</div>
+      <div class="nightChoiceCard__avatar">${escapeHtml(player?.avatar || "??")}</div>
+      <div class="nightChoiceCard__name">${escapeHtml(player?.name || "")}</div>
+    `;
+
+    if (typeof applyPalette === "function") applyPalette(b, player?.color || "#888");
+    return b;
+  }
+
+  function createProfileCardLarge({ player, badgeText, applyPalette, extraClass, isMe } = {}) {
     const card = el("div", "profileCardLarge");
     card.setAttribute("data-cardui", "1");
     if (extraClass) card.classList.add(extraClass);
+    if (isMe) card.classList.add("profileCardLarge--me");
     if (typeof applyPalette === "function") applyPalette(card, player?.color || "#888");
+
+    if (isMe) {
+      const tab = el("div", "meTab");
+      setText(tab, "본인");
+      card.insertBefore(tab, card.firstChild);
+    }
 
     const badge = el("div", "profileCardLarge__badge");
     setText(badge, badgeText || "");
@@ -346,6 +407,7 @@
     createAddBotCard,
     createInfoCard,
     createRoleCard,
+    createNightPlayerCard,
     createProfileCardLarge,
     setInteractive,
   };

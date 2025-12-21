@@ -111,16 +111,18 @@
     };
   }
 
-  function buildRoleNameHtml({ roleId, getRoleDisplayName, escapeHtml }) {
+  function buildRoleNameHtml({ roleId, getRoleDisplayName, escapeHtml, isMe = false }) {
     const title = escapeHtml(getRoleDisplayName(roleId || ""));
-    return `<div class="nightChoiceReveal"><div class="nightChoiceReveal__title">${title}</div></div>`;
+    const tab = isMe ? `<div class="meTab meTab--night">본인</div>` : "";
+    return `${tab}<div class="nightChoiceReveal"><div class="nightChoiceReveal__title">${title}</div></div>`;
   }
 
-  function buildProfileHtml({ player, escapeHtml }) {
+  function buildProfileHtml({ player, escapeHtml, isMe = false }) {
     const seat = escapeHtml(String(player?.seat ?? ""));
     const avatar = escapeHtml(player?.avatar || "👤");
     const name = escapeHtml(player?.name || "");
     return `
+      ${isMe ? '<div class="meTab meTab--night">본인</div>' : ''}
       <div class="nightChoiceReveal">
         <div class="nightChoiceReveal__profile">
           <div class="nightChoiceReveal__seat">${seat}</div>
@@ -142,7 +144,7 @@
     const applyReveal = () => {
       el.classList.add("nightChoiceCard--revealed");
       el.classList.toggle("nightChoiceCard--werewolf", !!isWerewolf);
-      el.innerHTML = buildRoleNameHtml({ roleId: rid, getRoleDisplayName, escapeHtml });
+      el.innerHTML = buildRoleNameHtml({ roleId: rid, getRoleDisplayName, escapeHtml, isMe: el.dataset.isMe === "1" });
     };
 
     if (hasGsap()) {
@@ -166,7 +168,7 @@
     const applyReveal = () => {
       el.classList.add("nightChoiceCard--revealed");
       el.classList.remove("nightChoiceCard--werewolf");
-      el.innerHTML = buildProfileHtml({ player, escapeHtml, getRoleDisplayName });
+      el.innerHTML = buildProfileHtml({ player, escapeHtml, getRoleDisplayName, isMe: el.dataset.isMe === "1" });
     };
 
     if (hasGsap()) {
@@ -192,6 +194,7 @@
       el.classList.remove("nightChoiceCard--werewolf");
       const t = escapeHtml ? escapeHtml(String(label || "")) : String(label || "");
       el.innerHTML = `
+        ${el.dataset.isMe === "1" ? '<div class="meTab meTab--night">본인</div>' : ''}
         <div class="nightChoiceReveal">
           <div class="nightChoiceCard__avatar">🂠</div>
           <div class="nightChoiceReveal__title">${t}</div>
@@ -234,7 +237,7 @@
     restore();
   }
 
-  function swapEls(a, b, { duration = 0.32, onComplete } = {}) {
+  function swapEls(a, b, { duration = 0.32, flip = false, liftZ = true, onComplete } = {}) {
     if (!a || !b || a === b) return;
     const gsap = window.gsap || null;
     const ra = a.getBoundingClientRect();
@@ -245,14 +248,27 @@
     const dyB = ra.top - rb.top;
     if (gsap) {
       gsap.killTweensOf([a, b]);
-      // Keep current rotation (flip) and only animate translate.
-      gsap.to(a, { x: `+=${dxA}`, y: `+=${dyA}`, duration, ease: "power2.inOut" });
-      gsap.to(b, {
-        x: `+=${dxB}`,
-        y: `+=${dyB}`,
-        duration,
-        ease: "power2.inOut",
-        onComplete: () => {
+
+      if (liftZ) gsap.set([a, b], { zIndex: 40 });
+
+      const rotA = Number(gsap.getProperty(a, "rotationY") || 0);
+      const rotB = Number(gsap.getProperty(b, "rotationY") || 0);
+
+      const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
+      tl.to(a, { x: `+=${dxA}`, y: `+=${dyA}`, duration, ease: "power2.inOut" }, 0);
+      tl.to(b, { x: `+=${dxB}`, y: `+=${dyB}`, duration, ease: "power2.inOut" }, 0);
+
+      let callbackTime = duration;
+      if (flip) {
+        const half = Math.max(0.08, duration * 0.5);
+        callbackTime = Math.max(callbackTime, half * 2);
+        tl.to(a, { rotationY: rotA + 90, duration: half, ease: "power2.in" }, 0);
+        tl.to(a, { rotationY: rotA, duration: half, ease: "power2.out" }, half);
+        tl.to(b, { rotationY: rotB + 90, duration: half, ease: "power2.in" }, 0);
+        tl.to(b, { rotationY: rotB, duration: half, ease: "power2.out" }, half);
+      }
+
+      tl.add(() => {
           const aNext = a.nextSibling;
           const bNext = b.nextSibling;
           const pa = a.parentNode;
@@ -267,10 +283,9 @@
             a.dataset.orbitBase = bb ?? "";
             b.dataset.orbitBase = ba ?? "";
           }
-          gsap.set([a, b], { clearProps: "x,y" });
+          gsap.set([a, b], { clearProps: "x,y,zIndex" });
           if (typeof onComplete === "function") onComplete();
-        },
-      });
+        }, callbackTime);
       return;
     }
     const aNext = a.nextSibling;
@@ -319,8 +334,18 @@
     createRuleOnlyPanel: ({ text = "", escapeHtml }) => {
       const el = document.createElement("div");
       el.className = "nightRuleOnly nightRuleOnly--center";
-      const t = escapeHtml ? escapeHtml(String(text || "")) : String(text || "");
-      el.innerHTML = `<div class="nightRuleOnly__text">${t}</div>`;
+      const t = String(text || "");
+      const textEl = document.createElement("div");
+      textEl.className = "nightRuleOnly__text";
+      if (window.TextHighlight?.applyHighlightedText && window.TextHighlight?.pickDictionaryHighlights) {
+        const highlights = window.TextHighlight.pickDictionaryHighlights(t);
+        window.TextHighlight.applyHighlightedText(textEl, t, highlights, { defaultClassName: "hl" });
+      } else if (escapeHtml) {
+        textEl.innerHTML = escapeHtml(t);
+      } else {
+        textEl.textContent = t;
+      }
+      el.appendChild(textEl);
       return el;
     },
   };
