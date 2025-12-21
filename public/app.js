@@ -1545,8 +1545,6 @@ function renderNightOverlay() {
       if (isMe) b.dataset.isMe = "1";
       b.innerHTML = `
         ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
-        ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
-        ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
         <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
         <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "👤")}</div>
         <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
@@ -1613,10 +1611,10 @@ function renderNightOverlay() {
     renderNightOverlay();
   };
 
-  const pulseEl = (el) => {
+  function pulseEl(el) {
     if (!el) return;
     CardUI?.motion?.emphasis?.(el, "pulse");
-  };
+  }
 
   function selectBounce(el) {
     if (!el) return;
@@ -3097,8 +3095,18 @@ function handleMsg(msg) {
     return;
   }
   if (msg.type === "night_step") {
-    state.nightStep = msg.data || null;
-    state.nightPrivate = null;
+    const nextStep = msg.data || null;
+    const nextStepId = nextStep?.stepId ?? null;
+    const nextRoleId = nextStep?.roleId ?? null;
+    state.nightStep = nextStep;
+    // Avoid race where night_private arrives before night_step for the same step (we must not wipe it).
+    if (
+      !state.nightPrivate ||
+      state.nightPrivate.stepId !== nextStepId ||
+      state.nightPrivate.roleId !== nextRoleId
+    ) {
+      state.nightPrivate = null;
+    }
     state.nightResult = null;
     state.lastNightResultApplyKey = "";
     state.nightUi = null;
