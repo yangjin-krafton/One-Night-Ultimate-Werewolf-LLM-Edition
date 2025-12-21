@@ -4432,6 +4432,19 @@ function initDebugApi() {
     startGame: () => send({ type: "start_game", data: {} }),
     forceStart: () => send({ type: "debug", data: { action: "force_start", data: {} } }),
     endGame: ({ winner = "mixed" } = {}) => send({ type: "debug", data: { action: "end_game", data: { winner } } }),
+    forceRole: (roleId, { clientId = "" } = {}) => {
+      ensureJoined();
+      const rid = String(roleId || "").trim();
+      const cid = String(clientId || "").trim() || String(state.clientId || "");
+      if (!rid) return;
+      send({ type: "debug", data: { action: "force_role", data: { clientId: cid, roleId: rid } } });
+    },
+    clearForcedRole: ({ clientId = "" } = {}) => {
+      ensureJoined();
+      const cid = String(clientId || "").trim() || String(state.clientId || "");
+      if (!cid) return;
+      send({ type: "debug", data: { action: "clear_forced_role", data: { clientId: cid } } });
+    },
     setPhase: (phase, { durationSec = 30 } = {}) =>
       send({ type: "debug", data: { action: "set_phase", data: { phase, durationSec } } }),
     dumpState: () => state.room,

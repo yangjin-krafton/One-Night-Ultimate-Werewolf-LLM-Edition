@@ -466,6 +466,9 @@ class GameServer:
         self._debug_enabled = os.environ.get("DEBUG_COMMANDS", "").strip() == "1" or (
             os.environ.get("NODE_ENV", "").strip().lower() == "development"
         )
+        # Debug-only: force role assignment for specific clientIds at game start.
+        # Used by gameDebug.forceRole() to speed up role UI iteration.
+        self._forced_roles: dict[str, str] = {}
         self._phase_task: asyncio.Task[None] | None = None
         self._night_task: asyncio.Task[None] | None = None
         self._cleanup_task: asyncio.Task[None] | None = None
@@ -1454,13 +1457,39 @@ class GameServer:
         deck = select_role_deck_for_game(variant, player_count)
         if len(deck) < player_count + 3:
             return False
-        self._room.night_deck = list(deck)
         random.shuffle(deck)
+        # Only the first (player_count + 3) cards are used this round.
+        used_deck = list(deck[: player_count + 3])
         player_ids = [p.client_id for p in self._room.players if p.ws is not None and not p.is_spectator]
         if len(player_ids) != player_count:
             return False
-        self._room.role_by_client_id = {cid: deck[i] for i, cid in enumerate(player_ids)}
-        self._room.center_roles = deck[player_count : player_count + 3]
+
+        # Debug: force specific roles at game start (best-effort).
+        # We try to swap a matching role card into the player's slot to preserve the used deck distribution.
+        if self._debug_enabled and self._forced_roles:
+            for i, cid in enumerate(player_ids):
+                want = (self._forced_roles.get(cid) or "").strip()
+                if not want:
+                    continue
+                if i < 0 or i >= len(used_deck):
+                    continue
+                if used_deck[i] == want:
+                    continue
+                try:
+                    j = next((k for k, r in enumerate(used_deck) if str(r or "") == want), None)
+                except Exception:
+                    j = None
+                if j is not None:
+                    used_deck[i], used_deck[j] = used_deck[j], used_deck[i]
+                else:
+                    # If the desired role isn't present in the used deck, overwrite the slot.
+                    # This is debug-only and may change the deck composition.
+                    used_deck[i] = want
+
+        self._room.role_by_client_id = {cid: used_deck[i] for i, cid in enumerate(player_ids)}
+        self._room.center_roles = used_deck[player_count : player_count + 3]
+        # Public: role IDs used for this round (no assignments).
+        self._room.night_deck = list(used_deck)
         # Prepare night sequence metadata from the runtime scenario (counts etc).
         self._room.night_episode_id = str(ep.get("episodeId") or "ep1")
         # Track which variantPlayerCount we picked so host can build URLs under /pN/.
@@ -1713,6 +1742,18 @@ class GameServer:
             elif action == "force_start":
                 self._room.votes.clear()
                 await self._set_phase_locked(PHASE_NIGHT, 10_000)
+            elif action == "force_role":
+                # Debug-only: lock a specific role for a clientId on the next game start.
+                # data: { clientId?: str, roleId: str }
+                cid = (data.get("clientId") or client_id or "").strip()
+                rid = (data.get("roleId") or "").strip()
+                if cid and rid:
+                    self._forced_roles[cid] = rid
+            elif action == "clear_forced_role":
+                # data: { clientId?: str } (default: host)
+                cid = (data.get("clientId") or client_id or "").strip()
+                if cid:
+                    self._forced_roles.pop(cid, None)
 
             scenario = self._scenarios.get(self._room.selected_scenario_id or "")
             can_start = scenario_can_start_for_episode(

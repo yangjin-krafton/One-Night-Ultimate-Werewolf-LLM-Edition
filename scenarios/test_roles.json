@@ -21,8 +21,8 @@
                   {
                     "minPlayers": 3,
                     "maxPlayers": 10,
-                    "fixedCards": ["werewolf", "seer","robber"],
-                    "minCounts": { "werewolf": 1, "seer": 1, "robber": 1 }
+                    "fixedCards": ["werewolf", "troublemaker","robber"],
+                    "minCounts": { "werewolf": 1, "troublemaker": 1, "robber": 1 }
                   }
                 ]
               },

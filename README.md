@@ -163,6 +163,10 @@ gameDebug.ui.seedPlayers(5)
 // 클라이언트에만 임시 더미 유저를 제거:
 gameDebug.ui.clearSeedPlayers()
 
+// NEW: 게임 시작 시 내 역할 고정(디버그/호스트 전용)
+gameDebug.forceRole('seer')       // 다음 게임 시작부터 내 역할을 seer로 고정
+gameDebug.clearForcedRole()       // 고정 해제
+
 // 오버레이 닫기
 gameDebug.ui.clear()
 ```
