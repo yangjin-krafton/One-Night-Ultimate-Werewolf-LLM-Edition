@@ -748,11 +748,13 @@ function render() {
   voteBtn.textContent = iVoted ? "투표 완료" : "투표";
 
   const players = room.players || [];
+
   gridEl.innerHTML = "";
   for (const p of players) {
     const isMe = p.clientId === state.clientId;
     const roleLabel = isMe && state.myRoleId ? getRoleDisplayName(state.myRoleId) : "";
     const isVoted = !!state.room?.votes?.[p.clientId];
+    const showKick = phase === "WAIT" && !state.isSpectator && !isMe;
 
     const card = CardUI?.createPlayerCard
       ? CardUI.createPlayerCard({
@@ -763,6 +765,13 @@ function render() {
           isVoted,
           roleLabel,
           applyPalette: applyPlayerPalette,
+          showKick,
+          onKick: (player) => {
+            if (phase !== "WAIT") return;
+            const targetClientId = String(player?.clientId || "");
+            if (!targetClientId || targetClientId === String(state.clientId || "")) return;
+            send({ type: "kick", data: { targetClientId } });
+          },
         })
       : (() => {
           const fallback = document.createElement("div");
@@ -774,6 +783,22 @@ function render() {
 
     // Keep lobby/grid motion subtle; avoid re-animating every websocket tick.
     if (phaseChanged && phase === "WAIT") CardUI?.motion?.enter?.(card, "playerGrid");
+  }
+
+  // Lobby-only: append "+ AI 추가" card as the last slot (debug-enabled only).
+  if (phase === "WAIT" && !state.isSpectator && state.debugEnabled && CardUI?.createAddBotCard) {
+    const addCard = CardUI.createAddBotCard({
+      label: "+ AI 추가",
+      onClick: async () => {
+        try {
+          await window.gameDebug?.ui?.addBot?.(1);
+        } catch (e) {
+          console.warn("addBot failed", e);
+        }
+      },
+    });
+    gridEl.appendChild(addCard);
+    if (phaseChanged && phase === "WAIT") CardUI?.motion?.enter?.(addCard, "playerGrid");
   }
 
   renderInfoDeck();
@@ -3984,6 +4009,7 @@ function initDebugApi() {
       this.roleId = "";
       this.seat = 0;
       this.nightPrivate = null;
+      this.debugVoteAnswer = null;
       this.lastNightStepId = 0;
       this.votedKey = "";
       this.readyKey = "";
@@ -4057,7 +4083,8 @@ function initDebugApi() {
 
     async _maybeVote(room) {
       const phase = String(room?.phase || "WAIT");
-      if (phase !== "VOTE") return;
+      // Server accepts votes in DEBATE and VOTE. For bot testing, vote immediately when day starts.
+      if (phase !== "DEBATE" && phase !== "VOTE") return;
       const voters = room?.votes || {};
       if (voters && voters[this.clientId]) return;
       const key = `${phase}:${room?.phaseEndsAtMs ?? ""}`;
@@ -4067,8 +4094,13 @@ function initDebugApi() {
       const players = (room?.players || []).filter((p) => p.connected && !p.isSpectator);
       if (!players.length) return;
       const seats = players.map((p) => Number(p.seat || 0)).filter(Boolean);
-      const targetSeat = pickRandom(seats) || 0;
-      await sleep(400 + Math.random() * 1000);
+
+      const wolfSeats = Array.isArray(this.debugVoteAnswer?.wolfSeats) ? this.debugVoteAnswer.wolfSeats.map(Number).filter(Boolean) : [];
+      const useCorrect = wolfSeats.length > 0 && Math.random() < 0.5;
+      const targetSeat = useCorrect ? (pickRandom(wolfSeats) || 0) : (pickRandom(seats) || 0);
+
+      // Vote quickly so host can iterate faster.
+      await sleep(80 + Math.random() * 200);
       if (this.closed) return;
       if (!targetSeat) return;
       this.send({ type: "submit_vote", data: { targetSeat } });
@@ -4168,6 +4200,10 @@ function initDebugApi() {
       }
       if (msg.type === "night_private") {
         this.nightPrivate = msg.data || null;
+        return;
+      }
+      if (msg.type === "debug_vote_answer") {
+        this.debugVoteAnswer = msg.data || null;
         return;
       }
       if (msg.type === "night_step") {

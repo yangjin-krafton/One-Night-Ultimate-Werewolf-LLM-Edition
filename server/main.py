@@ -34,6 +34,9 @@ NIGHT_HOST_ACK_TIMEOUT_MS = 180_000
 NIGHT_ACTION_WINDOW_MS = 1_000
 LOBBY_DISCONNECT_EVICT_MS = 30_000
 
+# Debug helpers (dev only): for debug-bot clients we can provide a "correct vote" target.
+WOLF_ROLES = {"werewolf", "alpha_wolf", "mystic_wolf", "dream_wolf"}
+
 
 COLOR_PALETTE = [
     # Prefer distinct, high-contrast colors for up to ~15 players.
@@ -531,6 +534,29 @@ class GameServer:
         self._room.phase_ends_at_ms = (_now_ms() + duration_ms) if duration_ms else None
         await self.broadcast({"type": "phase_changed", "data": {"phase": self._room.phase, "phaseEndsAtMs": self._room.phase_ends_at_ms}})
         await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
+
+        # Dev-only: when day starts (DEBATE/VOTE), tell debug-bots which seats are wolves so they can
+        # vote "correctly" some of the time for testing.
+        if self._debug_enabled and phase in (PHASE_DEBATE, PHASE_VOTE):
+            wolf_seats: list[int] = []
+            try:
+                for cid, rid in (self._room.role_by_client_id or {}).items():
+                    if str(rid or "") not in WOLF_ROLES:
+                        continue
+                    seat = self._seat_by_client_id_locked(str(cid))
+                    if seat is not None:
+                        wolf_seats.append(int(seat))
+                wolf_seats = sorted({int(x) for x in wolf_seats if int(x) > 0})
+            except Exception:
+                wolf_seats = []
+
+            for p in self._room.players:
+                if p.ws is None or p.is_spectator:
+                    continue
+                if not str(p.client_id).startswith("debug-bot-"):
+                    continue
+                await self._send_to(p.client_id, {"type": "debug_vote_answer", "data": {"wolfSeats": wolf_seats}})
+
         self._cancel_phase_task()
         if self._room.phase_ends_at_ms:
             self._phase_task = asyncio.create_task(self._phase_timer(self._room.phase, self._room.phase_ends_at_ms))
@@ -1315,6 +1341,46 @@ class GameServer:
             )
             await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
 
+    async def handle_kick(self, requester_client_id: str, target_client_id: str) -> None:
+        """
+        Lobby-only: forcibly remove a player from the room.
+        NOTE: Per product request, any connected user may kick any other user while in WAIT.
+        """
+        async with self._lock:
+            if self._room.phase != PHASE_WAIT:
+                return
+            requester_client_id = (requester_client_id or "").strip()
+            target_client_id = (target_client_id or "").strip()
+            if not requester_client_id or not target_client_id:
+                return
+
+            requester = next((p for p in self._room.players if p.client_id == requester_client_id and p.ws is not None), None)
+            if not requester or requester.is_spectator:
+                return
+
+            target = next((p for p in self._room.players if p.client_id == target_client_id), None)
+            if not target:
+                return
+
+            await self._remove_player_locked(target_client_id)
+
+            scenario = self._scenarios.get(self._room.selected_scenario_id or "")
+            can_start = scenario_can_start_for_episode(scenario, self._room.connected_player_count(), self._room.selected_episode_id)
+            await self.broadcast({"type": "host_changed", "data": {"hostClientId": self._room.host_client_id}})
+            await self.broadcast(
+                {
+                    "type": "scenario_state",
+                    "data": {
+                        "selectedScenarioId": self._room.selected_scenario_id,
+                        "selectedEpisodeId": self._room.selected_episode_id,
+                        "canStart": can_start,
+                        "playerCount": self._room.connected_player_count(),
+                        "totalConnected": self._room.connected_count(),
+                    },
+                }
+            )
+            await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
+
     async def handle_scenario_select(self, client_id: str, scenario_id: str) -> None:
         async with self._lock:
             if client_id != self._room.host_client_id:
@@ -1741,6 +1807,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 await game.handle_end_game(client_id)
             elif t == "debug":
                 await game.handle_debug(client_id, str(data.get("action") or ""), dict(data.get("data") or {}))
+            elif t == "kick":
+                await game.handle_kick(client_id, str(data.get("targetClientId") or ""))
             elif t == "leave":
                 if client_id:
                     await game.handle_leave(ws, client_id)

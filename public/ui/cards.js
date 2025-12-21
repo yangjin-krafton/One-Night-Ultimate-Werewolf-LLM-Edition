@@ -179,6 +179,8 @@
     isVoted,
     roleLabel,
     applyPalette,
+    showKick,
+    onKick,
   }) {
     const card = el("div", "card");
     card.setAttribute("data-cardui", "1");
@@ -187,6 +189,19 @@
     if (isConnected) card.classList.add("card--connected");
     if (isVoted) card.setAttribute("data-voted", "true");
     if (typeof applyPalette === "function") applyPalette(card, player?.color || "#888");
+
+    if (showKick) {
+      const kickBtn = el("button", "card__kick");
+      kickBtn.type = "button";
+      kickBtn.setAttribute("aria-label", "Kick");
+      kickBtn.textContent = "×";
+      kickBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof onKick === "function") onKick(player);
+      });
+      card.appendChild(kickBtn);
+    }
 
     const top = el("div", "card__top");
     const seat = el("div", "seat");
@@ -217,6 +232,45 @@
     card.appendChild(top);
     card.appendChild(content);
     card.appendChild(bar);
+    return card;
+  }
+
+  function createAddBotCard({ label = "+ AI 추가", onClick } = {}) {
+    const card = el("button", "card card--addBot");
+    card.type = "button";
+    card.setAttribute("data-cardui", "1");
+    card.setAttribute("aria-label", "Add AI Bot");
+
+    const top = el("div", "card__top");
+    const seat = el("div", "seat");
+    setText(seat, "");
+    const badgeGroup = el("div", "badgeGroup");
+    const badge = el("div", "badge");
+    setText(badge, "AI");
+    badgeGroup.appendChild(badge);
+    top.appendChild(seat);
+    top.appendChild(badgeGroup);
+
+    const content = el("div", "card__content");
+    const avatar = el("div", "card__avatar");
+    setText(avatar, "+");
+    const name = el("div", "name");
+    setText(name, label);
+    content.appendChild(avatar);
+    content.appendChild(name);
+
+    const bar = el("div", "card__bar");
+    card.appendChild(top);
+    card.appendChild(content);
+    card.appendChild(bar);
+
+    if (typeof onClick === "function") {
+      card.addEventListener("click", (e) => {
+        e.preventDefault();
+        onClick();
+      });
+    }
+
     return card;
   }
 
@@ -289,6 +343,7 @@
   window.CardUI = {
     motion: { enter, emphasis, tap, installGlobalTapFeedback, staggerEnter, attachSwipeMotion, flip },
     createPlayerCard,
+    createAddBotCard,
     createInfoCard,
     createRoleCard,
     createProfileCardLarge,
