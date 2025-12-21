@@ -3964,12 +3964,251 @@ function initDebugApi() {
     if (!state.room) throw new Error("Join a room first (click Join).");
   };
 
+  const makeBotId = () => `debug-bot-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const makeBotName = (idx) => `Bot-${String(idx).padStart(2, "0")}-${Math.random().toString(16).slice(2, 5)}`;
+  const makeWsUrl = () => {
+    const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${scheme}://${window.location.host}/ws`;
+  };
+
+  const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  class DebugBotClient {
+    constructor({ name, avatar, clientId }) {
+      this.name = String(name || "Bot");
+      this.avatar = String(avatar || "\u{1F916}");
+      this.clientId = String(clientId || makeBotId());
+      this.ws = null;
+      this.room = null;
+      this.roleId = "";
+      this.seat = 0;
+      this.nightPrivate = null;
+      this.lastNightStepId = 0;
+      this.votedKey = "";
+      this.readyKey = "";
+      this.closed = false;
+      this._connect();
+    }
+
+    _connect() {
+      const ws = new WebSocket(makeWsUrl());
+      this.ws = ws;
+      ws.addEventListener("open", () => {
+        if (this.closed) return;
+        this.send({ type: "join", data: { clientId: this.clientId, name: this.name, avatar: this.avatar } });
+      });
+      ws.addEventListener("message", (ev) => {
+        if (this.closed) return;
+        let msg = null;
+        try {
+          msg = JSON.parse(ev.data);
+        } catch (e) {
+          return;
+        }
+        this._handle(msg);
+      });
+      ws.addEventListener("close", () => {
+        // Do not auto-reconnect; bots are explicit dev tools.
+      });
+    }
+
+    send(obj) {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+      try {
+        this.ws.send(JSON.stringify(obj));
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    close({ sendLeave = true } = {}) {
+      this.closed = true;
+      try {
+        if (sendLeave) this.send({ type: "leave", data: {} });
+      } catch (e) {
+        // ignore
+      }
+      try {
+        this.ws?.close?.();
+      } catch (e) {
+        // ignore
+      }
+      this.ws = null;
+    }
+
+    _updateSeatFromRoom(room) {
+      const players = room?.players || [];
+      const me = players.find((p) => String(p.clientId || "") === String(this.clientId || "")) || null;
+      this.seat = Number(me?.seat || 0) || 0;
+      return this.seat;
+    }
+
+    async _maybeReady(room) {
+      const phase = String(room?.phase || "WAIT");
+      if (phase !== "ROLE") return;
+      const key = `${phase}:${room?.phaseEndsAtMs ?? ""}`;
+      if (this.readyKey === key) return;
+      this.readyKey = key;
+      await sleep(350 + Math.random() * 900);
+      if (this.closed) return;
+      this.send({ type: "night_ready", data: {} });
+    }
+
+    async _maybeVote(room) {
+      const phase = String(room?.phase || "WAIT");
+      if (phase !== "VOTE") return;
+      const voters = room?.votes || {};
+      if (voters && voters[this.clientId]) return;
+      const key = `${phase}:${room?.phaseEndsAtMs ?? ""}`;
+      if (this.votedKey === key) return;
+      this.votedKey = key;
+
+      const players = (room?.players || []).filter((p) => p.connected && !p.isSpectator);
+      if (!players.length) return;
+      const seats = players.map((p) => Number(p.seat || 0)).filter(Boolean);
+      const targetSeat = pickRandom(seats) || 0;
+      await sleep(400 + Math.random() * 1000);
+      if (this.closed) return;
+      if (!targetSeat) return;
+      this.send({ type: "submit_vote", data: { targetSeat } });
+    }
+
+    async _maybeNightAction(step, room) {
+      const stepId = Number(step?.stepId || 0);
+      if (!stepId || stepId === this.lastNightStepId) return;
+      this.lastNightStepId = stepId;
+
+      const kind = String(step?.kind || "");
+      if (kind !== "role") return;
+
+      const rid = String(step?.roleId || "");
+      if (!rid) return;
+
+      const isActive =
+        Array.isArray(step?.activeClientIds) && step.activeClientIds.map(String).includes(String(this.clientId || ""));
+      if (!isActive) return;
+
+      const players = (room?.players || []).filter((p) => p.connected && !p.isSpectator);
+      const mySeat = this._updateSeatFromRoom(room);
+      const otherSeats = players.map((p) => Number(p.seat || 0)).filter((s) => s && s !== mySeat);
+      const pickOtherSeat = () => pickRandom(otherSeats) || 0;
+
+      const wait = 450 + Math.random() * 1100;
+      await sleep(wait);
+      if (this.closed) return;
+
+      if (rid === "seer") {
+        const mode = Math.random() < 0.5 ? "player" : "center";
+        if (mode === "player" && otherSeats.length) {
+          const seat = pickOtherSeat();
+          if (seat) this.send({ type: "night_action", data: { stepId, action: { mode: "player", seat } } });
+          return;
+        }
+        // center mode
+        const idxs = [0, 1, 2];
+        const a = pickRandom(idxs);
+        const b = pickRandom(idxs.filter((x) => x !== a));
+        this.send({ type: "night_action", data: { stepId, action: { mode: "center", indices: [a, b] } } });
+        return;
+      }
+
+      if (rid === "robber") {
+        const seat = pickOtherSeat();
+        if (seat) this.send({ type: "night_action", data: { stepId, action: { seat } } });
+        return;
+      }
+
+      if (rid === "troublemaker") {
+        if (otherSeats.length < 2) return;
+        const a = pickOtherSeat();
+        const b = pickRandom(otherSeats.filter((x) => x !== a)) || 0;
+        if (a && b) this.send({ type: "night_action", data: { stepId, action: { seats: [a, b] } } });
+        return;
+      }
+
+      if (rid === "drunk") {
+        const idx = pickRandom([0, 1, 2]);
+        this.send({ type: "night_action", data: { stepId, action: { centerIndex: idx } } });
+        return;
+      }
+
+      if (rid === "werewolf") {
+        const canPeek = !!(this.nightPrivate?.payload && this.nightPrivate.payload.canPeekCenter);
+        if (!canPeek) return;
+        const idx = pickRandom([0, 1, 2]);
+        this.send({ type: "night_action", data: { stepId, action: { centerIndex: idx } } });
+      }
+    }
+
+    _handle(msg) {
+      if (!msg || typeof msg !== "object") return;
+      if (msg.type === "hello") {
+        const assigned = String(msg.assignedClientId || "");
+        if (assigned && assigned !== this.clientId) this.clientId = assigned;
+        const assignedName = String(msg.assignedName || "");
+        if (assignedName) this.name = assignedName;
+        return;
+      }
+      if (msg.type === "join_denied") {
+        // Don't spam; just stop this bot.
+        this.close({ sendLeave: false });
+        return;
+      }
+      if (msg.type === "room_snapshot") {
+        this.room = msg.data || null;
+        this._updateSeatFromRoom(this.room);
+        this._maybeReady(this.room).catch(() => {});
+        this._maybeVote(this.room).catch(() => {});
+        return;
+      }
+      if (msg.type === "role_assignment") {
+        this.roleId = String(msg.data?.roleId || "");
+        return;
+      }
+      if (msg.type === "night_private") {
+        this.nightPrivate = msg.data || null;
+        return;
+      }
+      if (msg.type === "night_step") {
+        const step = msg.data || null;
+        this._maybeNightAction(step, this.room).catch(() => {});
+        return;
+      }
+      // ignore others
+    }
+  }
+
+  const botManager = {
+    bots: [],
+    async add(count = 1) {
+      ensureJoined();
+      const n = Math.max(1, Math.min(20, Number(count) || 1));
+      for (let i = 0; i < n; i += 1) {
+        const idx = this.bots.length + 1;
+        const bot = new DebugBotClient({ name: makeBotName(idx), avatar: getRandomAvatar(), clientId: makeBotId() });
+        this.bots.push(bot);
+        await sleep(80);
+      }
+      return this.bots.length;
+    },
+    removeAll() {
+      const bots = [...this.bots];
+      this.bots = [];
+      bots.forEach((b) => b.close({ sendLeave: true }));
+    },
+  };
+
   const clearSeedPlayers = () => {
     ensureJoined();
+    // Legacy: remove local-only fake players.
     const seeded = new Set(state.debugSeedClientIds || []);
-    if (!seeded.size) return;
-    state.room.players = (state.room.players || []).filter((p) => !seeded.has(p.clientId));
-    state.debugSeedClientIds = [];
+    if (seeded.size) {
+      state.room.players = (state.room.players || []).filter((p) => !seeded.has(p.clientId));
+      state.debugSeedClientIds = [];
+    }
+    // New: remove real websocket bots.
+    botManager.removeAll();
     render();
   };
 
@@ -3978,7 +4217,16 @@ function initDebugApi() {
     const opts = typeof countOrOpts === "number" ? { count: countOrOpts } : (countOrOpts || {});
     const count = Math.max(0, Math.min(12, Number(opts.count ?? 5)));
 
+    const mode = String(opts.mode || "bot"); // bot | fake
     clearSeedPlayers();
+
+    if (mode !== "fake") {
+      // Create real bots so starting a real game behaves like actual multi-device play.
+      const current = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator).length || 0;
+      const need = Math.max(0, count - current);
+      botManager.add(need).catch(() => {});
+      return;
+    }
 
     const existing = state.room.players || [];
     const debugAvatars =
@@ -4023,6 +4271,17 @@ function initDebugApi() {
     state.room.players = existing;
     state.debugSeedClientIds = seededIds;
     render();
+  };
+
+  const addBot = (countOrOpts = 1) => {
+    ensureJoined();
+    const opts = typeof countOrOpts === "number" ? { count: countOrOpts } : (countOrOpts || {});
+    const count = Math.max(1, Math.min(20, Number(opts.count ?? 1)));
+    return botManager.add(count);
+  };
+  const removeBot = () => {
+    ensureJoined();
+    botManager.removeAll();
   };
   const ensureMySeat = () => {
     ensureJoined();
@@ -4151,6 +4410,8 @@ function initDebugApi() {
       nightOutro: () => previewNightStep({ kind: "outro", active: false }),
       seedPlayers: (countOrOpts) => seedPlayers(countOrOpts),
       clearSeedPlayers: () => clearSeedPlayers(),
+      addBot: (countOrOpts) => addBot(countOrOpts),
+      removeBot: () => removeBot(),
       clear: () => clearOverlays(),
       // Apply a preview to other clients (debug only, host only).
       applyTo: ({ target = "all", seats = [], clientIds = [], includeHost = true } = {}, name = "", ...args) => {

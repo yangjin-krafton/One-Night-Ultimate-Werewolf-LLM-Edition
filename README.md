@@ -153,6 +153,13 @@ gameDebug.ui.nightOutro()
 
 // 클라이언트에만 임시 더미 유저를 추가:
 gameDebug.ui.seedPlayers(5)
+// NEW: seedPlayers()는 이제 기본으로 실제 WebSocket 봇을 추가합니다. (실제 게임 시작 테스트 가능)
+// UI만 로컬로 “가짜 유저”를 채우고 싶으면:
+// gameDebug.ui.seedPlayers({ count: 5, mode: 'fake' })
+//
+// 봇을 직접 추가/삭제:
+ gameDebug.ui.addBot(3)
+ gameDebug.ui.removeBot()
 // 클라이언트에만 임시 더미 유저를 제거:
 gameDebug.ui.clearSeedPlayers()
 
