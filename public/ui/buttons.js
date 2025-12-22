@@ -1,6 +1,8 @@
 (function () {
   const hasGsap = () => typeof window !== "undefined" && !!window.gsap;
   const LOCK_ATTR = "data-btn-locked-label";
+  const READY_CLASS = "btn--ready";
+  const SOFT_DISABLED_CLASS = "btn--softDisabled";
 
   function tap(el) {
     if (!el) return;
@@ -83,6 +85,26 @@
     btn.removeAttribute(LOCK_ATTR);
   }
 
+  function setEnabled(btn, enabled, { soft = false } = {}) {
+    if (!btn) return;
+    const on = !!enabled;
+
+    // "Soft" disable keeps the button clickable so we can show feedback (bounce/pulse) on invalid attempts.
+    // We still mark aria-disabled for accessibility and style.
+    if (soft) {
+      btn.disabled = false;
+      btn.setAttribute("aria-disabled", on ? "false" : "true");
+      btn.classList.toggle(SOFT_DISABLED_CLASS, !on);
+      btn.classList.toggle(READY_CLASS, on);
+      return;
+    }
+
+    btn.disabled = !on;
+    btn.setAttribute("aria-disabled", on ? "false" : "true");
+    btn.classList.remove(SOFT_DISABLED_CLASS);
+    btn.classList.toggle(READY_CLASS, on);
+  }
+
   window.ButtonUI = {
     installGlobalButtonFeedback,
     setLabel,
@@ -90,5 +112,6 @@
     lockLabel,
     lockHighlightedLabel,
     unlockLabel,
+    setEnabled,
   };
 })();

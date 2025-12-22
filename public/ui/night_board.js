@@ -89,7 +89,17 @@
           // Do not overwrite rotation (flip rotateY), only update position/scale.
           window.gsap.set(el, { x: tx, y: ty, z: depth, scale });
         } else {
-          el.style.transform = `translate3d(${tx}px, ${ty}px, ${depth}px) scale(${scale})`;
+          // Use individual transform properties so we don't clobber rotateY flips (which use `transform`).
+          // translate/scale are supported in modern browsers and compose with `transform`.
+          try {
+            el.style.translate = `${tx}px ${ty}px ${depth}px`;
+            el.style.scale = String(scale);
+          } catch (e) {
+            // Fallback: preserve any existing rotateY by appending translate/scale (best-effort).
+            const existing = el.style.transform || "";
+            const cleaned = existing.replace(/translate3d\\([^)]*\\)\\s*/g, "").replace(/scale\\([^)]*\\)\\s*/g, "").trim();
+            el.style.transform = `${cleaned ? cleaned + " " : ""}translate3d(${tx}px, ${ty}px, ${depth}px) scale(${scale})`.trim();
+          }
         }
         el.style.zIndex = String(Math.round(10 + z * 90));
         el.style.opacity = String(0.72 + z * 0.28);
@@ -133,6 +143,47 @@
     `;
   }
 
+  function animateRotateY(el, { fromDeg = 0, toDeg = 180, durationMs = 400, onMid } = {}) {
+    if (!el) return () => {};
+    el.style.transformStyle = "preserve-3d";
+    let raf = 0;
+    let stopped = false;
+    let midCalled = false;
+    const start = performance.now();
+
+    const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+    const tick = () => {
+      if (stopped) return;
+      const t = Math.min(1, Math.max(0, (performance.now() - start) / Math.max(1, durationMs)));
+      const e = easeInOut(t);
+      const deg = fromDeg + (toDeg - fromDeg) * e;
+      el.style.rotate = `0 1 0 ${deg}deg`;
+      if (!midCalled && t >= 0.5) {
+        midCalled = true;
+        try {
+          onMid?.();
+        } catch (e2) {
+          // ignore
+        }
+      }
+      if (t >= 1) {
+        el.style.rotate = `0 1 0 ${toDeg}deg`;
+        raf = 0;
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      stopped = true;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    };
+  }
+
   function flipRevealRole(el, { roleId, isWerewolf, getRoleDisplayName, escapeHtml }) {
     if (!el) return;
     const rid = String(roleId || "");
@@ -144,6 +195,8 @@
     const applyReveal = () => {
       el.classList.add("nightChoiceCard--revealed");
       el.classList.toggle("nightChoiceCard--werewolf", !!isWerewolf);
+      // Once revealed, remove the blocked (🚫) overlay so the role name stays readable.
+      el.classList.remove("nightChoice--blocked");
       el.innerHTML = buildRoleNameHtml({ roleId: rid, getRoleDisplayName, escapeHtml, isMe: el.dataset.isMe === "1" });
     };
 
@@ -157,7 +210,8 @@
         .to(el, { rotateY: 180, duration: 0.22, ease: "power2.out" }, 0.18);
       return;
     }
-    applyReveal();
+    // No-GSAP path: animate rotateY via the individual `rotate` property so it composes with orbit translate/scale.
+    animateRotateY(el, { fromDeg: 0, toDeg: 180, durationMs: 400, onMid: applyReveal });
   }
 
   function flipRevealProfile(el, { player, getRoleDisplayName, escapeHtml }) {
@@ -168,6 +222,7 @@
     const applyReveal = () => {
       el.classList.add("nightChoiceCard--revealed");
       el.classList.remove("nightChoiceCard--werewolf");
+      el.classList.remove("nightChoice--blocked");
       el.innerHTML = buildProfileHtml({ player, escapeHtml, getRoleDisplayName, isMe: el.dataset.isMe === "1" });
     };
 
@@ -181,7 +236,7 @@
         .to(el, { rotateY: 180, duration: 0.22, ease: "power2.out" }, 0.18);
       return;
     }
-    applyReveal();
+    animateRotateY(el, { fromDeg: 0, toDeg: 180, durationMs: 400, onMid: applyReveal });
   }
 
   function flipRevealBack(el, { label = "중앙 카드", escapeHtml } = {}) {
@@ -192,6 +247,7 @@
     const applyReveal = () => {
       el.classList.add("nightChoiceCard--revealed");
       el.classList.remove("nightChoiceCard--werewolf");
+      el.classList.remove("nightChoice--blocked");
       const t = escapeHtml ? escapeHtml(String(label || "")) : String(label || "");
       el.innerHTML = `
         ${el.dataset.isMe === "1" ? '<div class="meTab meTab--night">본인</div>' : ''}
@@ -212,7 +268,7 @@
         .to(el, { rotateY: 180, duration: 0.22, ease: "power2.out" }, 0.18);
       return;
     }
-    applyReveal();
+    animateRotateY(el, { fromDeg: 0, toDeg: 180, durationMs: 400, onMid: applyReveal });
   }
 
   function flipRevertRole(el) {
@@ -234,7 +290,8 @@
         .to(el, { rotateY: 0, duration: 0.22, ease: "power2.out" }, 0.18);
       return;
     }
-    restore();
+    // No-GSAP path: rotate back to 0 and restore content mid-way.
+    animateRotateY(el, { fromDeg: 180, toDeg: 0, durationMs: 400, onMid: restore });
   }
 
   function swapEls(a, b, { duration = 0.32, flip = false, liftZ = true, onComplete } = {}) {

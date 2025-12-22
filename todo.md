@@ -351,7 +351,7 @@
 - 제출 payload: `{ seats: [aSeat, bSeat] }`
 - 결과 연출: `night_result.roleId === "troublemaker"`에서 `swapEls(aEl, bEl)`만 수행(역할 공개 없음)
 
-### `drunk` (취객)
+### `drunk` (주정뱅이)
 - UI 모듈 조합: `CenterCardRow(1장 선택)` + `PlayerOrbitRail(표시만, 선택 불가)` + `BottomActionBar(확인)`
   - 오빗의 플레이어 카드에 `NightBoardUI.setInteractive(false)` + `NightBoardUI.setBlockedBadge(true)`로 “선택 불가” 표시
 - 제출 payload: `{ centerIndex }`

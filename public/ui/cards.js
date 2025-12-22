@@ -192,11 +192,24 @@
       gsap.fromTo(node, { rotateY: 0 }, { rotateY: 180, duration, ease: "power2.inOut" });
       return;
     }
-    node.animate([{ transform: "rotateY(0deg)" }, { transform: "rotateY(180deg)" }], {
-      duration: Math.round(duration * 1000),
-      easing: "ease-in-out",
-      fill: "both",
-    });
+    // No-GSAP path: use individual `rotate` property so we don't clobber existing transforms (orbit/tilt).
+    const ms = Math.max(1, Math.round(Number(duration || 0.5) * 1000));
+    const start = performance.now();
+    let raf = 0;
+    const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    const tick = () => {
+      const t = Math.min(1, Math.max(0, (performance.now() - start) / ms));
+      const e = easeInOut(t);
+      const deg = 180 * e;
+      node.style.rotate = `0 1 0 ${deg}deg`;
+      if (t >= 1) {
+        node.style.rotate = "0 1 0 180deg";
+        raf = 0;
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
   }
 
   function attachSwipeMotion(deckEl, { cardSelector = ".info-card", contentSelector = ".info-card__content" } = {}) {

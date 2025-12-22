@@ -55,6 +55,7 @@ const scenarioBtn = qs("#scenarioBtn");
 const startBtn = qs("#startBtn");
 const voteBtn = qs("#voteBtn");
 const leaveBtn = qs("#leaveBtn");
+const waitForActionsBtn = qs("#waitForActionsBtn");
 const connDot = qs("#connDot");
 const phaseLabel = qs("#phaseLabel");
 const scenarioLabel = qs("#scenarioLabel");
@@ -281,7 +282,7 @@ const ROLE_DEFINITIONS = {
   seer: { icon: "🔮", name: "예언자", desc: "다른 사람의 카드 1장 또는 중앙 카드 2장을 확인합니다." },
   robber: { icon: "💰", name: "강도", desc: "다른 사람의 카드를 자신과 교환하고, 가져온 카드를 확인합니다." },
   troublemaker: { icon: "🥳", name: "문제아", desc: "다른 두 사람의 카드를 서로 바꿉니다 (자신은 확인 불가)." },
-  drunk: { icon: "🍺", name: "취객", desc: "중앙 카드 1장과 자신의 카드를 바꿉니다 (바꾼 카드는 확인 불가)." },
+  drunk: { icon: "🍺", name: "주정뱅이", desc: "중앙 카드 1장과 자신의 카드를 바꿉니다 (바꾼 카드는 확인 불가)." },
   insomniac: { icon: "🥱", name: "불면증", desc: "밤이 끝날 때 자신의 카드를 다시 확인합니다." },
   villager: { icon: "👶", name: "마을주민", desc: "특별한 능력이 없습니다. 누구보다 열심히 추리하세요." },
   hunter: { icon: "🤠", name: "사냥꾼", desc: "투표로 죽게 되면, 자신이 지목한 대상을 길동무로 데려갑니다." },
@@ -367,6 +368,8 @@ const state = {
   nightPrivate: null,
   nightResult: null,
   nightUi: null,
+  nightSubmittedStepId: null,
+  lastNightAction: null,
   roleReady: false,
   lastNightStepId: 0,
   voteResultPublic: null,
@@ -389,6 +392,7 @@ const state = {
   nightDrunkBoard: null,
   nightWerewolfBoard: null,
   seatMarks: {},
+  voicePlayerCountOverride: {},
   debugRoleBySeat: {},
   debugRoleByCenter: {},
   nightPreview: { active: false },
@@ -451,6 +455,7 @@ function setPhase(phase, endsAtMs) {
   state.tickTimer = setInterval(renderTimer, 200);
   renderTimer();
   syncWakeLock().catch(() => {});
+  syncHostBgmForPhase(phase).catch(() => {});
 }
 
 let wakeLockSentinel = null;
@@ -731,16 +736,27 @@ function render() {
       scenarioBtn.classList.remove("hidden");
       startBtn.classList.remove("hidden");
       startBtn.disabled = false;
+      if (waitForActionsBtn) {
+        waitForActionsBtn.classList.remove("hidden");
+        const sid = state.room?.selectedScenarioId || "";
+        const enabled = !!sid;
+        waitForActionsBtn.disabled = !enabled;
+        waitForActionsBtn.setAttribute("aria-disabled", enabled ? "false" : "true");
+        const on = !!state.room?.settings?.waitForActions;
+        waitForActionsBtn.textContent = `액션 수행 기다림: ${on ? "ON" : "OFF"}`;
+      }
     } else {
       rerollBtn.classList.remove("hidden");
       scenarioBtn.classList.add("hidden");
       startBtn.classList.add("hidden");
+      if (waitForActionsBtn) waitForActionsBtn.classList.add("hidden");
     }
   } else {
     // In game, hide lobby buttons
     rerollBtn.classList.add("hidden");
     scenarioBtn.classList.add("hidden");
     startBtn.classList.add("hidden");
+    if (waitForActionsBtn) waitForActionsBtn.classList.add("hidden");
   }
 
   if (leaveBtn) leaveBtn.classList.remove("hidden");
@@ -913,15 +929,16 @@ function renderInfoDeck() {
   const deckEl = qs("#infoDeck");
   const indicatorEl = qs("#deckIndicators");
   const sid = state.room?.selectedScenarioId;
-  const connectedCount = (state.room?.players || []).filter((p) => p.connected).length || 0;
+  const connectedCount = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator).length || 0;
   const phase = state.room?.phase || "WAIT";
   const nightDeck = Array.isArray(state.room?.nightDeck) ? state.room.nightDeck.map((x) => String(x || "")) : [];
   const nightDeckKey = nightDeck.length ? nightDeck.join(",") : "";
+  const selectedEpisodeId = state.room?.selectedEpisodeId || state.scenarioState?.selectedEpisodeId || "";
   
   // Re-render if scenario OR player count changes (to update role deck variant)
   const hasFull = !!state.scenarioById?.[sid]?.episodes;
   // While we only have list data (no episodes/roleDeck), don't churn the UI on every room update.
-  const cacheKey = hasFull ? `${sid}:${phase}:${connectedCount}:${nightDeckKey}:full` : `${sid}:${phase}:list`;
+  const cacheKey = hasFull ? `${sid}:${selectedEpisodeId}:${phase}:${connectedCount}:${nightDeckKey}:full` : `${sid}:${phase}:list`;
   if (deckEl.dataset.cacheKey === cacheKey && sid) return;
   deckEl.dataset.cacheKey = cacheKey;
 
@@ -985,11 +1002,14 @@ function renderInfoDeck() {
   });
 
   // 2. Dynamic Role Slides
-  // Get active roles for current player count (or default to max if waiting)
-  // If waiting, maybe show max player variant or just first episode's default?
-  // Let's iterate ALL unique roles in the scenario to be safe, or just current variant.
-  // Using current variant is better for context.
-  const selectedEpisodeId = state.room?.selectedEpisodeId || state.scenarioState?.selectedEpisodeId || "";
+  if (phase === "WAIT") {
+    slides.push({
+      icon: "🃏",
+      title: "등장 역할(가이드)",
+      tag: "Rule",
+      text: "로비에서는 이 시나리오에서 <b>등장 가능한 역할(풀/덱)</b>을 모두 보여줍니다. 실제 배정은 게임 시작 시 인원수/룰에 따라 결정됩니다.",
+    });
+  }
   const eps = Array.isArray(scenario.episodes) ? scenario.episodes : [];
   const ep = eps.find((e) => (e?.episodeId || "") === selectedEpisodeId) || eps[0];
   const fallbackCount =
@@ -1000,9 +1020,12 @@ function renderInfoDeck() {
   const useNightDeck = nightDeck.length && phase !== "WAIT";
   if (useNightDeck) {
     for (const r of nightDeck) counts[r] = (counts[r] || 0) + 1;
-  } else if (variant && variant.roleDeck) {
-    const deck = effectiveRoleDeckForPlayerCount(variant, fallbackCount);
-    for (const r of deck) counts[r] = (counts[r] || 0) + 1;
+  } else if (variant && Array.isArray(variant.roleDeck)) {
+    // Lobby (WAIT) behavior: show "all roles that can appear" for this scenario's variant.
+    // In random_pool mode, roleDeck is a pool (not a fixed truncation), so show the entire pool.
+    // In prefix mode, roleDeck is typically ordered; still show full list as "appearing roles".
+    const deck = phase === "WAIT" ? variant.roleDeck : effectiveRoleDeckForPlayerCount(variant, fallbackCount);
+    for (const r of deck) counts[String(r || "")] = (counts[String(r || "")] || 0) + 1;
   }
   const uniqueRoles = Object.keys(counts);
 
@@ -1081,10 +1104,10 @@ function renderInfoDeck() {
   };
 }
 
-function renderNightOverlay() {
-  const phase = state.room?.phase || "WAIT";
-  const step = state.nightStep;
-  if (phase !== "NIGHT" || !step) {
+	function renderNightOverlay() {
+	  const phase = state.room?.phase || "WAIT";
+	  const step = state.nightStep;
+	  if (phase !== "NIGHT" || !step) {
     nightOverlay.classList.add("hidden");
     nightOverlay.style.removeProperty("--panel-color");
     nightOverlay.classList.remove("nightOverlay--actorBg");
@@ -1104,38 +1127,48 @@ function renderNightOverlay() {
     return;
   }
 
-  nightOverlay.classList.remove("hidden");
-  // Default night mode: fullscreen profile card (consistent brightness), unless I'm actively acting.
-  const kind = String(step.kind || "");
-  const activeRole = String(step.roleId || "");
-  const activeRoleName = activeRole ? getRoleDisplayName(activeRole) : "";
-  const activeSeats = Array.isArray(step.activeSeats) ? step.activeSeats.map((n) => Number(n)) : [];
-  const activeClientIds = Array.isArray(step.activeClientIds) ? step.activeClientIds.map((x) => String(x)) : [];
-  const isActor =
-    !state.isSpectator &&
-    ((!!state.mySeat && activeSeats.includes(Number(state.mySeat))) || activeClientIds.includes(String(state.clientId || "")));
-  const useBgRuleCard = !!(isActor && kind === "role");
-  nightOverlay.classList.toggle("nightOverlay--fullscreen", !isActor);
-  nightOverlay.classList.toggle("nightOverlay--profileOnly", !isActor);
-  nightOverlay.classList.toggle("nightOverlay--actorBg", isActor && !useBgRuleCard);
-  nightOverlay.classList.toggle("nightOverlay--bgCard", !!useBgRuleCard);
-  nightOverlay.classList.toggle("nightOverlay--noHeader", !!useBgRuleCard);
-  nightOverlay.classList.toggle("nightOverlay--orbitBoard", false);
+	  nightOverlay.classList.remove("hidden");
+	  // Default night mode: fullscreen profile card (consistent brightness), unless I'm actively acting.
+	  const kind = String(step.kind || "");
+	  const activeRole = String(step.roleId || "");
+	  const activeRoleName = activeRole ? getRoleDisplayName(activeRole) : "";
+	  const sectionKey = String(step.sectionKey || "");
+	  const isDuringStep = kind === "role" && sectionKey.includes("/during/");
+	  const isAfterStep = kind === "role" && sectionKey.includes("/after/");
+	  const activeSeats = Array.isArray(step.activeSeats) ? step.activeSeats.map((n) => Number(n)) : [];
+	  const activeClientIds = Array.isArray(step.activeClientIds) ? step.activeClientIds.map((x) => String(x)) : [];
+	  const isActor =
+	    !state.isSpectator &&
+	    ((!!state.mySeat && activeSeats.includes(Number(state.mySeat))) || activeClientIds.includes(String(state.clientId || "")));
+	  const stepId = Number(step.stepId || 0);
+	  const isPostActionStep =
+	    isAfterStep &&
+	    String(state.lastNightAction?.roleId || "") === String(activeRole || "") &&
+	    Number(state.lastNightAction?.duringStepId || 0) > 0;
+	  const hasSubmittedThisStep =
+	    !state.debugNightPreview &&
+	    (state.nightSubmittedStepId === stepId || (isPostActionStep && state.nightSubmittedStepId === Number(state.lastNightAction?.duringStepId || 0)));
+	  // Show the actor board for the whole "during" step; after submit, keep the board visible but lock interactions.
+	  const isActorUi = isActor && (isDuringStep || isPostActionStep);
+	  const isActorInteractive = isActorUi && !hasSubmittedThisStep;
+	  const useBgRuleCard = !!(isActorUi && kind === "role");
+	  nightOverlay.classList.toggle("nightOverlay--fullscreen", !isActorUi);
+	  nightOverlay.classList.toggle("nightOverlay--profileOnly", !isActorUi);
+	  nightOverlay.classList.toggle("nightOverlay--actorBg", isActorUi && !useBgRuleCard);
+	  nightOverlay.classList.toggle("nightOverlay--bgCard", !!useBgRuleCard);
+	  nightOverlay.classList.toggle("nightOverlay--noHeader", !!useBgRuleCard);
+	  nightOverlay.classList.toggle("nightOverlay--orbitBoard", false);
+	  nightOverlay.classList.toggle("nightOverlay--submitted", hasSubmittedThisStep);
 
-  const stepId = Number(step.stepId || 0);
-  const roleId = activeRole;
+	  const roleId = activeRole;
+	  const reuseKeyStepId = isPostActionStep ? Number(state.lastNightAction?.duringStepId || stepId) : stepId;
 
-  const updateSeerOrbitSelection = () => {
-    const board = state.nightSeerBoard;
-    if (!board || board.stepId !== stepId) return;
-    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
-      board.confirmBtn.disabled = true;
-      board.confirmBtn.setAttribute("aria-disabled", "true");
-      return;
-    }
-    const ui = state.nightUi || {};
-    const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
-    const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
+	  const updateSeerOrbitSelection = () => {
+	    const board = state.nightSeerBoard;
+	    if (!board || board.stepId !== reuseKeyStepId) return;
+	    const ui = state.nightUi || {};
+	    const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
+	    const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
 
     for (const [seat, el] of board.bySeat.entries()) {
       el.classList.toggle("nightChoice--selected", selectedSeats.includes(seat));
@@ -1144,104 +1177,94 @@ function renderNightOverlay() {
 	      el.classList.toggle("nightChoice--selected", selectedCenter.includes(idx));
 	    }
 
-	    const canConfirm = selectedSeats.length === 1 || selectedCenter.length === 2;
-	    board.confirmBtn.disabled = false;
-	    board.confirmBtn.dataset.canConfirm = canConfirm ? "1" : "0";
-	    board.confirmBtn.classList.toggle("btn--softDisabled", !canConfirm);
-	    board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-
-    // Toggle label for preview/revert in debug mode.
-    if (state.debugNightPreview && board.preview?.active) {
-      setButtonLabelWithDict(board.confirmBtn, "원상 복구", { force: true });
-    } else if (state.debugNightPreview) {
-      setButtonLabelWithDict(board.confirmBtn, board.ruleText || board.confirmBtn.textContent, { force: true });
+    if (!isActorInteractive) return;
+    const seat = selectedSeats[0];
+    if (selectedSeats.length === 1 && seat) {
+      const el = board.bySeat.get(Number(seat)) || null;
+      pulseEl(el);
+      pulseBgCard();
+      submitNightAction("seer", { mode: "player", seat });
+      return;
+    }
+    if (selectedCenter.length === 2 && selectedCenter[0] !== selectedCenter[1]) {
+      const a = board.byCenter.get(Number(selectedCenter[0])) || null;
+      const b = board.byCenter.get(Number(selectedCenter[1])) || null;
+      pulseEl(a);
+      pulseEl(b);
+      pulseBgCard();
+      submitNightAction("seer", { mode: "center", indices: selectedCenter });
     }
   };
 
-  const updateRobberOrbitSelection = () => {
-    const board = state.nightRobberBoard;
-    if (!board || board.stepId !== stepId) return;
-    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
-      board.confirmBtn.disabled = true;
-      board.confirmBtn.setAttribute("aria-disabled", "true");
-      return;
+	  const updateRobberOrbitSelection = () => {
+	    const board = state.nightRobberBoard;
+	    if (!board || board.stepId !== reuseKeyStepId) return;
+	    const ui = state.nightUi || {};
+	    const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
+	    for (const [seat, el] of board.bySeat.entries()) {
+	      el.classList.toggle("nightChoice--selected", selectedSeats.includes(seat));
+	    }
+
+    if (!isActorInteractive) return;
+    const seat = selectedSeats[0];
+    if (selectedSeats.length === 1 && seat) {
+      const el = board.bySeat.get(Number(seat)) || null;
+      pulseEl(el);
+      pulseBgCard();
+      submitNightAction("robber", { seat });
     }
-    const ui = state.nightUi || {};
-    const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
+  };
+
+	  const updateTroublemakerOrbitSelection = () => {
+	    const board = state.nightTroublemakerBoard;
+	    if (!board || board.stepId !== reuseKeyStepId) return;
+	    const ui = state.nightUi || {};
+	    const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
+
     for (const [seat, el] of board.bySeat.entries()) {
       el.classList.toggle("nightChoice--selected", selectedSeats.includes(seat));
     }
-    const canConfirm = selectedSeats.length === 1;
-    board.confirmBtn.disabled = !canConfirm;
-    board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-    if (state.debugNightPreview && board.preview?.active) setButtonLabelWithDict(board.confirmBtn, "원상 복구", { force: true });
-    else setButtonLabelWithDict(board.confirmBtn, board.ruleText || board.confirmBtn.textContent, { force: true });
+
+    if (!isActorInteractive) return;
+    if (selectedSeats.length === 2 && selectedSeats[0] !== selectedSeats[1]) {
+      const aEl = board.bySeat.get(Number(selectedSeats[0])) || null;
+      const bEl = board.bySeat.get(Number(selectedSeats[1])) || null;
+      pulseEl(aEl);
+      pulseEl(bEl);
+      pulseBgCard();
+      submitNightAction("troublemaker", { seats: selectedSeats });
+    }
   };
 
-  const updateTroublemakerOrbitSelection = () => {
-    const board = state.nightTroublemakerBoard;
-    if (!board || board.stepId !== stepId) return;
-    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
-      board.confirmBtn.disabled = true;
-      board.confirmBtn.setAttribute("aria-disabled", "true");
-      return;
-    }
-    const ui = state.nightUi || {};
-    const selectedSeats = Array.isArray(ui.selectedSeats) ? ui.selectedSeats.map(Number) : [];
-
-    for (const [seat, el] of board.bySeat.entries()) {
-      el.classList.toggle("nightChoice--selected", selectedSeats.includes(seat));
-    }
-
-    const canConfirm = selectedSeats.length === 2;
-    board.confirmBtn.disabled = !canConfirm;
-    board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-    if (state.debugNightPreview && board.preview?.active) setButtonLabelWithDict(board.confirmBtn, "원상 복구", { force: true });
-    else setButtonLabelWithDict(board.confirmBtn, board.ruleText || board.confirmBtn.textContent, { force: true });
-  };
-
-  const updateDrunkOrbitSelection = () => {
-    const board = state.nightDrunkBoard;
-    if (!board || board.stepId !== stepId) return;
-    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
-      board.confirmBtn.disabled = true;
-      board.confirmBtn.setAttribute("aria-disabled", "true");
-      return;
-    }
-    const ui = state.nightUi || {};
-    const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
+	  const updateDrunkOrbitSelection = () => {
+	    const board = state.nightDrunkBoard;
+	    if (!board || board.stepId !== reuseKeyStepId) return;
+	    const ui = state.nightUi || {};
+	    const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
 
     for (const [idx, el] of board.byCenter.entries()) {
       el.classList.toggle("nightChoice--selected", selectedCenter.includes(idx));
     }
 
-    const canConfirm = selectedCenter.length === 1;
-    board.confirmBtn.disabled = !canConfirm;
-    board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-    if (state.debugNightPreview && board.preview?.active) board.confirmBtn.textContent = "원상 복구";
-    else board.confirmBtn.textContent = board.ruleText || board.confirmBtn.textContent;
+    if (!isActorInteractive) return;
+    const centerIndex = selectedCenter[0];
+    if (selectedCenter.length === 1 && Number.isFinite(centerIndex)) {
+      const el = board.byCenter.get(Number(centerIndex)) || null;
+      pulseEl(el);
+      pulseBgCard();
+      submitNightAction("drunk", { centerIndex });
+    }
   };
 
-  const updateWerewolfOrbitSelection = () => {
-    const board = state.nightWerewolfBoard;
-    if (!board || board.stepId !== stepId) return;
-    if (board.confirmBtn?.getAttribute?.("data-btn-locked-label") === "1" && !state.debugNightPreview) {
-      board.confirmBtn.disabled = true;
-      board.confirmBtn.setAttribute("aria-disabled", "true");
-      return;
-    }
-    const ui = state.nightUi || {};
-    const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
+	  const updateWerewolfOrbitSelection = () => {
+	    const board = state.nightWerewolfBoard;
+	    if (!board || board.stepId !== reuseKeyStepId) return;
+	    const ui = state.nightUi || {};
+	    const selectedCenter = Array.isArray(ui.selectedCenter) ? ui.selectedCenter.map(Number) : [];
 
     for (const [idx, el] of board.byCenter.entries()) {
       el.classList.toggle("nightChoice--selected", selectedCenter.includes(idx));
     }
-
-    const canConfirm = selectedCenter.length === 1;
-    board.confirmBtn.disabled = !canConfirm;
-    board.confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-    if (state.debugNightPreview && board.preview?.active) setButtonLabelWithDict(board.confirmBtn, "원상 복구", { force: true });
-    else setButtonLabelWithDict(board.confirmBtn, board.ruleText || board.confirmBtn.textContent, { force: true });
   };
 
   const stepLabel = `${String(step.stepIndex || 0)}/${String(step.stepCount || 0)}`;
@@ -1259,13 +1282,13 @@ function renderNightOverlay() {
     );
   }
 
-  const canReuseSeerOrbit = !!(useBgRuleCard && roleId === "seer" && state.nightSeerBoard && state.nightSeerBoard.stepId === stepId);
-  const canReuseRobberOrbit = !!(useBgRuleCard && roleId === "robber" && state.nightRobberBoard && state.nightRobberBoard.stepId === stepId);
-  const canReuseTroublemakerOrbit =
-    !!(useBgRuleCard && roleId === "troublemaker" && state.nightTroublemakerBoard && state.nightTroublemakerBoard.stepId === stepId);
-  const canReuseDrunkOrbit = !!(useBgRuleCard && roleId === "drunk" && state.nightDrunkBoard && state.nightDrunkBoard.stepId === stepId);
-  const canReuseWerewolfOrbit =
-    !!(useBgRuleCard && roleId === "werewolf" && state.nightWerewolfBoard && state.nightWerewolfBoard.stepId === stepId);
+	  const canReuseSeerOrbit = !!(useBgRuleCard && roleId === "seer" && state.nightSeerBoard && state.nightSeerBoard.stepId === reuseKeyStepId);
+	  const canReuseRobberOrbit = !!(useBgRuleCard && roleId === "robber" && state.nightRobberBoard && state.nightRobberBoard.stepId === reuseKeyStepId);
+	  const canReuseTroublemakerOrbit =
+	    !!(useBgRuleCard && roleId === "troublemaker" && state.nightTroublemakerBoard && state.nightTroublemakerBoard.stepId === reuseKeyStepId);
+	  const canReuseDrunkOrbit = !!(useBgRuleCard && roleId === "drunk" && state.nightDrunkBoard && state.nightDrunkBoard.stepId === reuseKeyStepId);
+	  const canReuseWerewolfOrbit =
+	    !!(useBgRuleCard && roleId === "werewolf" && state.nightWerewolfBoard && state.nightWerewolfBoard.stepId === reuseKeyStepId);
 
   // Reset containers (avoid full rebuild for seer orbit board; selection updates should be minimal)
   nightActive.innerHTML = "";
@@ -1287,7 +1310,12 @@ function renderNightOverlay() {
   } else {
     nightAction.classList.remove("hidden");
     nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
-    setTextHighlighted(nightHint, `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`);
+    setTextHighlighted(
+      nightHint,
+      hasSubmittedThisStep
+        ? `${activeRoleName || "당신"} 행동을 완료했습니다. 안내가 끝날 때까지 잠시 기다리세요.`
+        : `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`
+    );
     if (canReuseSeerOrbit) updateSeerOrbitSelection();
     if (canReuseRobberOrbit) updateRobberOrbitSelection();
     if (canReuseTroublemakerOrbit) updateTroublemakerOrbitSelection();
@@ -1417,7 +1445,7 @@ function renderNightOverlay() {
   }
 
   // Default (non-actor): keep my profile card fullscreen until day.
-  if (!isActor) {
+  if (!isActorUi) {
     setTextHighlighted(nightHint, `${activeRoleName || "누군가"} 차례입니다. 계속 눈을 감고 기다리세요.`);
     if (myCard) {
       nightActive.appendChild(myCard);
@@ -1429,7 +1457,12 @@ function renderNightOverlay() {
   // Actor device: show interaction UI (and keep brightness the same).
   // Reset logic may have hidden this; actor steps always use the action area (board or rule-only).
   nightAction.classList.remove("hidden");
-  setTextHighlighted(nightHint, `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`);
+  setTextHighlighted(
+    nightHint,
+    hasSubmittedThisStep
+      ? `${activeRoleName || "당신"} 행동을 완료했습니다. 안내가 끝날 때까지 잠시 기다리세요.`
+      : `${activeRoleName || "당신"} 차례입니다. 행동 후에는 다시 휴대폰을 내려놓고 눈을 감아주세요.`
+  );
 
   if (useBgRuleCard) {
     const card = document.createElement("div");
@@ -1508,7 +1541,7 @@ function renderNightOverlay() {
 
     // Center cards selectable (pick 1)
     const byCenter = new Map();
-    let confirmBtn = null;
+	    const messageEl = ensureActionMessageEl(row);
     const initialSelected = Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter.map(Number) : [];
     for (const idx of [0, 1, 2]) {
       const c = document.createElement("button");
@@ -1528,15 +1561,18 @@ function renderNightOverlay() {
         const next = current.includes(idx) ? [] : [idx];
         state.nightUi = { ...(state.nightUi || {}), selectedCenter: next, selectedSeats: [] };
         if (state.nightWerewolfBoard && state.nightWerewolfBoard.stepId === stepId) updateWerewolfOrbitSelection();
-        else {
-          for (const [k, el] of byCenter.entries()) el.classList.toggle("nightChoice--selected", next.includes(k));
-          const canConfirm = next.length === 1;
-          if (confirmBtn) {
-            confirmBtn.disabled = !canConfirm;
-            confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-          }
-        }
-      });
+	        else for (const [k, el] of byCenter.entries()) el.classList.toggle("nightChoice--selected", next.includes(k));
+
+		        // Auto-submit when a center card is selected.
+		        if (next.length === 1) {
+		          const idx2 = next[0];
+		          const el2 = byCenter.get(Number(idx2)) || null;
+		          if (el2) pulseEl(el2);
+		          // Give immediate feedback (the actual role is revealed when night_result arrives).
+		          flipEl(el2);
+		          submitNightAction("werewolf", { centerIndex: idx2 });
+		        }
+		      });
       byCenter.set(idx, c);
       centerEl.appendChild(c);
     }
@@ -1568,31 +1604,11 @@ function renderNightOverlay() {
     });
     assignOrbitBases(orbitCards);
 
-    confirmBtn = submitBtn(ruleText, () => {
-      const board = state.nightWerewolfBoard;
-      if (state.debugNightPreview && board?.preview?.active) {
-        const prev = board.preview;
-        if (prev.type === "flip") (prev.els || []).forEach((x) => flipRevertRole(x));
-        board.preview = { active: false };
-        updateWerewolfOrbitSelection();
-        return;
-      }
-      const idx = (state.nightUi?.selectedCenter || [])[0];
-      if (idx === undefined || idx === null) return;
-      const el = byCenter.get(Number(idx)) || null;
-      if (!el) return;
-      pulseEl(el);
-      pulseBgCard();
-      submitNightAction("werewolf", { centerIndex: idx });
-    });
-    confirmBtn.classList.add("btn--nightConfirm");
-    confirmBtn.disabled = !(initialSelected.length === 1);
-    confirmBtn.setAttribute("aria-disabled", initialSelected.length === 1 ? "false" : "true");
+	    if (messageEl) messageEl.textContent = "센터 카드 1장을 탭하면 즉시 확인합니다.";
 
-    nightAction.appendChild(row);
-    nightAction.appendChild(confirmBtn);
-    state.nightWerewolfBoard = { stepId, byCenter, confirmBtn, preview: { active: false }, ruleText };
-    updateWerewolfOrbitSelection();
+	    nightAction.appendChild(row);
+	    state.nightWerewolfBoard = { stepId, byCenter, messageEl, preview: { active: false }, ruleText };
+	    updateWerewolfOrbitSelection();
     applyNightResultOnce("werewolf", (result) => {
       const r = result || {};
       const idx = Number(r.centerIndex);
@@ -1613,8 +1629,123 @@ function renderNightOverlay() {
     nightPrivate.innerHTML = `<div>${escapeHtml(JSON.stringify(priv))}</div>`;
   }
 
-  const setChoiceState = (next) => {
-    state.nightUi = { ...(state.nightUi || {}), ...next };
+	  const setChoiceState = (next) => {
+	    state.nightUi = { ...(state.nightUi || {}), ...next };
+
+    // No explicit confirm button: once the selection satisfies the role condition, perform the action immediately.
+    const alreadySubmitted = state.nightSubmittedStepId === stepId && !state.debugNightPreview;
+    if (isActorUi && !alreadySubmitted) {
+      const selSeats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
+      const selCenter = Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter.map(Number) : [];
+
+	  if (roleId === "seer") {
+        const seat = selSeats[0];
+        if (selSeats.length === 1 && seat) {
+          submitNightAction("seer", { mode: "player", seat });
+          return;
+        }
+        if (selCenter.length === 2 && selCenter[0] !== selCenter[1]) {
+          // Mirror the old UX: flip the selected center cards immediately.
+          for (const idx of selCenter) {
+            const el = nightAction.querySelector(`.nightChoiceCard[data-center-index="${CSS.escape(String(idx))}"]`);
+            flipEl(el);
+          }
+          submitNightAction("seer", { mode: "center", indices: selCenter });
+          return;
+        }
+      } else if (roleId === "robber") {
+        const seat = selSeats[0];
+        if (selSeats.length === 1 && seat) {
+          submitNightAction("robber", { seat });
+          return;
+        }
+      } else if (roleId === "troublemaker") {
+        if (selSeats.length === 2 && selSeats[0] !== selSeats[1]) {
+          submitNightAction("troublemaker", { seats: selSeats });
+          return;
+        }
+      } else if (roleId === "drunk") {
+        const centerIndex = selCenter[0];
+        if (selCenter.length === 1 && Number.isFinite(centerIndex)) {
+          submitNightAction("drunk", { centerIndex });
+          return;
+        }
+      } else if (roleId === "apprentice_seer") {
+        const centerIndex = selCenter[0];
+        if (selCenter.length === 1 && Number.isFinite(centerIndex)) {
+          submitNightAction("apprentice_seer", { centerIndex });
+          return;
+        }
+      } else if (roleId === "mystic_wolf") {
+        const seat = selSeats[0];
+        if (selSeats.length === 1 && seat) {
+          submitNightAction("mystic_wolf", { seat });
+          return;
+        }
+      } else if (roleId === "revealer") {
+        const seat = selSeats[0];
+        if (selSeats.length === 1 && seat) {
+          submitNightAction("revealer", { seat });
+          return;
+        }
+	      } else if (roleId === "sentinel") {
+	        const seat = selSeats[0];
+	        if (selSeats.length === 1 && seat) {
+	          submitNightAction("sentinel", { seat });
+	          return;
+	        }
+	      } else if (roleId === "pickpocket") {
+	        const seat = selSeats[0];
+	        if (selSeats.length === 1 && seat) {
+	          submitNightAction("pickpocket", { seat });
+	          return;
+	        }
+	      } else if (roleId === "bodyguard") {
+	        const seat = selSeats[0];
+	        if (selSeats.length === 1 && seat) {
+	          submitNightAction("bodyguard", { seat });
+	          return;
+	        }
+	      } else if (roleId === "curator") {
+	        const seat = selSeats[0];
+	        if (selSeats.length === 1 && seat) {
+	          submitNightAction("curator", { seat });
+	          return;
+	        }
+	      } else if (roleId === "alpha_wolf") {
+	        const seat = selSeats[0];
+	        if (selSeats.length === 1 && seat) {
+	          submitNightAction("alpha_wolf", { seat });
+	          return;
+	        }
+	      } else if (roleId === "gremlin") {
+	        if (selSeats.length === 2 && selSeats[0] !== selSeats[1]) {
+	          submitNightAction("gremlin", { seats: selSeats });
+	          return;
+	        }
+	      } else if (roleId === "marksman") {
+	        if (selSeats.length === 2 && selSeats[0] !== selSeats[1]) {
+	          submitNightAction("marksman", { seats: selSeats });
+	          return;
+	        }
+	      } else if (roleId === "village_idiot") {
+	        const dir = String(state.nightUi?.dir || "");
+	        if (dir === "left" || dir === "right") {
+	          submitNightAction("village_idiot", { dir });
+          return;
+        }
+      } else if (roleId === "werewolf") {
+        // Lone wolf optional peek (centerIndex).
+        const centerIndex = selCenter[0];
+        if (selCenter.length === 1 && Number.isFinite(centerIndex)) {
+          const el = nightAction.querySelector(`.nightChoiceCard[data-center-index="${CSS.escape(String(centerIndex))}"]`);
+          flipEl(el);
+          submitNightAction("werewolf", { centerIndex });
+          return;
+        }
+      }
+    }
+
     renderNightOverlay();
   };
 
@@ -1656,10 +1787,10 @@ function renderNightOverlay() {
     bg.animate([{ opacity: 1 }, { opacity: 0.98 }, { opacity: 1 }], { duration: 280, easing: "ease-out" });
   }
 
-  const flipEl = (el) => {
+  function flipEl(el) {
     if (!el) return;
     CardUI?.motion?.flip?.(el, { duration: 0.4 });
-  };
+  }
 
   function ensureDebugRoles() {
     if (!state.debugNightPreview) return;
@@ -1698,41 +1829,47 @@ function renderNightOverlay() {
     `;
   };
 
-  function flipRevealRole(el, roleId) {
-    if (!el) return;
-    ensureDebugRoles();
-    const rid = String(roleId || "");
-    if (!rid) return;
+	  function flipRevealRole(el, roleId) {
+	    if (!el) return;
+	    ensureDebugRoles();
+	    const rid = String(roleId || "");
+	    if (!rid) return;
 
-    if (NightBoardUI?.flipRevealRole) {
-      NightBoardUI.flipRevealRole(el, {
-        roleId: rid,
-        isWerewolf: !!NightBoardUI?.isWolfTeam?.(rid),
-        getRoleDisplayName,
-        escapeHtml,
-      });
-      return;
-    }
-  }
+	    if (NightBoardUI?.flipRevealRole) {
+	      NightBoardUI.flipRevealRole(el, {
+	        roleId: rid,
+	        isWerewolf: !!NightBoardUI?.isWolfTeam?.(rid),
+	        getRoleDisplayName,
+	        escapeHtml,
+	      });
+	      return;
+	    }
+
+	    // Fallback: if NightBoardUI isn't loaded, still show role name on the flipped card.
+	    el.classList.add("nightChoiceCard--revealed");
+	    el.classList.remove("nightChoice--blocked");
+	    el.innerHTML = buildRevealedRoleHtml(rid);
+	  }
 
   function flipRevertRole(el) {
     if (!el) return;
     if (NightBoardUI?.flipRevertRole) NightBoardUI.flipRevertRole(el);
   }
 
-  function applyNightResultOnce(expectedRoleId, applyFn) {
-    const nr = state.nightResult || null;
-    if (!nr || !nr.result) return false;
-    if (Number(nr.stepId || 0) !== Number(stepId || 0)) return false;
-    if (String(nr.roleId || "") !== String(expectedRoleId || "")) return false;
-    let key = "";
-    try {
-      key = `${Number(stepId || 0)}:${String(expectedRoleId || "")}:${JSON.stringify(nr.result)}`;
-    } catch (e) {
-      key = `${Number(stepId || 0)}:${String(expectedRoleId || "")}:*`;
-    }
-    if (state.lastNightResultApplyKey === key) return false;
-    state.lastNightResultApplyKey = key;
+	  function applyNightResultOnce(expectedRoleId, applyFn) {
+	    const nr = state.nightResult || null;
+	    if (!nr || !nr.result) return false;
+	    const resultStepId = isPostActionStep ? Number(state.lastNightAction?.duringStepId || 0) : Number(stepId || 0);
+	    if (Number(nr.stepId || 0) !== Number(resultStepId || 0)) return false;
+	    if (String(nr.roleId || "") !== String(expectedRoleId || "")) return false;
+	    let key = "";
+	    try {
+	      key = `${Number(resultStepId || 0)}:${String(expectedRoleId || "")}:${JSON.stringify(nr.result)}`;
+	    } catch (e) {
+	      key = `${Number(resultStepId || 0)}:${String(expectedRoleId || "")}:*`;
+	    }
+	    if (state.lastNightResultApplyKey === key) return false;
+	    state.lastNightResultApplyKey = key;
     try {
       applyFn(nr.result);
     } catch (e) {
@@ -1768,30 +1905,40 @@ function renderNightOverlay() {
   }
 
   function setBoardMessage(board, msg) {
-    if (!board || !board.confirmBtn) return;
+    if (!board) return;
     const payload =
       msg && typeof msg === "object"
         ? { text: String(msg.text || ""), highlights: Array.isArray(msg.highlights) ? msg.highlights : [] }
         : { text: String(msg || ""), highlights: [] };
     board.lockedLabel = payload.text;
 
-    if (payload.highlights.length) {
-      (window.ButtonUI?.lockHighlightedLabel || window.ButtonUI?.setHighlightedLabel)?.(board.confirmBtn, payload.text, payload.highlights, {
-        lock: true,
-        force: true,
-      });
-    } else {
-      (window.ButtonUI?.lockLabel || window.ButtonUI?.setLabel)?.(board.confirmBtn, payload.text, { lock: true, force: true });
-      if (!window.ButtonUI?.lockLabel && !window.ButtonUI?.setLabel) board.confirmBtn.textContent = payload.text;
+    if (board.messageEl) {
+      board.messageEl.textContent = payload.text;
     }
-    board.confirmBtn.disabled = true;
-    board.confirmBtn.setAttribute("aria-disabled", "true");
+
+    if (board.confirmBtn) {
+      if (payload.highlights.length) {
+        (window.ButtonUI?.lockHighlightedLabel || window.ButtonUI?.setHighlightedLabel)?.(board.confirmBtn, payload.text, payload.highlights, {
+          lock: true,
+          force: true,
+        });
+      } else {
+        (window.ButtonUI?.lockLabel || window.ButtonUI?.setLabel)?.(board.confirmBtn, payload.text, { lock: true, force: true });
+        if (!window.ButtonUI?.lockLabel && !window.ButtonUI?.setLabel) board.confirmBtn.textContent = payload.text;
+      }
+      board.confirmBtn.disabled = true;
+      board.confirmBtn.setAttribute("aria-disabled", "true");
+    }
   }
 
-  function submitNightAction(roleIdForAction, action) {
-    const rid = String(roleIdForAction || "");
-    const a = action || {};
-    if (!rid) return;
+		  function submitNightAction(roleIdForAction, action) {
+	    const rid = String(roleIdForAction || "");
+	    const a = action || {};
+	    if (!rid) return;
+
+	    state.nightSubmittedStepId = stepId;
+	    state.lastNightAction = { roleId: rid, duringStepId: stepId };
+	    renderNightOverlay();
 
     if (!state.debugNightPreview) {
       send({ type: "night_action", data: { stepId, action: a } });
@@ -1937,23 +2084,91 @@ function renderNightOverlay() {
         }
         result = { targetSeat: seat, centerIndex: idx };
       }
-    } else if (rid === "village_idiot") {
-      const dir = String(a.dir || "left") === "right" ? "right" : "left";
-      const playersNow = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
-      const seats = playersNow.map((p) => Number(p.seat || 0)).filter(Boolean).sort((a, b) => a - b);
-      if (seats.length >= 2) {
-        const roles = seats.map((s) => state.debugRoleBySeat?.[s] || "villager");
-        const rotated = dir === "left" ? roles.slice(1).concat(roles.slice(0, 1)) : roles.slice(-1).concat(roles.slice(0, -1));
-        seats.forEach((s, i) => (state.debugRoleBySeat[s] = rotated[i]));
-        result = { dir };
-      }
-    }
+	    } else if (rid === "village_idiot") {
+	      const dir = String(a.dir || "left") === "right" ? "right" : "left";
+	      const playersNow = (state.room?.players || []).filter((p) => p.connected && !p.isSpectator);
+	      const seats = playersNow.map((p) => Number(p.seat || 0)).filter(Boolean).sort((a, b) => a - b);
+	      if (seats.length >= 2) {
+	        const roles = seats.map((s) => state.debugRoleBySeat?.[s] || "villager");
+	        const rotated = dir === "left" ? roles.slice(1).concat(roles.slice(0, 1)) : roles.slice(-1).concat(roles.slice(0, -1));
+	        seats.forEach((s, i) => (state.debugRoleBySeat[s] = rotated[i]));
+	        result = { dir };
+	      }
+	    } else if (rid === "insomniac") {
+	      result = { currentRole: String(state.debugRoleBySeat?.[mySeatNum] || "villager") };
+	    } else if (rid === "witch") {
+	      const stage = String(a.stage || "");
+	      if (stage === "pass") {
+	        const idx = asInt(state.nightUi?.witchPeekCenterIndex, -1);
+	        result = { stage: "pass", centerIndex: idx };
+	      } else if (stage === "swap") {
+	        const seat = asInt(a.seat, 0);
+	        const idx = asInt(state.nightUi?.witchPeekCenterIndex, -1);
+	        if (seat && idx >= 0 && idx <= 2) {
+	          const targetRole = state.debugRoleBySeat?.[seat];
+	          const centerRole = state.debugRoleByCenter?.[idx];
+	          if (targetRole != null && centerRole != null) {
+	            state.debugRoleBySeat[seat] = centerRole;
+	            state.debugRoleByCenter[idx] = targetRole;
+	          }
+	          result = { stage: "swap", centerIndex: idx, targetSeat: seat };
+	        }
+	      }
+	    }
 
-    if (!result) return;
-    state.lastNightResultApplyKey = "";
-    state.nightResult = { stepId, roleId: rid, result };
-    renderNightOverlay();
-  }
+	    if (!result) return;
+	    state.lastNightResultApplyKey = "";
+	    state.nightResult = { stepId, roleId: rid, result };
+	    renderNightOverlay();
+	  }
+
+	  function sendNightActionPartial(roleIdForAction, action) {
+	    const rid = String(roleIdForAction || "");
+	    const a = action || {};
+	    if (!rid) return;
+
+	    if (!state.debugNightPreview) {
+	      send({ type: "night_action", data: { stepId, action: a } });
+	      return;
+	    }
+
+	    // Debug preview: apply results locally without marking the step as submitted.
+	    ensureDebugRoles();
+	    const mySeatNum = Number(state.mySeat || 0);
+	    const asInt = (x, fallback = 0) => {
+	      const n = Number(x);
+	      return Number.isFinite(n) ? n : fallback;
+	    };
+
+	    let result = null;
+	    if (rid === "witch") {
+	      const stage = String(a.stage || "");
+	      if (stage === "peek") {
+	        const idx = asInt(a.centerIndex, -1);
+	        if (idx >= 0 && idx <= 2) result = { stage: "peek", centerIndex: idx, role: String(state.debugRoleByCenter?.[idx] || "villager") };
+	      } else if (stage === "pass") {
+	        result = { stage: "pass", centerIndex: asInt(state.nightUi?.witchPeekCenterIndex, -1) };
+	      } else if (stage === "swap") {
+	        const seat = asInt(a.seat, 0);
+	        const idx = asInt(state.nightUi?.witchPeekCenterIndex, -1);
+	        if (seat && idx >= 0 && idx <= 2) {
+	          const tid = String(seat);
+	          const targetRole = state.debugRoleBySeat?.[seat];
+	          const centerRole = state.debugRoleByCenter?.[idx];
+	          if (targetRole != null && centerRole != null) {
+	            state.debugRoleBySeat[seat] = centerRole;
+	            state.debugRoleByCenter[idx] = targetRole;
+	          }
+	          result = { stage: "swap", centerIndex: idx, targetSeat: seat, mySeat: mySeatNum };
+	        }
+	      }
+	    }
+
+	    if (!result) return;
+	    state.lastNightResultApplyKey = "";
+	    state.nightResult = { stepId, roleId: rid, result };
+	    renderNightOverlay();
+	  }
 
   function swapEls(a, b, opts = {}) {
     if (!a || !b || a === b) return;
@@ -2081,14 +2296,13 @@ function renderNightOverlay() {
         <div class="nightChoiceCard__avatar">🂠</div>
         <div class="nightChoiceCard__name">중앙 카드</div>
       `;
-      applyPlayerPalette(b, me?.color || "#888");
-      if (selectedCenter.includes(idx)) b.classList.add("nightChoice--selected");
-      b.addEventListener("click", () => {
-        if (isMe) return; // Seer: cannot target self.
-        selectBounce(b);
-        pulseBgCard();
-        let next = [...(Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter : selectedCenter)];
-        if (next.includes(idx)) next = next.filter((x) => x !== idx);
+	      applyPlayerPalette(b, me?.color || "#888");
+	      if (selectedCenter.includes(idx)) b.classList.add("nightChoice--selected");
+	      b.addEventListener("click", () => {
+	        selectBounce(b);
+	        pulseBgCard();
+	        let next = [...(Array.isArray(state.nightUi?.selectedCenter) ? state.nightUi.selectedCenter : selectedCenter)];
+	        if (next.includes(idx)) next = next.filter((x) => x !== idx);
         else if (next.length < 2) next.push(idx);
         else next = [next[1], idx];
         state.nightUi = { ...(state.nightUi || {}), selectedCenter: next, selectedSeats: [] };
@@ -2170,40 +2384,13 @@ function renderNightOverlay() {
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
       nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
 
-	      // Confirm button is shared and updates without rerender.
-	      const confirmBtn = submitBtn(seerRuleText, () => {
-	        clearBlockedBadges(row);
-	        const seat = (state.nightUi?.selectedSeats || [])[0];
-	        const indices = state.nightUi?.selectedCenter || [];
-	        const canConfirm = !!seat || (Array.isArray(indices) && indices.length === 2);
-	        if (!canConfirm) {
-	          pulseBgCard();
-	          selectBounce(confirmBtn);
-	          return;
-	        }
-	        if (seat) {
-	          const el = bySeat.get(Number(seat)) || null;
-	          pulseEl(el);
-	          pulseBgCard();
-          submitNightAction("seer", { mode: "player", seat });
-          return;
-        }
-        if (Array.isArray(indices) && indices.length === 2) {
-          const a = byCenter.get(Number(indices[0])) || null;
-          const b = byCenter.get(Number(indices[1])) || null;
-          pulseBgCard();
-          pulseEl(a);
-          pulseEl(b);
-          submitNightAction("seer", { mode: "center", indices });
-        }
-	      });
-	      confirmBtn.classList.add("btn--nightConfirm");
-	      confirmBtn.disabled = false;
+	      const messageEl = ensureActionMessageEl(row);
+	      if (messageEl) messageEl.textContent = "플레이어 1명 또는 중앙 2장을 탭하면 즉시 확인합니다.";
+
 	      nightAction.appendChild(row);
-	      nightAction.appendChild(confirmBtn);
-      state.nightSeerBoard = { stepId, bySeat, byCenter, confirmBtn, preview: { active: false }, ruleText: seerRuleText };
-      ensureDebugRoles();
-      updateSeerOrbitSelection();
+      state.nightSeerBoard = { stepId, bySeat, byCenter, messageEl, preview: { active: false }, ruleText: seerRuleText };
+	      ensureDebugRoles();
+	      updateSeerOrbitSelection();
       applyNightResultOnce("seer", (result) => {
         const r = result || {};
         if (r && typeof r === "object" && r.role && r.seat) {
@@ -2231,67 +2418,8 @@ function renderNightOverlay() {
     }
 
     nightAction.appendChild(row);
-
-	    const confirmBtn = submitBtn(seerRuleText, () => {
-	        clearBlockedBadges(row);
-	        const seat = (state.nightUi?.selectedSeats || [])[0];
-	        const indices = state.nightUi?.selectedCenter || [];
-	        if (state.debugNightPreview && state.nightPreview?.active) {
-	          const prev = state.nightPreview;
-	          if (prev.type === "flip") (prev.els || []).forEach((el) => flipRevertRole(el));
-	          state.nightPreview = { active: false };
-	          confirmBtn.textContent = seerRuleText;
-	          return;
-	        }
-	        const canConfirm = !!seat || (Array.isArray(indices) && indices.length === 2);
-	        if (!canConfirm) {
-	          pulseBgCard();
-	          selectBounce(confirmBtn);
-	          return;
-	        }
-	        if (seat) {
-	          const el = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(seat))}"]`);
-	          pulseEl(el);
-	          pulseBgCard();
-          if (state.debugNightPreview) {
-            ensureDebugRoles();
-            const rid = state.debugRoleBySeat?.[Number(seat)] || "villager";
-            flipRevealRole(el, rid);
-            state.nightPreview = { active: true, type: "flip", els: [el] };
-            confirmBtn.textContent = "원상 복구";
-            return;
-          }
-          submitNightAction("seer", { mode: "player", seat });
-          return;
-        }
-        if (Array.isArray(indices) && indices.length === 2) {
-          const a = nightAction.querySelector(`.nightChoiceCard[data-center-index="${CSS.escape(String(indices[0]))}"]`);
-          const b = nightAction.querySelector(`.nightChoiceCard[data-center-index="${CSS.escape(String(indices[1]))}"]`);
-          pulseBgCard();
-          if (state.debugNightPreview) {
-            ensureDebugRoles();
-            const r1 = state.debugRoleByCenter?.[Number(indices[0])] || "villager";
-            const r2 = state.debugRoleByCenter?.[Number(indices[1])] || "villager";
-            flipRevealRole(a, r1);
-            flipRevealRole(b, r2);
-            state.nightPreview = { active: true, type: "flip", els: [a, b] };
-            confirmBtn.textContent = "원상 복구";
-            return;
-          }
-          for (const idx of indices) {
-            const el = nightAction.querySelector(`.nightChoiceCard[data-center-index="${CSS.escape(String(idx))}"]`);
-            flipEl(el);
-          }
-          submitNightAction("seer", { mode: "center", indices });
-        }
-	      });
-	    confirmBtn.classList.add("btn--nightConfirm");
-	    const canConfirm = !!((state.nightUi?.selectedSeats || []).length === 1 || (state.nightUi?.selectedCenter || []).length === 2);
-	    confirmBtn.disabled = false;
-	    confirmBtn.dataset.canConfirm = canConfirm ? "1" : "0";
-	    confirmBtn.classList.toggle("btn--softDisabled", !canConfirm);
-	    confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
-	    nightAction.appendChild(confirmBtn);
+    const messageEl = ensureActionMessageEl(row);
+    if (messageEl) messageEl.textContent = "플레이어 1명 또는 중앙 2장을 선택하면 즉시 확인합니다.";
   } else if (roleId === "robber") {
     const useOrbitBoard = !!useBgRuleCard;
     if (useOrbitBoard) {
@@ -2362,25 +2490,14 @@ function renderNightOverlay() {
       });
       assignOrbitBases(orbitCards);
 
-      const confirmBtn = submitBtn(ruleText, () => {
-        clearBlockedBadges(row);
-        const seat = (state.nightUi?.selectedSeats || [])[0];
-        if (!seat) return;
-        const target = bySeat.get(Number(seat)) || null;
-        const mine = bySeat.get(Number(state.mySeat || 0)) || null;
-        if (!target || !mine) return;
-        pulseEl(target);
-        pulseBgCard();
-        submitNightAction("robber", { seat });
-      });
-      confirmBtn.classList.add("btn--nightConfirm");
+      const messageEl = ensureActionMessageEl(row);
+      if (messageEl) messageEl.textContent = "대상을 탭하면 즉시 교환합니다.";
 
       nightAction.appendChild(row);
-      nightAction.appendChild(confirmBtn);
       CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
       CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
-      state.nightRobberBoard = { stepId, bySeat, byCenter, confirmBtn, preview: { active: false }, ruleText };
+      state.nightRobberBoard = { stepId, bySeat, byCenter, messageEl, preview: { active: false }, ruleText };
       updateRobberOrbitSelection();
       applyNightResultOnce("robber", (result) => {
         const r = result || {};
@@ -2410,21 +2527,6 @@ function renderNightOverlay() {
     }
 
     nightAction.appendChild(renderPlayerChoices({ selectedSeats: ui.selectedSeats || [], max: 1 }));
-    nightAction.appendChild(
-      submitBtn("교환", () => {
-        const seat = (ui.selectedSeats || [])[0];
-        if (!seat) return;
-        const el = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(seat))}"]`);
-        pulseEl(el);
-        if (state.debugNightPreview) {
-          const myEl = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(state.mySeat || ""))}"]`);
-          swapEls(myEl, el);
-          setChoiceState({ selectedSeats: [], selectedCenter: [] });
-          return;
-        }
-        submitNightAction("robber", { seat });
-      })
-    );
   } else if (roleId === "troublemaker") {
     const useOrbitBoard = !!useBgRuleCard;
     if (useOrbitBoard) {
@@ -2497,26 +2599,14 @@ function renderNightOverlay() {
       });
       assignOrbitBases(orbitCards);
 
-      const confirmBtn = submitBtn(ruleText, () => {
-        clearBlockedBadges(row);
-        const seats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
-        if (seats.length !== 2) return;
-        const aEl = bySeat.get(seats[0]) || null;
-        const bEl = bySeat.get(seats[1]) || null;
-        if (!aEl || !bEl) return;
-        pulseBgCard();
-        pulseEl(aEl);
-        pulseEl(bEl);
-        submitNightAction("troublemaker", { seats });
-      });
-      confirmBtn.classList.add("btn--nightConfirm");
+      const messageEl = ensureActionMessageEl(row);
+      if (messageEl) messageEl.textContent = "플레이어 2명을 선택하면 즉시 교환합니다.";
 
       nightAction.appendChild(row);
-      nightAction.appendChild(confirmBtn);
       CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
       CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
-      state.nightTroublemakerBoard = { stepId, bySeat, confirmBtn, preview: { active: false }, ruleText };
+      state.nightTroublemakerBoard = { stepId, bySeat, messageEl, preview: { active: false }, ruleText };
       updateTroublemakerOrbitSelection();
       applyNightResultOnce("troublemaker", (result) => {
         const r = result || {};
@@ -2537,24 +2627,6 @@ function renderNightOverlay() {
     }
 
     nightAction.appendChild(renderPlayerChoices({ selectedSeats: ui.selectedSeats || [], max: 2 }));
-    nightAction.appendChild(
-      submitBtn("교환", () => {
-        const seats = ui.selectedSeats || [];
-        if (!Array.isArray(seats) || seats.length !== 2) return;
-        for (const seat of seats) {
-          const el = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(seat))}"]`);
-          pulseEl(el);
-        }
-        if (state.debugNightPreview) {
-          const a = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(seats[0]))}"]`);
-          const b = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(seats[1]))}"]`);
-          swapEls(a, b, { flip: true });
-          setChoiceState({ selectedSeats: [], selectedCenter: [] });
-          return;
-        }
-        submitNightAction("troublemaker", { seats });
-      })
-    );
   } else if (roleId === "drunk") {
     const useOrbitBoard = !!useBgRuleCard;
     if (useOrbitBoard) {
@@ -2618,75 +2690,109 @@ function renderNightOverlay() {
       });
       assignOrbitBases(orbitCards);
 
-      const confirmBtn = submitBtn(ruleText, () => {
-        clearBlockedBadges(row);
-        const board = state.nightDrunkBoard;
-        if (state.debugNightPreview && board?.preview?.active) {
-          const prev = board.preview;
-          if (prev.type === "flip") (prev.els || []).forEach((el) => NightBoardUI?.flipRevertRole?.(el));
-          board.preview = { active: false };
-          updateDrunkOrbitSelection();
-          return;
-        }
-        const idx = (state.nightUi?.selectedCenter || [])[0];
-        if (idx === undefined || idx === null) return;
-        const el = byCenter.get(Number(idx)) || null;
-        if (!el) return;
-        pulseBgCard();
-        if (state.debugNightPreview) {
-          // Drunk: swap with center, but you do NOT learn the swapped role.
-          // Preview uses "card back" (center-card style) on both flipped cards.
-          const mySeat = Number(state.mySeat || 0);
-          const myEl = bySeat.get(mySeat) || null;
-          if (!myEl) return;
-          NightBoardUI?.flipRevealBack?.(el, { label: "중앙 카드", escapeHtml });
-          NightBoardUI?.flipRevealBack?.(myEl, { label: "내 카드", escapeHtml });
-          state.nightDrunkBoard.preview = { active: true, type: "flip", els: [el, myEl] };
-          updateDrunkOrbitSelection();
-          return;
-        }
-        submitNightAction("drunk", { centerIndex: idx });
-      });
-      confirmBtn.classList.add("btn--nightConfirm");
+      const messageEl = ensureActionMessageEl(row);
+      if (messageEl) messageEl.textContent = "중앙 카드 1장을 선택하면 즉시 교환합니다. (카드는 확인하지 않습니다)";
 
       nightAction.appendChild(row);
-      nightAction.appendChild(confirmBtn);
       CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
       CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
-      state.nightDrunkBoard = { stepId, byCenter, confirmBtn, preview: { active: false }, ruleText };
+      state.nightDrunkBoard = { stepId, byCenter, messageEl, preview: { active: false }, ruleText };
       updateDrunkOrbitSelection();
       return;
     }
 
     nightAction.appendChild(renderCenterChoices({ selected: ui.selectedCenter || [], max: 1 }));
-    nightAction.appendChild(
-      submitBtn("교환", () => {
-        const centerIndex = (ui.selectedCenter || [])[0];
-        if (centerIndex === undefined || centerIndex === null) return;
-        const el = nightAction.querySelector(`.nightChoiceCard[data-center-index="${CSS.escape(String(centerIndex))}"]`);
-        flipEl(el);
-        if (state.debugNightPreview) {
-          const myEl = nightAction.querySelector(`.nightChoiceCard[data-seat="${CSS.escape(String(state.mySeat || ""))}"]`);
-          swapEls(myEl, el);
-          setChoiceState({ selectedSeats: [], selectedCenter: [] });
-          return;
-        }
-	    submitNightAction("drunk", { centerIndex });
-	  })
-	);
   } else if (roleId === "insomniac") {
+    const useOrbitBoard = !!useBgRuleCard;
     const def = ROLE_DEFINITIONS[activeRole] || null;
-    const ruleText = def?.desc || "내 역할을 확인합니다.";
+    const ruleText = def?.desc || "내 현재 역할을 확인합니다.";
 
+    if (useOrbitBoard) {
+      ensureDebugRoles();
+      nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
+      nightAction.classList.remove("hidden");
+
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
+
+      // Center stack (3 cards) - keep them present but not selectable.
+      for (const idx of [0, 1, 2]) {
+        const c = document.createElement("button");
+        c.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
+        c.setAttribute("data-center-index", String(idx));
+        c.innerHTML = `
+          <div class="nightChoiceCard__seat">C${idx + 1}</div>
+          <div class="nightChoiceCard__avatar">🂠</div>
+          <div class="nightChoiceCard__name">중앙 카드</div>
+        `;
+        applyPlayerPalette(c, me?.color || "#888");
+        (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(c, false);
+        NightBoardUI?.setBlockedBadge?.(c, true);
+        centerEl.appendChild(c);
+      }
+
+      const orbitCards = [];
+      let myOrbitEl = null;
+      const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
+      playersSorted.forEach((p) => {
+        const isMe = p.clientId === state.clientId;
+        const b = document.createElement("button");
+        b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
+        b.setAttribute("data-seat", String(p.seat || ""));
+        if (isMe) b.dataset.isMe = "1";
+        b.innerHTML = `
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+          <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+          <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "👤")}</div>
+          <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
+        `;
+        applyPlayerPalette(b, p.color || "#888");
+        if (isMe) {
+          myOrbitEl = b;
+        } else {
+          (CardUI?.setInteractive || NightBoardUI?.setInteractive)?.(b, false);
+          NightBoardUI?.setBlockedBadge?.(b, true);
+        }
+        orbitEl.appendChild(b);
+        orbitCards.push(b);
+      });
+      assignOrbitBases(orbitCards);
+
+      const messageEl = ensureActionMessageEl(row);
+      if (messageEl) messageEl.textContent = "본인 카드를 탭하면 즉시 확인합니다.";
+
+      if (myOrbitEl) {
+        myOrbitEl.addEventListener("click", () => {
+          if (state.nightSubmittedStepId === stepId) return;
+          selectBounce(myOrbitEl);
+          pulseBgCard();
+          submitNightAction("insomniac", {});
+        });
+      }
+
+      const board = { messageEl };
+      applyNightResultOnce("insomniac", (result) => {
+        const rid = String(result?.currentRole || "");
+        if (!rid || !myOrbitEl) return;
+        flipRevealRole(myOrbitEl, rid);
+        const roleName = getRoleDisplayName(rid);
+        setBoardMessage(board, { text: `현재 당신의 신분은 ${roleName}입니다.`, highlights: [roleName] });
+      });
+
+      nightAction.appendChild(row);
+      if (myOrbitEl) CardUI?.motion?.enter?.(myOrbitEl, "card");
+      CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
+      CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
+      state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
+      state.nightInsomniacBoard = { stepId, myOrbitEl, messageEl, ruleText };
+      return;
+    }
+
+    // Fallback (non-orbit): single-card tap-to-reveal.
+    nightAction.classList.remove("hidden");
     nightAction.classList.add("nightOverlay__action--bottomBar");
-
-    const centerLayer = document.createElement("div");
-    centerLayer.className = "nightCenterLayer";
-
     const card = document.createElement("button");
-    card.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
-    card.setAttribute("data-seat", String(state.mySeat || ""));
+    card.className = "nightChoice nightChoiceCard nightChoiceCard--center";
     card.dataset.isMe = "1";
     card.innerHTML = `
       <div class="meTab meTab--night">본인</div>
@@ -2695,51 +2801,261 @@ function renderNightOverlay() {
       <div class="nightChoiceCard__name">${escapeHtml(me?.name || "")}</div>
     `;
     applyPlayerPalette(card, me?.color || "#888");
+    const messageEl = ensureActionMessageEl(card);
+    if (messageEl) messageEl.textContent = "카드를 탭하면 즉시 확인합니다.";
     card.addEventListener("click", () => {
+      if (state.nightSubmittedStepId === stepId) return;
       selectBounce(card);
       pulseBgCard();
+      flipEl(card);
+      submitNightAction("insomniac", {});
     });
-
-    centerLayer.appendChild(card);
-    nightBody?.appendChild?.(centerLayer);
-    CardUI?.motion?.enter?.(card, "card");
-
-    const confirmBtn = submitBtn(ruleText, () => {
-      if (state.debugNightPreview && state.nightPreview?.active) {
-        const prev = state.nightPreview;
-        if (prev.type === "flip") (prev.els || []).forEach((el) => flipRevertRole(el));
-        state.nightPreview = { active: false };
-        confirmBtn.textContent = ruleText;
-        return;
-      }
-      pulseBgCard();
-
-      const rid = state.myRoleId || (() => {
-        if (state.debugNightPreview) {
-          ensureDebugRoles();
-          return state.debugRoleBySeat?.[Number(state.mySeat || 0)] || "villager";
-        }
-        return "villager";
-      })();
-
-      if (state.debugNightPreview) {
-        flipRevealRole(card, rid);
-        state.nightPreview = { active: true, type: "flip", els: [card] };
-        confirmBtn.textContent = "원상 복구";
-        return;
-      }
-
+    const board = { messageEl };
+    applyNightResultOnce("insomniac", (result) => {
+      const rid = String(result?.currentRole || "");
+      if (!rid) return;
       flipRevealRole(card, rid);
       const roleName = getRoleDisplayName(rid);
-      const msg = `현재 당신의 신분은 ${roleName}로 확인됐습니다.`;
-      (window.ButtonUI?.lockHighlightedLabel || window.ButtonUI?.setHighlightedLabel)?.(confirmBtn, msg, [roleName], { lock: true, force: true });
-      if (!window.ButtonUI?.lockHighlightedLabel && !window.ButtonUI?.setHighlightedLabel) confirmBtn.textContent = msg;
-      confirmBtn.disabled = true;
-      confirmBtn.setAttribute("aria-disabled", "true");
+      setBoardMessage(board, { text: `현재 당신의 신분은 ${roleName}입니다.`, highlights: [roleName] });
     });
-    confirmBtn.classList.add("btn--nightConfirm");
+    nightAction.appendChild(card);
+  } else if (roleId === "witch") {
+    const useOrbitBoard = !!useBgRuleCard;
+    if (useOrbitBoard) {
+      ensureDebugRoles();
+      nightOverlay.classList.toggle("nightOverlay--orbitBoard", true);
+      nightAction.classList.remove("hidden");
 
-    nightAction.appendChild(confirmBtn);
+      const def = ROLE_DEFINITIONS[activeRole] || null;
+      const ruleText = def?.desc || "센터 카드 1장을 보고, 원하면 그 카드를 누군가의 카드와 교환합니다.";
+
+      const peekedCenterIndexRaw = Number(state.nightUi?.witchPeekCenterIndex);
+      const peekedCenterIndex = Number.isFinite(peekedCenterIndexRaw) ? peekedCenterIndexRaw : null;
+      const selectedSeats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
+
+      const { row, orbitArena, centerEl, orbitEl } = createNightBoardScaffold();
+
+      const byCenter = new Map();
+      const bySeat = new Map();
+
+      const board = { messageEl: null };
+      const messageEl = ensureActionMessageEl(row);
+      board.messageEl = messageEl;
+      if (messageEl) {
+        messageEl.textContent =
+          peekedCenterIndex == null
+            ? "먼저 센터 카드 1장을 탭해 확인하세요."
+            : "이제 교환할 플레이어를 선택하거나, '그대로'를 탭해 교환하지 않을 수 있습니다.";
+      }
+
+      const updateWitchSelection = () => {
+        const peekIdxRaw = Number(state.nightUi?.witchPeekCenterIndex);
+        const peekIdx = Number.isFinite(peekIdxRaw) ? peekIdxRaw : null;
+        const selSeats = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
+        for (const [idx, el] of byCenter.entries()) {
+          el.classList.toggle("nightChoice--selected", peekIdx === idx);
+          const disable = peekIdx != null && peekIdx !== idx;
+          el.disabled = !!disable || state.nightSubmittedStepId === stepId;
+          el.setAttribute("aria-disabled", el.disabled ? "true" : "false");
+        }
+        for (const [seat, el] of bySeat.entries()) {
+          el.classList.toggle("nightChoice--selected", selSeats.includes(seat));
+        }
+        if (passCard) {
+          const canPass = peekIdx != null;
+          passCard.disabled = !canPass || state.nightSubmittedStepId === stepId;
+          passCard.setAttribute("aria-disabled", passCard.disabled ? "true" : "false");
+          passCard.classList.toggle("nightChoice--selected", false);
+        }
+      };
+
+      // Center stack (3 cards) - peek exactly one
+      for (const idx of [0, 1, 2]) {
+        const c = document.createElement("button");
+        c.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
+        c.setAttribute("data-center-index", String(idx));
+        c.innerHTML = `
+          <div class="nightChoiceCard__seat">C${idx + 1}</div>
+          <div class="nightChoiceCard__avatar">🂠</div>
+          <div class="nightChoiceCard__name">중앙 카드</div>
+        `;
+        applyPlayerPalette(c, me?.color || "#888");
+        c.addEventListener("click", () => {
+          if (state.nightSubmittedStepId === stepId) return;
+          const currentPeekRaw = Number(state.nightUi?.witchPeekCenterIndex);
+          const currentPeek = Number.isFinite(currentPeekRaw) ? currentPeekRaw : null;
+          if (currentPeek != null && currentPeek !== idx) {
+            setBoardMessage(board, "이미 센터 카드 1장을 확인했습니다. 이제 교환 또는 '그대로'를 선택하세요.");
+            return;
+          }
+          selectBounce(c);
+          pulseBgCard();
+          flipEl(c);
+          setChoiceState({ selectedCenter: [idx], selectedSeats: [], witchPeekCenterIndex: idx });
+          sendNightActionPartial("witch", { stage: "peek", centerIndex: idx });
+          updateWitchSelection();
+        });
+        byCenter.set(idx, c);
+        centerEl.appendChild(c);
+      }
+
+      // "Pass" card: do not swap
+      const passCard = document.createElement("button");
+      passCard.className = "nightChoice nightChoiceCard nightChoiceCard--center nightBoard__centerCard";
+      passCard.innerHTML = `
+        <div class="nightChoiceCard__seat">PASS</div>
+        <div class="nightChoiceCard__avatar">⏭️</div>
+        <div class="nightChoiceCard__name">그대로</div>
+      `;
+      applyPlayerPalette(passCard, me?.color || "#888");
+      passCard.addEventListener("click", () => {
+        if (state.nightSubmittedStepId === stepId) return;
+        const peekIdxRaw = Number(state.nightUi?.witchPeekCenterIndex);
+        const peekIdx = Number.isFinite(peekIdxRaw) ? peekIdxRaw : null;
+        if (peekIdx == null) {
+          setBoardMessage(board, "먼저 센터 카드 1장을 확인하세요.");
+          return;
+        }
+        selectBounce(passCard);
+        pulseBgCard();
+        submitNightAction("witch", { stage: "pass" });
+      });
+      centerEl.appendChild(passCard);
+
+      // Orbiting player cards - pick one to swap with the peeked center card
+      const orbitCards = [];
+      const playersSorted = [...players].sort((a, b) => Number(a.seat) - Number(b.seat));
+      playersSorted.forEach((p) => {
+        const isMe = p.clientId === state.clientId;
+        const b = document.createElement("button");
+        b.className = "nightChoice nightChoiceCard nightBoard__orbitCard";
+        b.setAttribute("data-seat", String(p.seat || ""));
+        if (isMe) b.dataset.isMe = "1";
+        b.innerHTML = `
+          ${isMe ? `<div class="meTab meTab--night">본인</div>` : ""}
+          <div class="nightChoiceCard__seat">${escapeHtml(String(p.seat || ""))}</div>
+          <div class="nightChoiceCard__avatar">${escapeHtml(p?.avatar || "👤")}</div>
+          <div class="nightChoiceCard__name">${escapeHtml(p?.name || "")}</div>
+        `;
+        applyPlayerPalette(b, p.color || "#888");
+        const seat = Number(p.seat || 0);
+        if (selectedSeats.includes(seat)) b.classList.add("nightChoice--selected");
+        b.addEventListener("click", () => {
+          if (state.nightSubmittedStepId === stepId) return;
+          const peekIdxRaw = Number(state.nightUi?.witchPeekCenterIndex);
+          const peekIdx = Number.isFinite(peekIdxRaw) ? peekIdxRaw : null;
+          if (peekIdx == null) {
+            setBoardMessage(board, "먼저 센터 카드 1장을 확인하세요.");
+            return;
+          }
+          selectBounce(b);
+          pulseBgCard();
+          setChoiceState({ selectedSeats: [seat], selectedCenter: [peekIdx] });
+          submitNightAction("witch", { stage: "swap", seat });
+        });
+        orbitEl.appendChild(b);
+        orbitCards.push(b);
+        bySeat.set(seat, b);
+      });
+      assignOrbitBases(orbitCards);
+
+      applyNightResultOnce("witch", (result) => {
+        const stage = String(result?.stage || "");
+        if (stage === "peek") {
+          const idx = Number(result?.centerIndex);
+          const rid = String(result?.role || "");
+          if (Number.isFinite(idx) && rid) {
+            const el = byCenter.get(idx) || null;
+            flipRevealRole(el, rid);
+            setChoiceState({ witchPeekCenterIndex: idx, selectedCenter: [idx], selectedSeats: [] });
+            const roleName = getRoleDisplayName(rid);
+            setBoardMessage(board, { text: `C${idx + 1} 카드 신분은 ${roleName}입니다.`, highlights: [`C${idx + 1}`, roleName] });
+          }
+        } else if (stage === "swap") {
+          const idx = Number(result?.centerIndex);
+          const seat = Number(result?.targetSeat);
+          if (Number.isFinite(idx) && seat) {
+            setBoardMessage(board, { text: `C${idx + 1} 카드와 ${seat}번 카드가 교환되었습니다.`, highlights: [`C${idx + 1}`, `${seat}번`] });
+          }
+        } else if (stage === "pass") {
+          setBoardMessage(board, "카드를 교환하지 않았습니다.");
+        }
+      });
+
+      updateWitchSelection();
+      nightAction.appendChild(row);
+      CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
+      CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
+      state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
+      state.nightWitchBoard = { stepId, byCenter, bySeat, passCard, messageEl, preview: { active: false }, ruleText };
+      return;
+    }
+
+    // Fallback (non-orbit): center peek + player pick.
+    const peekIdxRaw = Number(state.nightUi?.witchPeekCenterIndex);
+    const peekIdx = Number.isFinite(peekIdxRaw) ? peekIdxRaw : null;
+    const selectedSeats2 = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
+    const row = document.createElement("div");
+    row.className = "nightAction__row";
+    const msgEl = ensureActionMessageEl(row);
+    if (msgEl) msgEl.textContent = peekIdx == null ? "센터 카드 1장을 먼저 확인하세요." : "교환할 플레이어를 선택하거나 그대로를 선택하세요.";
+
+    const passBtn = document.createElement("button");
+    passBtn.className = "nightChoice nightChoiceCard";
+    passBtn.innerHTML = `
+      <div class="nightChoiceCard__seat">PASS</div>
+      <div class="nightChoiceCard__avatar">⏭️</div>
+      <div class="nightChoiceCard__name">그대로</div>
+    `;
+    applyPlayerPalette(passBtn, me?.color || "#888");
+    passBtn.disabled = peekIdx == null || state.nightSubmittedStepId === stepId;
+    passBtn.addEventListener("click", () => {
+      if (state.nightSubmittedStepId === stepId) return;
+      const idx = Number(state.nightUi?.witchPeekCenterIndex);
+      if (!Number.isFinite(idx)) return;
+      submitNightAction("witch", { stage: "pass" });
+    });
+
+    const peekRow = renderCenterChoices({ selected: peekIdx != null ? [peekIdx] : [], max: 1 });
+    peekRow.querySelectorAll(".nightChoiceCard[data-center-index]").forEach((btn) => {
+      const idx = Number(btn.getAttribute("data-center-index"));
+      btn.addEventListener("click", () => {
+        if (state.nightSubmittedStepId === stepId) return;
+        const currentPeekRaw2 = Number(state.nightUi?.witchPeekCenterIndex);
+        const currentPeek2 = Number.isFinite(currentPeekRaw2) ? currentPeekRaw2 : null;
+        if (currentPeek2 != null && currentPeek2 !== idx) return;
+        flipEl(btn);
+        setChoiceState({ witchPeekCenterIndex: idx, selectedCenter: [idx], selectedSeats: [] });
+        sendNightActionPartial("witch", { stage: "peek", centerIndex: idx });
+      });
+    });
+
+    const playerRow = renderPlayerChoices({ selectedSeats: selectedSeats2, max: 1 });
+    playerRow.querySelectorAll(".nightChoiceCard[data-seat]").forEach((btn) => {
+      const seat = Number(btn.getAttribute("data-seat"));
+      btn.addEventListener("click", () => {
+        if (state.nightSubmittedStepId === stepId) return;
+        const idx = Number(state.nightUi?.witchPeekCenterIndex);
+        if (!Number.isFinite(idx)) return;
+        submitNightAction("witch", { stage: "swap", seat });
+      });
+    });
+
+    applyNightResultOnce("witch", (result) => {
+      const stage = String(result?.stage || "");
+      if (stage === "peek") {
+        const idx = Number(result?.centerIndex);
+        const rid = String(result?.role || "");
+        if (Number.isFinite(idx) && rid) {
+          setChoiceState({ witchPeekCenterIndex: idx });
+        }
+      }
+    });
+
+    row.appendChild(passBtn);
+    nightAction.appendChild(peekRow);
+    nightAction.appendChild(playerRow);
+    nightAction.appendChild(row);
   } else if (roleId === "apprentice_seer") {
     const useOrbitBoard = !!useBgRuleCard;
     if (useOrbitBoard) {
@@ -2798,18 +3114,10 @@ function renderNightOverlay() {
       });
       assignOrbitBases(orbitCards);
 
-      const confirmBtn = submitBtn(ruleText, () => {
-        clearBlockedBadges(row);
-        const idx = (state.nightUi?.selectedCenter || [])[0];
-        if (idx === undefined || idx === null) return;
-        pulseBgCard();
-        submitNightAction("apprentice_seer", { centerIndex: idx });
-      });
-      confirmBtn.classList.add("btn--nightConfirm");
-      confirmBtn.disabled = !(selectedCenter.length === 1);
-      confirmBtn.setAttribute("aria-disabled", selectedCenter.length === 1 ? "false" : "true");
+      const messageEl = ensureActionMessageEl(row);
+      if (messageEl) messageEl.textContent = "중앙 카드 1장을 탭하면 즉시 확인합니다.";
 
-      const board = { confirmBtn };
+      const board = { messageEl };
       applyNightResultOnce("apprentice_seer", (result) => {
         const r = result || {};
         const idx = Number(r.centerIndex);
@@ -2821,7 +3129,6 @@ function renderNightOverlay() {
       });
 
       nightAction.appendChild(row);
-      nightAction.appendChild(confirmBtn);
       CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
       CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
@@ -2895,20 +3202,10 @@ function renderNightOverlay() {
       });
       assignOrbitBases(orbitCards);
 
-      const confirmBtn = submitBtn(ruleText, () => {
-        clearBlockedBadges(row);
-        const seat = (state.nightUi?.selectedSeats || [])[0];
-        if (!seat) return;
-        const el = bySeat.get(Number(seat)) || null;
-        pulseEl(el);
-        pulseBgCard();
-        submitNightAction("mystic_wolf", { seat });
-      });
-      confirmBtn.classList.add("btn--nightConfirm");
-      confirmBtn.disabled = !(selectedSeats.length === 1);
-      confirmBtn.setAttribute("aria-disabled", selectedSeats.length === 1 ? "false" : "true");
+      const messageEl = ensureActionMessageEl(row);
+      if (messageEl) messageEl.textContent = "대상을 탭하면 즉시 확인합니다.";
 
-      const board = { confirmBtn };
+      const board = { messageEl };
       applyNightResultOnce("mystic_wolf", (result) => {
         const r = result || {};
         const seat = Number(r.seat || 0);
@@ -2920,7 +3217,6 @@ function renderNightOverlay() {
       });
 
       nightAction.appendChild(row);
-      nightAction.appendChild(confirmBtn);
       CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
       CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
@@ -2994,20 +3290,10 @@ function renderNightOverlay() {
       });
       assignOrbitBases(orbitCards);
 
-      const confirmBtn = submitBtn(ruleText, () => {
-        clearBlockedBadges(row);
-        const seat = (state.nightUi?.selectedSeats || [])[0];
-        if (!seat) return;
-        const el = bySeat.get(Number(seat)) || null;
-        pulseEl(el);
-        pulseBgCard();
-        submitNightAction("revealer", { seat });
-      });
-      confirmBtn.classList.add("btn--nightConfirm");
-      confirmBtn.disabled = !(selectedSeats.length === 1);
-      confirmBtn.setAttribute("aria-disabled", selectedSeats.length === 1 ? "false" : "true");
+      const messageEl = ensureActionMessageEl(row);
+      if (messageEl) messageEl.textContent = "대상을 탭하면 즉시 공개합니다.";
 
-      const board = { confirmBtn };
+      const board = { messageEl };
       applyNightResultOnce("revealer", (result) => {
         const r = result || {};
         const seat = Number(r.seat || 0);
@@ -3024,7 +3310,6 @@ function renderNightOverlay() {
       });
 
       nightAction.appendChild(row);
-      nightAction.appendChild(confirmBtn);
       CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
       CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
@@ -3105,17 +3390,21 @@ function renderNightOverlay() {
           b.classList.add("nightChoice--selected");
         }
 
-        b.addEventListener("click", () => {
-          if (!selectable) return;
-          selectBounce(b);
-          pulseBgCard();
-          let next = [...selectedSeats];
-          if (next.includes(seatNum)) next = next.filter((x) => x !== seatNum);
-          else if (max === 1) next = [seatNum];
-          else if (next.length < max) next.push(seatNum);
-          else next = [next[1], seatNum];
-          setChoiceState({ selectedSeats: next, selectedCenter: [] });
-        });
+	        b.addEventListener("click", () => {
+	          if (!selectable) return;
+	          selectBounce(b);
+	          pulseBgCard();
+	          let next = [...selectedSeats];
+	          if (roleId === "marksman" && next.includes(seatNum) && next.length === 1) {
+	            submitNightAction("marksman", { seats: [seatNum] });
+	            return;
+	          }
+	          if (next.includes(seatNum)) next = next.filter((x) => x !== seatNum);
+	          else if (max === 1) next = [seatNum];
+	          else if (next.length < max) next.push(seatNum);
+	          else next = [next[1], seatNum];
+	          setChoiceState({ selectedSeats: next, selectedCenter: [] });
+	        });
 
         orbitEl.appendChild(b);
         orbitCards.push(b);
@@ -3123,42 +3412,10 @@ function renderNightOverlay() {
       });
       assignOrbitBases(orbitCards);
 
-      const canConfirm = roleId === "marksman" ? selectedSeats.length >= 1 && selectedSeats.length <= 2 : selectedSeats.length === max;
-      const confirmBtn = submitBtn(ruleText, () => {
-        clearBlockedBadges(row);
-        const seatsNow = Array.isArray(state.nightUi?.selectedSeats) ? state.nightUi.selectedSeats.map(Number) : [];
-        if (roleId === "gremlin") {
-          if (seatsNow.length !== 2) return;
-          const aEl = bySeat.get(seatsNow[0]) || null;
-          const bEl = bySeat.get(seatsNow[1]) || null;
-          pulseEl(aEl);
-          pulseEl(bEl);
-          pulseBgCard();
-          submitNightAction("gremlin", { seats: seatsNow });
-          return;
-        }
-        if (roleId === "marksman") {
-          if (!seatsNow.length || seatsNow.length > 2) return;
-          pulseBgCard();
-          submitNightAction("marksman", { seats: seatsNow });
-          return;
-        }
-        const seat = seatsNow[0];
-        if (!seat) return;
-        const el = bySeat.get(Number(seat)) || null;
-        pulseEl(el);
-        pulseBgCard();
-        if (roleId === "pickpocket") submitNightAction("pickpocket", { seat });
-        else if (roleId === "sentinel") submitNightAction("sentinel", { seat });
-        else if (roleId === "bodyguard") submitNightAction("bodyguard", { seat });
-        else if (roleId === "curator") submitNightAction("curator", { seat });
-        else if (roleId === "alpha_wolf") submitNightAction("alpha_wolf", { seat });
-      });
-      confirmBtn.classList.add("btn--nightConfirm");
-      confirmBtn.disabled = !canConfirm;
-      confirmBtn.setAttribute("aria-disabled", canConfirm ? "false" : "true");
+      const messageEl = ensureActionMessageEl(row);
+      if (messageEl) messageEl.textContent = max === 2 ? "대상을 선택하면 즉시 수행합니다. (2명 선택 역할은 2명 선택 시 실행)" : "대상을 탭하면 즉시 수행합니다.";
 
-      const board = { confirmBtn };
+      const board = { messageEl };
       applyNightResultOnce("sentinel", (result) => {
         const seat = Number(result?.seat || 0);
         setBoardMessage(board, { text: `${seat}번에게 방패를 주었습니다.`, highlights: [`${seat}번`] });
@@ -3219,7 +3476,6 @@ function renderNightOverlay() {
       });
 
       nightAction.appendChild(row);
-      nightAction.appendChild(confirmBtn);
       CardUI?.motion?.staggerEnter?.(centerEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.04 });
       CardUI?.motion?.staggerEnter?.(orbitEl.querySelectorAll(".nightChoiceCard"), { preset: "stack", stagger: 0.01 });
       state.nightOrbitCleanup = startOrbit(orbitArena, orbitCards, { speed: 0.035 });
@@ -3258,17 +3514,10 @@ function renderNightOverlay() {
     row.appendChild(mk("left", "왼쪽", "⬅️"));
     row.appendChild(mk("right", "오른쪽", "➡️"));
 
-    const confirmBtn = submitBtn(ruleText, () => {
-      const dir = String(state.nightUi?.dir || "");
-      if (dir !== "left" && dir !== "right") return;
-      pulseBgCard();
-      submitNightAction("village_idiot", { dir });
-    });
-    confirmBtn.classList.add("btn--nightConfirm");
-    confirmBtn.disabled = !(selectedDir === "left" || selectedDir === "right");
-    confirmBtn.setAttribute("aria-disabled", confirmBtn.disabled ? "true" : "false");
+    const messageEl = ensureActionMessageEl(row);
+    if (messageEl) messageEl.textContent = "방향을 선택하면 즉시 회전합니다.";
 
-    const board = { confirmBtn };
+    const board = { messageEl };
     applyNightResultOnce("village_idiot", (result) => {
       const dir = String(result?.dir || "");
       const label = dir === "right" ? "오른쪽" : "왼쪽";
@@ -3276,7 +3525,6 @@ function renderNightOverlay() {
     });
 
     nightAction.appendChild(row);
-    nightAction.appendChild(confirmBtn);
     return;
   } else if (roleId === "minion") {
     const def = ROLE_DEFINITIONS[activeRole] || null;
@@ -3301,28 +3549,6 @@ function renderNightOverlay() {
       nightAction.innerHTML = "";
     } else {
       nightAction.appendChild(renderCenterChoices({ selected: ui.selectedCenter || [], max: 1 }));
-      nightAction.appendChild(
-        submitBtn("센터 확인", () => {
-          if (state.debugNightPreview && state.nightPreview?.active) {
-            const prev = state.nightPreview;
-            if (prev.type === "flip") (prev.els || []).forEach((el) => flipRevertRole(el));
-            state.nightPreview = { active: false };
-            return;
-          }
-          const centerIndex = (ui.selectedCenter || [])[0];
-          if (centerIndex === undefined || centerIndex === null) return;
-          const el = nightAction.querySelector(`.nightChoiceCard[data-center-index="${CSS.escape(String(centerIndex))}"]`);
-          if (state.debugNightPreview) {
-            ensureDebugRoles();
-            const rid = state.debugRoleByCenter?.[Number(centerIndex)] || "werewolf";
-            flipRevealRole(el, rid);
-            state.nightPreview = { active: true, type: "flip", els: [el] };
-            return;
-          }
-          flipEl(el);
-          submitNightAction("werewolf", { centerIndex });
-        })
-      );
     }
   } else {
     // Default: NightBoard-based rule-only UI for roles that don't require card interaction (or not implemented yet).
@@ -3365,7 +3591,8 @@ function renderRoleOverlay() {
   roleOverlay.classList.toggle("nightOverlay--fullscreen", true);
   roleOverlay.classList.toggle("nightOverlay--profileOnly", !!state.roleReady);
   roleOverlay.classList.toggle("nightOverlay--bgCard", true);
-  const showRuleCard = !state.isSpectator;
+  // UX: after pressing "eyes closed", hide the role-check UI and show a large profile card instead.
+  const showRuleCard = !state.isSpectator && !state.roleReady;
   roleOverlay.classList.toggle("nightOverlay--noHeader", showRuleCard);
   roleTitle.textContent = "ROLE · 역할 확인";
 
@@ -3382,18 +3609,13 @@ function renderRoleOverlay() {
       (def?.desc || "자신의 역할을 확인하세요.") + " 준비되면 아래 버튼을 누르고, 휴대폰을 테이블에 내려놓은 채 눈을 감아주세요."
     );
 
-    // Keep bottom instruction visible (also in profile-only view).
-    roleAction.classList.remove("hidden");
+    // After confirming "eyes closed", hide the bottom instruction panel so only the big profile card remains.
+    roleAction.classList.toggle("hidden", !!state.roleReady);
     if (roleActionText) {
       roleActionText.textContent = "";
     }
 
-    if (state.roleReady) {
-      eyesClosedBtn.disabled = true;
-      eyesClosedBtn.setAttribute("aria-disabled", "true");
-      eyesClosedBtn.textContent = "눈 감았어요";
-      eyesClosedBtn.classList.remove("btn--attn");
-    } else {
+    if (!state.roleReady) {
       eyesClosedBtn.textContent = "휴대폰 화면을 다른 사람이 보이게\n내려놓고,\n눈을 감아요";
       if (state.debugRolePreview) {
         eyesClosedBtn.disabled = true;
@@ -3404,6 +3626,12 @@ function renderRoleOverlay() {
         eyesClosedBtn.removeAttribute("aria-disabled");
         eyesClosedBtn.classList.remove("btn--attn");
       }
+    } else {
+      // Button is hidden, but keep state consistent.
+      eyesClosedBtn.disabled = true;
+      eyesClosedBtn.setAttribute("aria-disabled", "true");
+      eyesClosedBtn.textContent = "눈 감았어요";
+      eyesClosedBtn.classList.remove("btn--attn");
     }
   }
 
@@ -3437,7 +3665,7 @@ function renderRoleOverlay() {
   const card = CardUI?.createProfileCardLarge
     ? CardUI.createProfileCardLarge({
         player: me,
-        badgeText: "READY?",
+        badgeText: state.roleReady ? "눈 감았어요" : "READY?",
         applyPalette: applyPlayerPalette,
       })
     : document.createElement("div");
@@ -3462,10 +3690,14 @@ async function playNightStepAsHost(step) {
   }
 
   await ensureAudioUnlocked();
-  const url = buildVoiceUrl({ scenarioId, episodeId, playerCount: variantPlayerCount, sectionKey });
-  const ok = await urlExists(url);
-  if (ok) {
-    await state.narration.playList([url]);
+  const resolved = await resolveVoiceUrlWithFallback({
+    scenarioId,
+    episodeId,
+    requestedPlayerCount: variantPlayerCount,
+    sectionKey,
+  });
+  if (resolved.url) {
+    await state.narration.playList([resolved.url]);
   } else {
     const t = await getNarrationTextForSection({ scenarioId, episodeId, variantPlayerCount, sectionKey });
     if (t) {
@@ -3658,6 +3890,42 @@ function handleMsg(msg) {
     showJoin();
     return;
   }
+  if (msg.type === "kicked") {
+    const bySeat = msg.data?.bySeat;
+    const byName = msg.data?.byName;
+    try {
+      window.alert(`추방되었습니다.${bySeat ? `\\n(추방자: ${bySeat}번${byName ? ` ${byName}` : ""})` : ""}`);
+    } catch (e) {
+      // ignore
+    }
+    // Reset local room UI/state back to the first screen.
+    state.room = null;
+    state.seatMarks = {};
+    state.scenarioState = null;
+    state.myRoleId = "";
+    state.mySeat = 0;
+    state.nightStep = null;
+    state.nightPrivate = null;
+    state.nightResult = null;
+    state.nightUi = null;
+    state.roleReady = false;
+    state.lastNarrationKey = "";
+    state.lastNightStepId = null;
+    closeVoteResult();
+    closeLobbyNotice();
+    try {
+      state.narration?.stop?.();
+    } catch (e) {
+      // ignore
+    }
+    try {
+      state.bgm?.stop?.();
+    } catch (e) {
+      // ignore
+    }
+    showJoin();
+    return;
+  }
   if (msg.type === "hello") {
     state.debugEnabled = !!msg.debugEnabled;
     const assigned = String(msg.assignedClientId || "");
@@ -3707,6 +3975,7 @@ function handleMsg(msg) {
   if (msg.type === "host_changed") {
     state.room = state.room || {};
     state.room.hostClientId = msg.data?.hostClientId || null;
+    syncHostBgmForPhase(state.room?.phase || "WAIT").catch(() => {});
     render();
     return;
   }
@@ -3733,13 +4002,28 @@ function handleMsg(msg) {
     state.nightResult = null;
     state.lastNightResultApplyKey = "";
     state.roleReady = false;
+    state.nightSubmittedStepId = null;
+    state.lastNightAction = null;
     render();
     return;
   }
   if (msg.type === "night_step") {
+    const prevStep = state.nightStep || null;
     const nextStep = msg.data || null;
     const nextStepId = nextStep?.stepId ?? null;
     const nextRoleId = nextStep?.roleId ?? null;
+
+    const prevRoleId = prevStep?.roleId ?? null;
+    const prevSectionKey = String(prevStep?.sectionKey || "");
+    const nextSectionKey = String(nextStep?.sectionKey || "");
+    const duringToAfterSameRole =
+      prevStep &&
+      String(prevStep.kind || "") === "role" &&
+      prevSectionKey.includes("/during/") &&
+      String(nextStep?.kind || "") === "role" &&
+      nextSectionKey.includes("/after/") &&
+      String(prevRoleId || "") === String(nextRoleId || "");
+
     state.nightStep = nextStep;
     // Avoid race where night_private arrives before night_step for the same step (we must not wipe it).
     if (
@@ -3749,9 +4033,21 @@ function handleMsg(msg) {
     ) {
       state.nightPrivate = null;
     }
-    state.nightResult = null;
-    state.lastNightResultApplyKey = "";
-    state.nightUi = null;
+
+    // Preserve the actor's view/results when transitioning from /during/ -> /after/ of the same role.
+    // This lets the actor see revealed/swapped results until the close-eyes narration finishes.
+    const keepPostActionView =
+      duringToAfterSameRole &&
+      String(state.lastNightAction?.roleId || "") === String(nextRoleId || "") &&
+      Number(state.lastNightAction?.duringStepId || 0) === Number(prevStep?.stepId || 0) &&
+      Number(state.nightSubmittedStepId || 0) === Number(prevStep?.stepId || 0);
+
+    if (!keepPostActionView) {
+      state.nightResult = null;
+      state.lastNightResultApplyKey = "";
+      state.nightUi = null;
+      state.nightSubmittedStepId = null;
+    }
     render();
     if (isHost()) playNightStepAsHost(state.nightStep).catch(() => {});
     return;
@@ -3984,6 +4280,47 @@ function buildVoiceUrl({ scenarioId, episodeId, playerCount, sectionKey }) {
   return `/assets/voices/${encodeURIComponent(scenarioId)}/${encodeURIComponent(episodeId)}/p${playerCount}/${sectionKey}/voice.wav`;
 }
 
+function _voiceOverrideKey({ scenarioId, episodeId }) {
+  return `${String(scenarioId || "")}:${String(episodeId || "")}`;
+}
+
+async function resolveVoiceUrlWithFallback({ scenarioId, episodeId, requestedPlayerCount, sectionKey }) {
+  const sid = String(scenarioId || "").trim();
+  const eid = String(episodeId || "").trim();
+  const pc = Number.parseInt(String(requestedPlayerCount || ""), 10);
+  const sk = String(sectionKey || "").trim();
+  if (!sid || !eid || !Number.isFinite(pc) || !sk) return { url: "", playerCount: null };
+
+  // Project convention: we generate WAVs only for the "max playerCount variant" and reuse them for smaller games.
+  // So prefer /pMax/ first, then fall back to the requested playerCount if needed.
+  state.voicePlayerCountOverride = state.voicePlayerCountOverride || {};
+  const key = _voiceOverrideKey({ scenarioId: sid, episodeId: eid });
+  const overridden = Number.parseInt(String(state.voicePlayerCountOverride[key] || ""), 10);
+
+  const resolveMaxVariantPc = async () => {
+    const scenario = (await ensureScenarioDetailLoaded(sid)) || state.scenarioById?.[sid] || null;
+    const eps = Array.isArray(scenario?.episodes) ? scenario.episodes : [];
+    const ep = eps.find((e) => String(e?.episodeId || "") === eid) || eps[0] || null;
+    const variants = ep?.variantByPlayerCount || {};
+    const keys = parseNumericVariantKeys(variants);
+    return keys.length ? keys[keys.length - 1].n : null;
+  };
+
+  const maxPc = Number.isFinite(overridden) && overridden > 0 ? overridden : await resolveMaxVariantPc();
+  if (Number.isFinite(maxPc) && maxPc > 0) {
+    const url = buildVoiceUrl({ scenarioId: sid, episodeId: eid, playerCount: maxPc, sectionKey: sk });
+    if (await urlExists(url)) {
+      state.voicePlayerCountOverride[key] = maxPc;
+      return { url, playerCount: maxPc };
+    }
+  }
+
+  const fallback = buildVoiceUrl({ scenarioId: sid, episodeId: eid, playerCount: pc, sectionKey: sk });
+  if (await urlExists(fallback)) return { url: fallback, playerCount: pc };
+
+  return { url: "", playerCount: null };
+}
+
 function buildEpisodeStartPlaylist(scenario, episode, playerCount) {
   const scenarioId = scenario?.scenarioId;
   const episodeId = episode?.episodeId;
@@ -3992,13 +4329,18 @@ function buildEpisodeStartPlaylist(scenario, episode, playerCount) {
   const variantPlayerCount = sel.variantPlayerCount;
   if (!scenarioId || !episodeId || !variant || !variantPlayerCount) return [];
   const narration = variant?.narration || {};
+  const maxVariantPlayerCount = (() => {
+    const keys = parseNumericVariantKeys(episode?.variantByPlayerCount || {});
+    return keys.length ? keys[keys.length - 1].n : null;
+  })();
+  const voicePlayerCount = Number.isFinite(maxVariantPlayerCount) && maxVariantPlayerCount > 0 ? maxVariantPlayerCount : variantPlayerCount;
 
   const urls = [];
   const openingCount = Array.isArray(narration.openingClips)
     ? narration.openingClips.length
     : Math.max(0, Number.parseInt(String(narration.openingClipCount || 0), 10) || 0);
   for (let i = 0; i < openingCount; i++) {
-    urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount: variantPlayerCount, sectionKey: `opening/${pad3(i + 1)}` }));
+    urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount: voicePlayerCount, sectionKey: `opening/${pad3(i + 1)}` }));
   }
 
   const roleDeck = effectiveRoleDeckForPlayerCount(variant, playerCount);
@@ -4015,7 +4357,7 @@ function buildEpisodeStartPlaylist(scenario, episode, playerCount) {
         : Math.max(0, Number.parseInt(String(rc[part] || 0), 10) || 0);
       for (let i = 0; i < partCount; i++) {
         urls.push(
-          buildVoiceUrl({ scenarioId, episodeId, playerCount: variantPlayerCount, sectionKey: `role/${roleId}/${part}/${pad3(i + 1)}` })
+          buildVoiceUrl({ scenarioId, episodeId, playerCount: voicePlayerCount, sectionKey: `role/${roleId}/${part}/${pad3(i + 1)}` })
         );
       }
     }
@@ -4025,7 +4367,7 @@ function buildEpisodeStartPlaylist(scenario, episode, playerCount) {
     ? narration.nightOutroClips.length
     : Math.max(0, Number.parseInt(String(narration.nightOutroClipCount || 0), 10) || 0);
   for (let i = 0; i < outroCount; i++) {
-    urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount: variantPlayerCount, sectionKey: `outro/${pad3(i + 1)}` }));
+    urls.push(buildVoiceUrl({ scenarioId, episodeId, playerCount: voicePlayerCount, sectionKey: `outro/${pad3(i + 1)}` }));
   }
 
   return urls;
@@ -4252,6 +4594,26 @@ async function getNarrationTextForSection({ scenarioId, episodeId, variantPlayer
       const fromTtsParts = pickClipText(partVal, idx);
       if (fromTtsParts) return fromTtsParts;
     }
+
+    // If we generate "after" steps (close-eyes) but the TTS JSON only provides a single string per role,
+    // avoid repeating the same long instruction twice.
+    if (part === "after") {
+      const closeMap = {
+        werewolf: "늑대인간은 이제 눈을 감으세요.",
+        mystic_wolf: "신비한 늑대는 이제 눈을 감으세요.",
+        minion: "하수인은 이제 눈을 감으세요.",
+        mason: "프리메이슨은 이제 눈을 감으세요.",
+        apprentice_seer: "견습 점술사는 이제 눈을 감으세요.",
+        seer: "점술사는 이제 눈을 감으세요.",
+        robber: "강도는 이제 눈을 감으세요.",
+        troublemaker: "말썽꾼은 이제 눈을 감으세요.",
+        drunk: "주정뱅이는 이제 눈을 감으세요.",
+        revealer: "계시자는 이제 눈을 감으세요.",
+        insomniac: "불면증 환자는 이제 눈을 감으세요.",
+      };
+      return closeMap[roleId] || "이제 눈을 감으세요.";
+    }
+
     return pickClipText(roleVal, idx);
   }
 
@@ -4267,6 +4629,7 @@ function createBgmEngine() {
   let src = null;
   let gain = null;
   let current = null;
+  let currentSrc = "";
 
   async function ensureCtx() {
     if (ctx) return;
@@ -4285,6 +4648,37 @@ function createBgmEngine() {
     gain.gain.linearRampToValueAtTime(value, now + ms / 1000);
   }
 
+  function isRunning() {
+    return !!current && !!currentSrc && !audio.paused;
+  }
+
+  async function loadMetadata({ timeoutMs = 5000 } = {}) {
+    return new Promise((resolve, reject) => {
+      let done = false;
+      const cleanup = () => {
+        if (done) return;
+        done = true;
+        audio.removeEventListener("loadedmetadata", onMeta);
+        audio.removeEventListener("error", onErr);
+        clearTimeout(t);
+      };
+      const onMeta = () => {
+        cleanup();
+        resolve(true);
+      };
+      const onErr = () => {
+        cleanup();
+        reject(new Error("bgm_load_failed"));
+      };
+      const t = setTimeout(() => {
+        cleanup();
+        reject(new Error("bgm_load_timeout"));
+      }, timeoutMs);
+      audio.addEventListener("loadedmetadata", onMeta, { once: true });
+      audio.addEventListener("error", onErr, { once: true });
+    });
+  }
+
   async function start(bgmCfg) {
     const tracks = bgmCfg?.tracks || [];
     if (!tracks.length) return;
@@ -4294,15 +4688,39 @@ function createBgmEngine() {
     await ensureCtx();
     if (ctx.state === "suspended") await ctx.resume();
 
-    current = {
+    const next = {
       volume: typeof t.volume === "number" ? t.volume : 0.22,
       fadeInMs: typeof t.fadeInMs === "number" ? t.fadeInMs : 800,
       fadeOutMs: typeof t.fadeOutMs === "number" ? t.fadeOutMs : 1200,
     };
 
-    audio.src = t.src;
+    // If already running on the same track, just ensure target volume.
+    if (isRunning() && currentSrc === String(t.src)) {
+      current = next;
+      fadeTo(current.volume, current.fadeInMs);
+      return;
+    }
+
+    current = next;
+    currentSrc = String(t.src);
+
+    audio.src = currentSrc;
     audio.load();
-    await new Promise((r) => audio.addEventListener("loadedmetadata", r, { once: true }));
+    try {
+      await loadMetadata();
+    } catch (e) {
+      // File missing/blocked: fail silently (no BGM).
+      current = null;
+      currentSrc = "";
+      try {
+        audio.pause();
+        audio.removeAttribute("src");
+        audio.load();
+      } catch (_) {
+        // ignore
+      }
+      return;
+    }
 
     const dur = Number.isFinite(audio.duration) ? audio.duration : 0;
     if (dur > 30) {
@@ -4322,6 +4740,7 @@ function createBgmEngine() {
     await new Promise((r) => setTimeout(r, current.fadeOutMs + 30));
     audio.pause();
     current = null;
+    currentSrc = "";
   }
 
   async function set(on, opts = {}) {
@@ -4336,7 +4755,7 @@ function createBgmEngine() {
     }
   }
 
-  return { ensureCtx, start, stop, set };
+  return { ensureCtx, start, stop, set, isRunning };
 }
 
 function createNarrationEngine() {
@@ -4659,6 +5078,40 @@ async function ensureAudioUnlocked() {
   syncWakeLock().catch(() => {});
 }
 
+const HOST_BGM_DEFAULT = {
+  tracks: [
+    // Put your 1-hour BGM file here: public/assets/bgm.mp3  (served as /assets/bgm.mp3)
+    { src: "/assets/bgm.mp3", volume: 0.18, fadeInMs: 900, fadeOutMs: 4500 },
+  ],
+};
+
+async function startHostBgm() {
+  if (!isHost()) return;
+  await ensureAudioUnlocked();
+  await state.bgm.start(HOST_BGM_DEFAULT);
+}
+
+async function stopHostBgm() {
+  if (!state.bgm?.isRunning?.()) return;
+  await state.bgm.stop();
+}
+
+async function syncHostBgmForPhase(phase) {
+  const p = String(phase || "WAIT").toUpperCase();
+  if (!isHost()) {
+    await stopHostBgm();
+    return;
+  }
+  // Start at game start and keep under host narration (ROLE/NIGHT), then fade out when debate begins.
+  if (p === "ROLE" || p === "NIGHT") {
+    await startHostBgm();
+    return;
+  }
+  if (p === "DEBATE" || p === "VOTE" || p === "RESULT" || p === "REVEAL" || p === "ENDING" || p === "WAIT") {
+    await stopHostBgm();
+  }
+}
+
 async function init() {
   installViewportFix();
   ButtonUI?.installGlobalButtonFeedback?.();
@@ -4732,6 +5185,15 @@ async function init() {
     closeEpisodePicker();
     openModal(scenarioModal);
   });
+
+  if (waitForActionsBtn) {
+    waitForActionsBtn.addEventListener("click", () => {
+      if (!isHost()) return;
+      if ((state.room?.phase || "WAIT") !== "WAIT") return;
+      const current = !!state.room?.settings?.waitForActions;
+      send({ type: "room_settings", data: { waitForActions: !current } });
+    });
+  }
   episodeBackBtn.addEventListener("click", () => closeEpisodePicker());
   scenarioBackdrop.addEventListener("click", () => {
     closeEpisodePicker();
@@ -4748,6 +5210,9 @@ async function init() {
 
   startBtn.addEventListener("click", async () => {
     await ensureAudioUnlocked();
+    // Host-only: start looping BGM immediately on user gesture, keep it through host narration,
+    // and fade out when debate starts (handled by syncHostBgmForPhase()).
+    await startHostBgm();
     send({ type: "start_game", data: {} });
   });
 
@@ -5149,16 +5614,16 @@ function initDebugApi() {
     render();
   };
 
-  const addBot = (countOrOpts = 1) => {
-    ensureJoined();
-    const opts = typeof countOrOpts === "number" ? { count: countOrOpts } : (countOrOpts || {});
-    const count = Math.max(1, Math.min(20, Number(opts.count ?? 1)));
-    return botManager.add(count);
-  };
-  const removeBot = () => {
-    ensureJoined();
-    botManager.removeAll();
-  };
+	  const addBot = (countOrOpts = 1) => {
+	    if (!state.room) return;
+	    const opts = typeof countOrOpts === "number" ? { count: countOrOpts } : (countOrOpts || {});
+	    const count = Math.max(1, Math.min(20, Number(opts.count ?? 1)));
+	    return botManager.add(count);
+	  };
+	  const removeBot = () => {
+	    if (!state.room) return;
+	    botManager.removeAll();
+	  };
   const ensureMySeat = () => {
     ensureJoined();
     const me = (state.room?.players || []).find((p) => p.clientId === state.clientId) || null;

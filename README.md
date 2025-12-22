@@ -66,6 +66,7 @@
 - [x] 시나리오 JSON 파일 (scenarios/ghost_survey_club.json 등)
 - [x] TTS 스크립트 및 오디오 생성 도구 (scripts/ 디렉토리)
 - [x] 음성 파일 경로 규칙 구현 (public/assets/voices/)
+- [ ] (선택) 호스트용 BGM 파일: `public/assets/bgm.mp3` (게임 시작 시 랜덤 오프셋으로 재생)
 
 #### 실행 및 배포
 - [x] 개발 실행 스크립트 (run_dev.ps1)
@@ -440,7 +441,7 @@ python scripts/gpt_sovits_tts.py --tts windows --character characters/_template/
 #### 시나리오 JSON에서 일괄 생성
 ```bash
 # 전체 생성 + (기본) 에피소드 wav 병합까지
-python scripts/generate_scenario_audio.py --scenario scenarios_tts/ultimate.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\\GPT_SoVIT" --character-container-ref-base "/workspace/refs"  --api-base http://localhost:9880 --sovits-http-method post
+python scripts/generate_scenario_audio.py --scenario scenarios_tts/flexible_story.tts.json --tts gpt-sovits --characters-dir characters/Thema_01 --character-local-ref-base "D:\\GPT_SoVIT" --character-container-ref-base "/workspace/refs"  --api-base http://localhost:9880 --sovits-http-method post
 
 # 최대 인원 변형만 생성
 python scripts/generate_scenario_audio.py --scenario scenarios_tts/ghost_survey_club.tts.json --variant-mode max-only --tts gpt-sovits --characters-dir characters/Thema_01

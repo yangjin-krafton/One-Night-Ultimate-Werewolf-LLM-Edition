@@ -109,7 +109,7 @@
       { term: "문제아", color: "#fbbf24" },
       { term: "장난꾸러기", color: "#fbbf24" },
       { term: "drunk", color: "#34d399" },
-      { term: "취객", color: "#34d399" },
+      { term: "주정뱅이", color: "#34d399" },
       { term: "술꾼", color: "#34d399" },
 
       { term: "village_idiot", color: "#fbbf24" },

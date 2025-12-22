@@ -32,6 +32,7 @@ PHASE_ENDING = "ENDING"
 
 NIGHT_HOST_ACK_TIMEOUT_MS = 180_000
 NIGHT_ACTION_WINDOW_MS = 1_000
+NIGHT_ACTION_GRACE_MS = 8_000
 LOBBY_DISCONNECT_EVICT_MS = 30_000
 
 # Debug helpers (dev only): for debug-bot clients we can provide a "correct vote" target.
@@ -108,7 +109,7 @@ def load_scenario_tts(scenario: dict[str, Any] | None, player_count: int | None 
     Load the corresponding *.tts.json for a runtime scenario.
 
     Priority:
-      1) Exact match by (scenarioId, playerCount) if player_count is provided and scenarios_tts exists
+      1) Best-fit match by (scenarioId, playerCount) if player_count is provided and scenarios_tts exists
       2) scenario["ttsSource"] if present and readable
     """
     if not scenario:
@@ -121,6 +122,7 @@ def load_scenario_tts(scenario: dict[str, Any] | None, player_count: int | None 
         except Exception:
             wanted = None
         if wanted is not None:
+            candidates: list[tuple[int, dict[str, Any]]] = []
             for p in sorted(SCENARIOS_TTS_DIR.glob("*.tts.json")):
                 try:
                     raw = json.loads(p.read_text(encoding="utf-8"))
@@ -132,8 +134,17 @@ def load_scenario_tts(scenario: dict[str, Any] | None, player_count: int | None 
                     pc = int(raw.get("playerCount") or 0)
                 except Exception:
                     pc = 0
-                if pc == wanted:
-                    return raw if isinstance(raw, dict) else None
+                if pc <= 0 or not isinstance(raw, dict):
+                    continue
+                candidates.append((pc, raw))
+
+            if candidates:
+                candidates.sort(key=lambda x: x[0])
+                # Prefer smallest pc >= wanted, else fall back to largest pc.
+                for pc, raw in candidates:
+                    if pc >= wanted:
+                        return raw
+                return candidates[-1][1]
 
     src = scenario.get("ttsSource")
     if isinstance(src, str) and src.strip():
@@ -408,6 +419,11 @@ class RoomState:
     night_done_actor_ids: set[str] = field(default_factory=set)
     night_waiting_role_id: str | None = None
     night_ready_ids: set[str] = field(default_factory=set)
+    # Cache actors for each role wake (prevents role-swap roles like robber/drunk from changing who receives /after/).
+    night_role_actor_ids_by_role: dict[str, list[str]] = field(default_factory=dict)
+
+    # Witch (2-stage): remember which center card was peeked so the witch can optionally swap it later.
+    witch_peek_center_index_by_client_id: dict[str, int] = field(default_factory=dict)
 
     # Night-only side effects / items (kept private; not included in snapshots).
     sentinel_shield_seat: int | None = None
@@ -418,6 +434,10 @@ class RoomState:
 
     # If True, when an episode naturally completes and returns to WAIT, auto-advance to next episode (if any).
     advance_episode_on_return: bool = True
+
+    # If True, night role narration can include an extra "after" step for action roles,
+    # so the host can play a "close your eyes" line after the actor confirms their action.
+    wait_for_actions: bool = False
 
     def reseat(self) -> None:
         used_colors = {p.color for p in self.players if p.color}
@@ -463,6 +483,10 @@ class RoomState:
             # Public: role IDs used for this round (no assignments). Useful for in-game role reference UI.
             "nightDeck": list(self.night_deck or []),
             "seatMarks": {str(k): list(v or []) for k, v in (self.seat_marks or {}).items()},
+            "settings": {
+                "waitForActions": bool(self.wait_for_actions),
+                "advanceEpisodeOnReturn": bool(self.advance_episode_on_return),
+            },
         }
 
 
@@ -706,6 +730,8 @@ class GameServer:
         self._room.night_done_actor_ids.clear()
         self._room.night_waiting_role_id = None
         self._room.night_ready_ids.clear()
+        self._room.night_role_actor_ids_by_role.clear()
+        self._room.witch_peek_center_index_by_client_id.clear()
         self._room.sentinel_shield_seat = None
         self._room.bodyguard_protect_seat = None
         self._room.curator_artifact_by_client_id.clear()
@@ -753,6 +779,8 @@ class GameServer:
             "gremlin",
             "marksman",
             "village_idiot",
+            "insomniac",
+            "witch",
         }:
             return True
         if rid == "werewolf":
@@ -791,9 +819,6 @@ class GameServer:
                 except Exception:
                     idx = None
                 payload["centerWerewolfIndex"] = idx
-        elif rid == "insomniac":
-            # Will also be sent as night_result on action-less step start.
-            payload = {"currentRole": self._room.role_by_client_id.get(actor_ids[0], "")}
         elif rid == "curator":
             # Curator receives a random artifact to give away.
             artifacts = ["claw", "mask", "amulet", "ring"]
@@ -813,8 +838,9 @@ class GameServer:
         # Need host ack for this step, and all required actor actions.
         if self._room.night_waiting_host_step_id is not None:
             return
-        if self._room.night_waiting_actor_ids and not self._room.night_waiting_actor_ids.issubset(self._room.night_done_actor_ids):
-            return
+        if self._room.wait_for_actions:
+            if self._room.night_waiting_actor_ids and not self._room.night_waiting_actor_ids.issubset(self._room.night_done_actor_ids):
+                return
         await self._advance_night_locked(reason=reason)
 
     def _build_night_queue_locked(self, *, episode: dict[str, Any], variant: dict[str, Any], player_count: int) -> list[dict[str, Any]]:
@@ -838,9 +864,23 @@ class GameServer:
 
         for role_id in wake_order:
             c = role_counts.get(role_id) or {}
+            before = int(c.get("before") or 0)
             during = int(c.get("during") or 0)
+            after = int(c.get("after") or 0)
+
+            # Ensure action roles have an "after" step (close-eyes line).
+            # - When waitForActions is ON, the server will wait for the actor's action before advancing to /after/.
+            # - When OFF, /after/ plays immediately after /during/ (legacy fast pacing).
+            actor_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == str(role_id)]
+            if self._role_action_required_locked(str(role_id), actor_ids):
+                after = max(after, 1)
+
+            for i in range(1, max(0, before) + 1):
+                queue.append({"kind": "role", "roleId": str(role_id), "sectionKey": f"role/{role_id}/before/{i:03d}"})
             for i in range(1, max(0, during) + 1):
                 queue.append({"kind": "role", "roleId": str(role_id), "sectionKey": f"role/{role_id}/during/{i:03d}"})
+            for i in range(1, max(0, after) + 1):
+                queue.append({"kind": "role", "roleId": str(role_id), "sectionKey": f"role/{role_id}/after/{i:03d}"})
 
         for i in range(1, max(0, outro_count) + 1):
             queue.append({"kind": "outro", "sectionKey": f"outro/{i:03d}"})
@@ -858,17 +898,28 @@ class GameServer:
         item = self._room.night_queue[self._room.night_index]
         kind = str(item.get("kind") or "")
         role_id = str(item.get("roleId") or "")
+        section_key = str(item.get("sectionKey") or "")
 
         active_seats: list[int] = []
         active_client_ids: list[str] = []
         waiting_actor_client_ids: list[str] = []
         requires_action = False
         if kind == "role" and role_id:
-            actor_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == role_id]
+            is_after = "/after/" in section_key.replace("\\", "/")
+            actor_ids = None
+            if self._room.wait_for_actions and is_after:
+                actor_ids = self._room.night_role_actor_ids_by_role.get(role_id)
+            if not actor_ids:
+                actor_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == role_id]
+                if role_id not in self._room.night_role_actor_ids_by_role:
+                    # Cache the first observed actors for this role's wake window (before swaps can occur).
+                    self._room.night_role_actor_ids_by_role[role_id] = list(actor_ids)
             active_client_ids = [str(x) for x in actor_ids]
             seats = [self._seat_by_client_id_locked(cid) for cid in actor_ids]
             active_seats = sorted([int(x) for x in seats if x is not None])
-            requires_action = self._role_action_required_locked(role_id, actor_ids)
+            # Only the "during" clip is an interactive step; "before/after" are narration-only.
+            is_during = "/during/" in section_key.replace("\\", "/")
+            requires_action = is_during and self._role_action_required_locked(role_id, actor_ids)
             waiting_actor_client_ids = sorted([str(x) for x in self._room.night_waiting_actor_ids])
 
         return {
@@ -912,6 +963,7 @@ class GameServer:
         scenario_id = self._room.selected_scenario_id or ""
         kind = str(item.get("kind") or "")
         role_id = str(item.get("roleId") or "")
+        section_key = str(item.get("sectionKey") or "")
 
         active_seats: list[int] = []
         actor_ids: list[str] = []
@@ -919,29 +971,26 @@ class GameServer:
         requires_action = False
         if kind == "role" and role_id:
             # Determine actors based on current roles (roles may have swapped earlier).
-            actor_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == role_id]
+            is_after = "/after/" in section_key.replace("\\", "/")
+            actor_ids = None
+            if self._room.wait_for_actions and is_after:
+                actor_ids = self._room.night_role_actor_ids_by_role.get(role_id)
+            if not actor_ids:
+                actor_ids = [cid for cid, r in self._room.role_by_client_id.items() if r == role_id]
+                if role_id not in self._room.night_role_actor_ids_by_role:
+                    # Cache the first observed actors for this role's wake window (before swaps can occur).
+                    self._room.night_role_actor_ids_by_role[role_id] = list(actor_ids)
             active_client_ids = [str(x) for x in actor_ids]
             seats = [self._seat_by_client_id_locked(cid) for cid in actor_ids]
             active_seats = sorted([int(x) for x in seats if x is not None])
-            requires_action = self._role_action_required_locked(role_id, actor_ids)
+            # Only the "during" clip is an interactive step; "before/after" are narration-only.
+            is_during = "/during/" in section_key.replace("\\", "/")
+            requires_action = is_during and self._role_action_required_locked(role_id, actor_ids)
             if requires_action and actor_ids:
                 # For now, accept only one actor for interactive roles.
                 self._room.night_waiting_actor_ids.add(actor_ids[0])
             # Informational private hints.
             await self._send_night_private_locked(step_id=step_id, role_id=role_id, actor_ids=actor_ids)
-            # Insomniac reveals current card at its wake step.
-            if role_id == "insomniac" and actor_ids:
-                await self._send_to(
-                    actor_ids[0],
-                    {
-                        "type": "night_result",
-                        "data": {
-                            "stepId": step_id,
-                            "roleId": "insomniac",
-                            "result": {"currentRole": self._room.role_by_client_id.get(actor_ids[0], "")},
-                        },
-                    },
-                )
 
         payload = {
             "type": "night_step",
@@ -1013,10 +1062,30 @@ class GameServer:
                 self._room.night_waiting_host_step_id = None
 
             # From this point on, the host narration is done.
-            # Do NOT advance immediately based on actor completion; use a fixed action window
-            # so the night pacing stays consistent and doesn't reveal who acted.
+            #
+            # When waitForActions is ON:
+            #  - Wait indefinitely for the actor to submit their action, then advance to the synthetic /after/ step.
+            #  - Do not auto-skip; the user explicitly wants the game to pause here until input arrives.
+            if self._room.wait_for_actions and self._room.night_waiting_actor_ids:
+                if self._room.night_waiting_actor_ids.issubset(self._room.night_done_actor_ids):
+                    self._room.night_step_ends_at_ms = None
+                    await self._advance_night_locked(reason="ack_actor_done")
+                    return
+
+                # Cancel any pending step timer (host-ack timeout) and wait for actor action.
+                self._room.night_step_ends_at_ms = None
+                try:
+                    if self._night_task is not None:
+                        self._night_task.cancel()
+                except Exception:
+                    pass
+                self._night_task = None
+                return
+
+            # When waitForActions is OFF but the step is interactive:
+            # give a short grace period so the actor UI doesn't flash and disappear (e.g. when TTS is missing).
             if self._room.night_waiting_actor_ids:
-                self._room.night_step_ends_at_ms = _now_ms() + NIGHT_ACTION_WINDOW_MS
+                self._room.night_step_ends_at_ms = _now_ms() + NIGHT_ACTION_GRACE_MS
                 try:
                     if self._night_task is not None:
                         self._night_task.cancel()
@@ -1042,6 +1111,8 @@ class GameServer:
             role_id = (self._room.night_waiting_role_id or "").strip()
             if not role_id:
                 return
+
+            action_completed = True
 
             # Apply action (best-effort; invalid actions are ignored).
             if role_id == "seer":
@@ -1277,9 +1348,78 @@ class GameServer:
                         client_id,
                         {"type": "night_result", "data": {"stepId": step_id, "roleId": "village_idiot", "result": {"dir": dir_}}},
                     )
+            elif role_id == "insomniac":
+                # Tap-to-reveal current role (after any swaps earlier in the night).
+                current = self._room.role_by_client_id.get(client_id, "")
+                await self._send_to(
+                    client_id,
+                    {"type": "night_result", "data": {"stepId": step_id, "roleId": "insomniac", "result": {"currentRole": current}}},
+                )
+            elif role_id == "witch":
+                # Two-stage: peek a center card, then optionally swap it with a player's card (or pass).
+                stage = str(action.get("stage") or "")
+                if stage == "peek":
+                    try:
+                        idx = int(action.get("centerIndex"))
+                    except Exception:
+                        idx = -1
+                    if 0 <= idx <= 2 and len(self._room.center_roles) >= 3:
+                        self._room.witch_peek_center_index_by_client_id[client_id] = idx
+                        await self._send_to(
+                            client_id,
+                            {
+                                "type": "night_result",
+                                "data": {
+                                    "stepId": step_id,
+                                    "roleId": "witch",
+                                    "result": {"stage": "peek", "centerIndex": idx, "role": self._room.center_roles[idx]},
+                                },
+                            },
+                        )
+                    action_completed = False
+                elif stage == "pass":
+                    idx = self._room.witch_peek_center_index_by_client_id.get(client_id, -1)
+                    await self._send_to(
+                        client_id,
+                        {"type": "night_result", "data": {"stepId": step_id, "roleId": "witch", "result": {"stage": "pass", "centerIndex": idx}}},
+                    )
+                    self._room.witch_peek_center_index_by_client_id.pop(client_id, None)
+                elif stage == "swap":
+                    idx = self._room.witch_peek_center_index_by_client_id.get(client_id, -1)
+                    try:
+                        seat = int(action.get("seat") or 0)
+                    except Exception:
+                        seat = 0
+                    tid = self._client_id_by_seat_locked(seat)
+                    if tid and tid != client_id and 0 <= idx <= 2 and len(self._room.center_roles) >= 3:
+                        target_role = self._room.role_by_client_id.get(tid)
+                        if target_role is not None:
+                            self._room.role_by_client_id[tid], self._room.center_roles[idx] = self._room.center_roles[idx], target_role
+                            await self._send_to(
+                                client_id,
+                                {
+                                    "type": "night_result",
+                                    "data": {
+                                        "stepId": step_id,
+                                        "roleId": "witch",
+                                        "result": {"stage": "swap", "centerIndex": idx, "targetSeat": seat},
+                                    },
+                                },
+                            )
+                            self._room.witch_peek_center_index_by_client_id.pop(client_id, None)
+                        else:
+                            action_completed = False
+                    else:
+                        action_completed = False
+                else:
+                    action_completed = False
 
-            self._room.night_done_actor_ids.add(client_id)
-            # Intentionally do not advance the night here; host narration pacing drives progression.
+            if action_completed:
+                self._room.night_done_actor_ids.add(client_id)
+                # Advance once the host has finished narration and the actor has completed their action.
+                # - When waitForActions is ON: this moves to /after/ immediately after the actor acts.
+                # - When OFF: this ends the (short) grace period early and continues the night.
+                await self._maybe_advance_night_locked(reason="actor_done")
 
     def scenario_list(self) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
@@ -1573,6 +1713,21 @@ class GameServer:
             if not target:
                 return
 
+            # Notify the target (best-effort) so their client can return to the join screen.
+            try:
+                if target.ws is not None:
+                    await target.ws.send_json(
+                        {
+                            "type": "kicked",
+                            "data": {
+                                "bySeat": requester.seat,
+                                "byName": requester.name,
+                            },
+                        }
+                    )
+            except Exception:
+                pass
+
             await self._remove_player_locked(target_client_id)
 
             scenario = self._scenarios.get(self._room.selected_scenario_id or "")
@@ -1620,6 +1775,19 @@ class GameServer:
                     },
                 }
             )
+            await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
+
+    async def handle_room_settings(self, client_id: str, settings: dict[str, Any]) -> None:
+        async with self._lock:
+            if client_id != self._room.host_client_id:
+                return
+            if self._room.phase != PHASE_WAIT:
+                return
+            s = settings if isinstance(settings, dict) else {}
+            if "waitForActions" in s:
+                self._room.wait_for_actions = bool(s.get("waitForActions"))
+            if "advanceEpisodeOnReturn" in s:
+                self._room.advance_episode_on_return = bool(s.get("advanceEpisodeOnReturn"))
             await self.broadcast({"type": "room_snapshot", "data": self._room.snapshot()})
 
     async def handle_episode_select(self, client_id: str, episode_id: str) -> None:
@@ -2044,6 +2212,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 await game.handle_scenario_select(client_id, str(data.get("scenarioId") or ""))
             elif t == "episode_select":
                 await game.handle_episode_select(client_id, str(data.get("episodeId") or ""))
+            elif t == "room_settings":
+                await game.handle_room_settings(client_id, dict(data or {}))
             elif t == "start_game":
                 await game.handle_start_game(client_id)
             elif t == "reroll":
