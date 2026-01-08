@@ -5,6 +5,21 @@ const CardUI = window.CardUI || null;
 const ButtonUI = window.ButtonUI || null;
 const NightBoardUI = window.NightBoardUI || null;
 
+const APP_BASE_PATH = (() => {
+  try {
+    return new URL(".", window.location.href).pathname;
+  } catch (e) {
+    return "/";
+  }
+})();
+
+function toAppPath(path) {
+  const raw = String(path || "");
+  if (/^https?:\/\//i.test(raw) || /^wss?:\/\//i.test(raw)) return raw;
+  const rel = raw.startsWith("/") ? raw.slice(1) : raw;
+  return `${APP_BASE_PATH}${rel}`;
+}
+
 let viewportFixInstalled = false;
 let viewportRaf = 0;
 
@@ -3711,7 +3726,7 @@ async function playNightStepAsHost(step) {
 }
 
 async function fetchScenarios() {
-  const res = await fetch("/api/scenarios");
+  const res = await fetch(toAppPath("api/scenarios"));
   const list = await res.json();
   state.scenarios = list;
   state.scenarioById = {};
@@ -3727,7 +3742,7 @@ async function ensureScenarioDetailLoaded(scenarioId) {
 
   scenarioDetailInflight.add(sid);
   try {
-    const res = await fetch(`/api/scenarios/${encodeURIComponent(sid)}`);
+    const res = await fetch(toAppPath(`api/scenarios/${encodeURIComponent(sid)}`));
     if (!res.ok) return null;
     const full = await res.json();
     state.scenarioById[sid] = full;
@@ -3752,7 +3767,9 @@ async function ensureScenarioTtsLoaded(scenarioId, playerCount) {
 
   scenarioTtsInflight.add(key);
   try {
-    const res = await fetch(`/api/scenarios/${encodeURIComponent(sid)}/tts?playerCount=${encodeURIComponent(String(pc))}`);
+    const res = await fetch(
+      toAppPath(`api/scenarios/${encodeURIComponent(sid)}/tts?playerCount=${encodeURIComponent(String(pc))}`)
+    );
     if (!res.ok) return null;
     const tts = await res.json();
     state.scenarioTtsByKey[key] = tts;
@@ -3850,7 +3867,7 @@ function renderVoteGrid() {
 
 function connect() {
   const scheme = window.location.protocol === "https:" ? "wss" : "ws";
-  const wsUrl = `${scheme}://${window.location.host}/ws`;
+  const wsUrl = `${scheme}://${window.location.host}${toAppPath("ws")}`;
   const ws = new WebSocket(wsUrl);
   state.ws = ws;
 
@@ -4277,7 +4294,9 @@ function effectiveRoleDeckForPlayerCount(variant, playerCount) {
 }
 
 function buildVoiceUrl({ scenarioId, episodeId, playerCount, sectionKey }) {
-  return `/assets/voices/${encodeURIComponent(scenarioId)}/${encodeURIComponent(episodeId)}/p${playerCount}/${sectionKey}/voice.wav`;
+  return toAppPath(
+    `assets/voices/${encodeURIComponent(scenarioId)}/${encodeURIComponent(episodeId)}/p${playerCount}/${sectionKey}/voice.wav`
+  );
 }
 
 function _voiceOverrideKey({ scenarioId, episodeId }) {
@@ -4385,7 +4404,7 @@ async function urlExists(urlPath) {
 async function playEpisodeStartNarration(scenarioId) {
   let scenario;
   try {
-    const res = await fetch(`/api/scenarios/${encodeURIComponent(scenarioId)}`);
+    const res = await fetch(toAppPath(`api/scenarios/${encodeURIComponent(scenarioId)}`));
     scenario = await res.json();
   } catch (e) {
     return;
@@ -5081,7 +5100,7 @@ async function ensureAudioUnlocked() {
 const HOST_BGM_DEFAULT = {
   tracks: [
     // Put your 1-hour BGM file here: public/assets/bgm.mp3  (served as /assets/bgm.mp3)
-    { src: "/assets/bgm.mp3", volume: 0.18, fadeInMs: 900, fadeOutMs: 4500 },
+    { src: toAppPath("assets/bgm.mp3"), volume: 0.18, fadeInMs: 900, fadeOutMs: 4500 },
   ],
 };
 
@@ -5298,7 +5317,7 @@ function initDebugApi() {
   const makeBotName = (idx) => `Bot-${String(idx).padStart(2, "0")}-${Math.random().toString(16).slice(2, 5)}`;
   const makeWsUrl = () => {
     const scheme = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${scheme}://${window.location.host}/ws`;
+    return `${scheme}://${window.location.host}${toAppPath("ws")}`;
   };
 
   const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];

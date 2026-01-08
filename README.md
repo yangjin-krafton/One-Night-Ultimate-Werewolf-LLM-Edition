@@ -97,7 +97,10 @@ venv\Scripts\activate  # Windows
 python -m uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-서버가 시작되면 `http://localhost:8000`에서 클라이언트에 접속할 수 있습니다. 스마트폰에서는 서버 PC의 IP 주소 (예: `http://192.168.1.100:8000`)로 접속하세요.
+서버가 시작되면 기본적으로 `http://localhost:8001`에서 클라이언트에 접속할 수 있습니다. 스마트폰에서는 서버 PC의 IP 주소 (예: `http://192.168.1.100:8001`)로 접속하세요.
+
+허브(Weeks Game Hub)와 함께 사용할 때는 브라우저에서 **포트 3000만** 접속합니다:
+- `http://localhost:3000/games/one-night-werewolf/`
 
 ### UI Debug (Chrome Console)
 빠르게 밤 UI/UX를 확인하려면 개발 모드에서 `gameDebug` 콘솔 커맨드를 사용할 수 있습니다.
