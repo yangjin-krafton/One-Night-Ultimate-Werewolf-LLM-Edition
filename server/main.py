@@ -2166,6 +2166,13 @@ app = FastAPI()
 @app.on_event("startup")
 async def _startup() -> None:
     game.start_background_tasks()
+    # Hub에 동적 등록 (Hub가 실행 중인 경우에만)
+    try:
+        from .hub_client import register_to_hub
+        port = int(os.environ.get("PORT", "8001"))
+        register_to_hub(port=port)
+    except Exception as e:
+        print(f"[hub] registration skipped: {e}")
 
 
 @app.get("/api/scenarios")
