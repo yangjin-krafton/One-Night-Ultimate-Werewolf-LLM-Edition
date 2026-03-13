@@ -177,19 +177,59 @@ function buildPlaylist(manifest, scenarioId, episodeId, playerCount, wakeOrder) 
   return playlist;
 }
 
-// Audio playback
+// ===== AUDIO PLAYBACK (mobile-safe, event-driven) =====
 const audioEl = document.getElementById('audioPlayer');
-let stopRequested = false;
+let audioCtx = null;
+
+// Unlock audio on iOS/Android — must be called directly from user tap
+function unlockAudio() {
+  // WebAudio unlock
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  // HTMLAudio unlock: play a tiny silent buffer
+  audioEl.muted = true;
+  audioEl.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBqSAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBqSAAAAAAAAAAAAAAAAAAAA';
+  const p = audioEl.play();
+  if (p) p.then(() => { audioEl.pause(); audioEl.muted = false; }).catch(() => { audioEl.muted = false; });
+}
 
 function stopPlayback() {
-  stopRequested = true;
+  state.playing = false;
   audioEl.pause();
   audioEl.removeAttribute('src');
-  state.playing = false;
+  audioEl.onended = null;
+  audioEl.onerror = null;
   render();
 }
 
+function playNext() {
+  state.playlistIndex++;
+  if (state.playlistIndex >= state.playlist.length) {
+    // Finished all clips
+    state.playing = false;
+    render();
+    showToast('밤이 끝났습니다. 토론을 시작하세요!');
+    return;
+  }
+  renderPlayingOverlay();
+  const clip = state.playlist[state.playlistIndex];
+  audioEl.src = clip.url;
+  audioEl.load();
+  audioEl.play().catch((err) => {
+    console.warn('play() rejected:', clip.url, err);
+    // Skip to next on failure
+    playNext();
+  });
+}
+
 async function startPlayback() {
+  // MUST unlock in the same synchronous call stack as user tap
+  unlockAudio();
+
   const { scenarioId, episodeId, playerCount } = resolveCurrentConfig();
   const scenario = SCENARIOS.find(s => s.id === scenarioId);
   const variant = getVariant(scenario, episodeId, playerCount);
@@ -211,43 +251,25 @@ async function startPlayback() {
 
   state.playing = true;
   state.playlistIndex = 0;
-  stopRequested = false;
   render();
 
-  for (let i = 0; i < state.playlist.length; i++) {
-    if (stopRequested) break;
-    state.playlistIndex = i;
-    renderPlayingOverlay();
+  // Event-driven chain: ended → playNext (no async gaps that break mobile)
+  audioEl.onended = () => playNext();
+  audioEl.onerror = () => {
+    console.warn('Audio error, skipping:', state.playlist[state.playlistIndex]?.url);
+    playNext();
+  };
 
-    const clip = state.playlist[i];
-    await playClip(clip.url);
-    if (stopRequested) break;
-
-    // Small gap between clips
-    await sleep(600);
-  }
-
-  if (!stopRequested) {
-    showToast('밤이 끝났습니다. 토론을 시작하세요!');
-  }
-  state.playing = false;
-  render();
-}
-
-function playClip(url) {
-  return new Promise((resolve) => {
-    audioEl.src = url;
-    audioEl.onended = resolve;
-    audioEl.onerror = () => {
-      console.warn('Audio load failed:', url);
-      resolve(); // skip failed clip
-    };
-    audioEl.play().catch(() => resolve());
+  // Start first clip
+  const firstClip = state.playlist[0];
+  audioEl.src = firstClip.url;
+  audioEl.load();
+  audioEl.play().catch((err) => {
+    console.warn('First play() rejected:', err);
+    showToast('오디오 재생에 실패했습니다. 다시 시도해주세요.');
+    state.playing = false;
+    render();
   });
-}
-
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
 }
 
 // ===== HELPERS =====
