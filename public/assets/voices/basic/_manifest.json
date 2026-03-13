@@ -6,256 +6,256 @@
       "speakerId": "Narrator",
       "backend": "gpt-sovits",
       "text": "[default]기록 개시. 당신들은 ‘안개마을’의 주민들입니다. 오늘 밤, 누군가가 사람의 얼굴을 한 채 돌아다닙니다. [fearful]지금부터 모두 조용히 자신의 카드를 확인하고, 카드를 엎어 앞에 두세요. 가운데에는 센터 카드가 세 장 있습니다. 밤 동안 몇몇 역할은 카드(정체)를 바꿀 수 있습니다. 그래서 낮에 토론할 때는, ‘처음 내가 무엇이었나’와 ‘지금 내가 무엇이 되었나’가 다를 수 있습니다. [default]초보자 팁: 밤에는 내 차례에만 눈을 뜨고, 화면 안내대로 딱 한 번 행동한 뒤 다시 눈을 감으세요.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/opening/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/opening/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/opening/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/opening/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/drunk/during/001",
       "speakerId": "drunk",
       "backend": "gpt-sovits",
       "text": "[기본]주정뱅이! 으어... 술이 깬다... 눈이... 떠지네? 센터 카드 한 장과 자신의 카드를 바꿔! 바꾼 카드는 확인하지 마!",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/drunk/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/drunk/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/drunk/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/drunk/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/drunk/after/001",
       "speakerId": "drunk",
       "backend": "gpt-sovits",
       "text": "[기본]아이고 머리야... 다시 자야겠다... ... 내가... 방금 뭘 했더라?",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/drunk/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/drunk/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/drunk/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/drunk/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/insomniac/during/001",
       "speakerId": "insomniac",
       "backend": "gpt-sovits",
       "text": "[놀람]불면증 환자, 잠이... 안 와요. 눈을 뜨고 확인해봐야겠어요. 지금 당신의 현재 카드를 확인하세요. 이전과 다르다면 무엇이 바뀌었는지 기억하세요.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/insomniac/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/insomniac/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/insomniac/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/insomniac/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/insomniac/after/001",
       "speakerId": "insomniac",
       "backend": "gpt-sovits",
       "text": "[default]이제 안심이 되네요. 다시 잠을 청해볼게요. 눈을 감습니다. ... 양 한 마리... 양 두 마리... 아, 방금 본 카드가 계속 생각나서 잠이 안 오네... 그래도 자는 척은 해야겠죠?",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/insomniac/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/insomniac/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/insomniac/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/insomniac/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/mason/during/001",
       "speakerId": "mason",
       "backend": "gpt-sovits",
       "text": "[기본]프리메이슨, 전사들이여, 고개를 들어라. 전장을 확인할 시간이다. 같은 표식을 가진 동료를 찾아라. 찾으면 고개를 끄덕여 신호를 주고, 못 찾으면 휴식하라. 불꽃이 사그라든다. ... 우리의 유대는 그 무엇보다 강하다. 어둠 속에서도 서로를 지키며, 결전의 순간을 기다려라.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/mason/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/mason/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/mason/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/mason/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/minion/during/001",
       "speakerId": "minion",
       "backend": "gpt-sovits",
       "text": "[기본]하수인, 시각 신경 연결. 화면을 응시해라, 실험체들. 늑대들이 누구인지 확인하고 마음속에 새겨라. 연결 해제. 의식을 차단한다. ... 아주 흥미로운 반응이었어. 이 데이터는 나만 알고 있어야지. 쥐새끼들이 알면 곤란하니까.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/minion/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/minion/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/minion/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/minion/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/robber/during/001",
       "speakerId": "robber",
       "backend": "gpt-sovits",
       "text": "[기본]강도, 의뢰 시작이다. 눈 똑바로 뜨고 목표물을 확인해. 교환 대상자를 정하고 카드를 교환해. 교환한 뒤 즉시 새 카드를 확인하는 거야.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/robber/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/robber/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/robber/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/robber/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/robber/after/001",
       "speakerId": "robber",
       "backend": "gpt-sovits",
       "text": "[기본]철수한다. 모래폭풍 속으로 사라져. ... 지금은 죽은 듯이 있어.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/robber/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/robber/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/robber/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/robber/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/seer/during/001",
       "speakerId": "seer",
       "backend": "gpt-sovits",
       "text": "[기본]점술사, 어머, 귀여운 아가씨? 눈을 뜨고 언니를 봐주렴. 한 플레이어의 카드 한 장 또는 센터 카드 두 장을 결정해 확인하렴.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/seer/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/seer/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/seer/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/seer/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/seer/after/001",
       "speakerId": "seer",
       "backend": "gpt-sovits",
       "text": "[기본]이제 잘 시간이야. 착한 아이는 눈을 감아야지? ... 방금 본 건 우리 둘만의 비밀이란다. 조용히...",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/seer/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/seer/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/seer/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/seer/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/troublemaker/during/001",
       "speakerId": "troublemaker",
       "backend": "gpt-sovits",
       "text": "[놀람]말썽꾼! 여행자! 일어나! 장난칠 시간이야! 두 사람을 골라 카드를 서로 바꿔버려! 내용은 보지 말고!",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/troublemaker/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/troublemaker/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/troublemaker/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/troublemaker/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/troublemaker/after/001",
       "speakerId": "troublemaker",
       "backend": "gpt-sovits",
       "text": "[놀람]도망가자! 눈 감고 자는 척해! ... 아무도 모를 거야, 당신이 입만 다물면... 읍읍!",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/troublemaker/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/troublemaker/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/troublemaker/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/troublemaker/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/werewolf/during/001",
       "speakerId": "werewolf",
       "backend": "gpt-sovits",
       "text": "[공포]늑대인간, 심판의 때가 도래했다. 눈을 뜨고 진실을 마주하라. 서로를 찾고 고개를 끄덕여 신호하세요. 아무도 보이지 않으면 혼자입니다. 혼자라면 조용히 센터 카드 한 장을 확인하세요.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/werewolf/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/werewolf/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/werewolf/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/werewolf/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/role/werewolf/after/001",
       "speakerId": "werewolf",
       "backend": "gpt-sovits",
       "text": "[공포]늑대인간은 이제 눈을 감아라. 다시 어둠 속으로. 판결은 보류되었다. ... 물러가라.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/werewolf/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/role/werewolf/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/role/werewolf/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/role/werewolf/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep1/p10/outro/001",
       "speakerId": "Narrator",
       "backend": "gpt-sovits",
       "text": "[default]밤이 끝났습니다. 모두 눈을 뜨세요. [default]이제 토론 시간입니다. 중요한 규칙을 기억하세요. 승리 판정은 ‘현재 카드’ 기준이며, 밤에 카드가 바뀌었을 수 있습니다. 서로의 말이 맞는지, 누가 무엇을 했는지 퍼즐처럼 맞추고, 한 명을 투표로 선택하세요.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/outro/001/voice.wav",
-      "url": "/assets/voices/basic/ep1/p10/outro/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/outro/001/voice.m4a",
+      "url": "/assets/voices/basic/ep1/p10/outro/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/opening/001",
       "speakerId": "Narrator",
       "backend": "gpt-sovits",
       "text": "[default]기록 2일차. 안개마을의 소문은 더 거칠어졌습니다. 어젯밤의 말들이 서로를 갈라놓았고, 오늘 밤은 ‘기억’을 겨눕니다. [fearful]다시 한 번, 모두 자신의 카드를 확인한 뒤 엎어 두세요. 센터 카드 세 장은 그대로 비밀입니다. [default]초보자 팁: 낮에는 ‘무엇을 했는지’와 ‘무엇을 봤는지’를 구분해 말하세요. 행동은 증거가 될 수 있고, 본 것은 단서가 될 수 있습니다.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/opening/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/opening/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/opening/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/opening/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/drunk/during/001",
       "speakerId": "drunk",
       "backend": "gpt-sovits",
       "text": "[기본]주정뱅이! 으어... 술이 깬다... 눈이... 떠지네? 센터 카드와 교환해(확인 금지).",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/drunk/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/drunk/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/drunk/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/drunk/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/drunk/after/001",
       "speakerId": "drunk",
       "backend": "gpt-sovits",
       "text": "[기본]아이고 머리야... 다시 자야겠다... ... 내가... 방금 뭘 했더라?",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/drunk/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/drunk/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/drunk/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/drunk/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/insomniac/during/001",
       "speakerId": "insomniac",
       "backend": "gpt-sovits",
       "text": "[놀람]불면증 환자, 잠이... 안 와요. 눈을 뜨고 확인해봐야겠어요. 현재 카드를 확인하세요.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/insomniac/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/insomniac/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/insomniac/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/insomniac/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/insomniac/after/001",
       "speakerId": "insomniac",
       "backend": "gpt-sovits",
       "text": "[default]이제 안심이 되네요. 다시 잠을 청해볼게요. 눈을 감습니다. ... 양 한 마리... 양 두 마리...",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/insomniac/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/insomniac/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/insomniac/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/insomniac/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/mason/during/001",
       "speakerId": "mason",
       "backend": "gpt-sovits",
       "text": "[기본]프리메이슨, 전사들이여, 고개를 들어라. 전장을 확인할 시간이다. 동료가 있으면 확인해라. 휴식하라. 불꽃이 사그라든다. ... 우리의 유대는 그 무엇보다 강하다.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/mason/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/mason/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/mason/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/mason/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/minion/during/001",
       "speakerId": "minion",
       "backend": "gpt-sovits",
       "text": "[기본]하수인, 시각 신경 연결. 화면을 응시해라, 실험체들. 늑대 팀을 확인해라. 연결 해제. 의식을 차단한다. ... 아주 흥미로운 반응이었어.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/minion/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/minion/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/minion/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/minion/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/robber/during/001",
       "speakerId": "robber",
       "backend": "gpt-sovits",
       "text": "[기본]강도, 의뢰 시작이다. 눈 똑바로 뜨고 목표물을 확인해. 한 플레이어와 카드를 교환하고 받은 카드를 확인해.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/robber/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/robber/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/robber/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/robber/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/robber/after/001",
       "speakerId": "robber",
       "backend": "gpt-sovits",
       "text": "[기본]철수한다. 모래폭풍 속으로 사라져. ... 죽은 듯이 있어.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/robber/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/robber/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/robber/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/robber/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/seer/during/001",
       "speakerId": "seer",
       "backend": "gpt-sovits",
       "text": "[기본]점술사, 어머, 귀여운 아가씨? 눈을 뜨고 언니를 봐주렴. 플레이어 한 명 또는 센터 두 장을 확인하렴.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/seer/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/seer/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/seer/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/seer/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/seer/after/001",
       "speakerId": "seer",
       "backend": "gpt-sovits",
       "text": "[기본]이제 잘 시간이야. 착한 아이는 눈을 감아야지? ... 우리 둘만의 비밀이란다.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/seer/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/seer/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/seer/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/seer/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/troublemaker/during/001",
       "speakerId": "troublemaker",
       "backend": "gpt-sovits",
       "text": "[놀람]말썽꾼! 여행자! 일어나! 장난칠 시간이야! 두 사람의 카드를 교환해! 내용은 보지 말고!",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/troublemaker/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/troublemaker/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/troublemaker/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/troublemaker/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/troublemaker/after/001",
       "speakerId": "troublemaker",
       "backend": "gpt-sovits",
       "text": "[놀람]도망가자! 눈 감고 자는 척해! ... 아무도 모를 거야! 쉿!",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/troublemaker/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/troublemaker/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/troublemaker/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/troublemaker/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/werewolf/during/001",
       "speakerId": "werewolf",
       "backend": "gpt-sovits",
       "text": "[공포]늑대인간, 심판의 때가 도래했다. 눈을 뜨고 진실을 마주하라. 서로 확인해라. 혼자면 센터 카드 1장을 확인하도록.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/werewolf/during/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/werewolf/during/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/werewolf/during/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/werewolf/during/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/role/werewolf/after/001",
       "speakerId": "werewolf",
       "backend": "gpt-sovits",
       "text": "[공포]늑대인간은 이제 눈을 감아라. 다시 어둠 속으로. 판결은 보류되었다. ... 물러가라.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/werewolf/after/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/role/werewolf/after/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/role/werewolf/after/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/role/werewolf/after/001/voice.m4a"
     },
     {
       "clipId": "basic/ep2/p10/outro/001",
       "speakerId": "Narrator",
       "backend": "gpt-sovits",
       "text": "[default]밤이 끝났습니다. 모두 눈을 뜨세요. [default]이제 토론입니다. 서로의 진술을 ‘행동 순서’에 맞춰 맞춰보세요. 누군가의 말이 앞뒤가 맞지 않는다면, 그 틈이 바로 단서입니다. 투표는 화면 안내에 따라 진행합니다.",
-      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/outro/001/voice.wav",
-      "url": "/assets/voices/basic/ep2/p10/outro/001/voice.wav"
+      "wavPath": "D:/Workspace/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep2/p10/outro/001/voice.m4a",
+      "url": "/assets/voices/basic/ep2/p10/outro/001/voice.m4a"
     }
   ]
 }
