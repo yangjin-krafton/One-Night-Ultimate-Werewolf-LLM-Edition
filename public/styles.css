@@ -110,11 +110,37 @@ body {
   color: var(--fg-muted);
   margin-bottom: 4px;
 }
-.home__version {
-  font-size: 11px;
-  color: var(--fg-muted);
-  opacity: 0.5;
+.home__changelog-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
   margin-bottom: 20px;
+  background: rgba(160,100,240,0.1);
+  border: 1px solid rgba(160,100,240,0.25);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  color: inherit;
+}
+.home__changelog-btn:active {
+  transform: scale(0.96);
+  background: rgba(160,100,240,0.18);
+}
+.home__changelog-ver {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono, monospace);
+  color: #c8a0f0;
+  background: rgba(160,100,240,0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+.home__changelog-label {
+  font-size: 13px;
+  color: var(--fg-muted);
 }
 .home__actions {
   display: flex;
