@@ -217,6 +217,7 @@ const state = {
   deck: null,
   // playing
   playing: false,
+  paused: false,
   playlistIndex: 0,
   playlist: [],
   manifest: null,
@@ -363,12 +364,46 @@ function unlockAudio() {
 
 function stopPlayback() {
   state.playing = false;
+  state.paused = false;
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   audioEl.pause();
   audioEl.removeAttribute('src');
   audioEl.onended = null;
   audioEl.onerror = null;
   render();
+}
+
+function togglePause() {
+  if (!state.playing) return;
+  if (state.paused) {
+    // Resume
+    state.paused = false;
+    if (state._pausedDelay) {
+      // Was paused during a delay timer — restart remaining delay
+      state._delayTimer = setTimeout(() => {
+        state._delayTimer = null;
+        state._pausedDelay = null;
+        playClip(state.playlist[state.playlistIndex]);
+      }, state._pausedDelay.remaining);
+      state._pausedDelay = null;
+    } else {
+      audioEl.play().catch(() => {});
+    }
+  } else {
+    // Pause
+    state.paused = true;
+    if (state._delayTimer) {
+      // Pause during delay — save remaining time
+      const elapsed = Date.now() - (state._delayStart || Date.now());
+      const total = state.actionDelay * 1000;
+      clearTimeout(state._delayTimer);
+      state._delayTimer = null;
+      state._pausedDelay = { remaining: Math.max(0, total - elapsed) };
+    } else {
+      audioEl.pause();
+    }
+  }
+  renderPlayingOverlay();
 }
 
 function playNext() {
@@ -386,8 +421,10 @@ function playNext() {
   const roleChanged = prevClip && nextClip && prevClip.roleId && nextClip.roleId && prevClip.roleId !== nextClip.roleId;
   if (roleChanged && state.actionDelay > 0) {
     renderPlayingOverlay();
+    state._delayStart = Date.now();
     state._delayTimer = setTimeout(() => {
       state._delayTimer = null;
+      state._delayStart = null;
       playClip(nextClip);
     }, state.actionDelay * 1000);
     return;
@@ -408,6 +445,8 @@ function playClip(clip) {
 
 function skipToNext() {
   if (!state.playing) return;
+  state.paused = false;
+  state._pausedDelay = null;
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   audioEl.pause();
   // Jump to the next role's first clip (skip remaining clips of current role)
@@ -428,6 +467,8 @@ function skipToNext() {
 
 function skipToPrev() {
   if (!state.playing) return;
+  state.paused = false;
+  state._pausedDelay = null;
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   audioEl.pause();
   // Jump to the start of current role, or previous role if already at start
@@ -836,12 +877,18 @@ function renderPlayingOverlayHTML() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
           이전
         </button>
-        <button class="playing__stop" onclick="stopPlayback()">■ 정지</button>
+        <button class="playing__pause" onclick="togglePause()">
+          ${state.paused
+            ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+            : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>'}
+          ${state.paused ? '재개' : '일시정지'}
+        </button>
         <button class="playing__skip" onclick="skipToNext()">
           다음
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 18l8.5-6L4 6z" /></svg>
         </button>
       </div>
+      <button class="playing__exit" onclick="stopPlayback()">나가기</button>
     </div>`;
 }
 
@@ -864,6 +911,13 @@ function renderPlayingOverlay() {
     if (subEl) subEl.textContent = clip.phase === 'during' ? '눈을 뜨세요' : clip.phase === 'after' ? '눈을 감으세요' : '';
     if (fillEl) fillEl.style.width = `${pct}%`;
     if (countEl) countEl.textContent = `${current} / ${total}`;
+
+    const pauseBtn = existing.querySelector('.playing__pause');
+    if (pauseBtn) {
+      pauseBtn.innerHTML = state.paused
+        ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 재개'
+        : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg> 일시정지';
+    }
   }
 }
 
