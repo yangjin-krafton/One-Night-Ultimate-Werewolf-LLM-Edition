@@ -207,7 +207,7 @@ const SCENARIOS = [
 
 // ===== STATE =====
 const state = {
-  screen: 'home',          // home | setup | join | lobby
+  screen: 'home',          // home | setup | join | lobby | changelog
   // setup
   scenarioIdx: null,
   episodeIdx: null,
@@ -496,10 +496,11 @@ function render() {
     return;
   }
   switch (state.screen) {
-    case 'home':  app.innerHTML = renderHomeHTML(); break;
-    case 'setup': app.innerHTML = renderSetupHTML(); break;
-    case 'join':  app.innerHTML = renderJoinHTML(); break;
-    case 'lobby': app.innerHTML = renderLobbyHTML(); break;
+    case 'home':      app.innerHTML = renderHomeHTML(); break;
+    case 'setup':     app.innerHTML = renderSetupHTML(); break;
+    case 'join':      app.innerHTML = renderJoinHTML(); break;
+    case 'lobby':     app.innerHTML = renderLobbyHTML(); break;
+    case 'changelog': app.innerHTML = renderChangelogHTML(); break;
   }
 }
 
@@ -510,12 +511,72 @@ function renderHomeHTML() {
       <div class="home__moon"></div>
       <h1 class="home__title">한밤의<br>늑대인간</h1>
       <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
-      <p class="home__version">v${window.APP_VERSION || '1.4.0'}</p>
+      <p class="home__version" onclick="goChangelog()" style="cursor:pointer;">v${window.APP_VERSION || '1.5.0'} — 업데이트 로그</p>
       <div class="home__actions">
         <button class="btn btn--primary btn--full" onclick="goSetup()">게임 만들기</button>
         <button class="btn btn--ghost btn--full" onclick="goJoin()">게임 참가</button>
       </div>
     </div>`;
+}
+
+// -- Changelog
+const CHANGELOG = [
+  { ver: '1.5.0', date: '2026-04-07', items: [
+    '홈 화면에 업데이트 로그 페이지 추가',
+    '최근 참가한 방 코드 5개를 로컬에 저장 및 참가 화면에 표시',
+  ]},
+  { ver: '1.4.0', date: '2026-04-07', items: [
+    '역할 설명 카드에 중요 키워드 컬러 하이라이트 적용',
+    '밤 행동 간격 지연 옵션 추가 (없음/3초/5초/10초/15초/20초)',
+  ]},
+  { ver: '1.3.0', date: '2026-04-07', items: [
+    '랜덤 덱 생성 — 매 게임마다 다른 역할 조합',
+    '방 코드에 덱 인코딩 (8자리) — 같은 코드로 같은 덱 공유',
+    '로비에서 역할 다시 뽑기 버튼 추가',
+  ]},
+  { ver: '1.2.0', date: '2026-04-07', items: [
+    '역할 카드를 밤 기상 순서대로 정렬',
+    '역할 카드에 기상 순서 번호 배지 표시',
+  ]},
+  { ver: '1.1.0', date: '2026-04-06', items: [
+    '모바일 오디오 재생 안정화 (iOS/Android)',
+    '시나리오별 인원수 variant 자동 선택',
+    'GitHub Pages 배포 워크플로우 추가',
+  ]},
+  { ver: '1.0.0', date: '2026-04-05', items: [
+    '첫 공개 — 나레이션 플레이어 기본 기능',
+    'TTS 음성 재생 (GPT-SoVITS)',
+    '3~10인 시나리오 3종 (기본/유연/4인전용)',
+  ]},
+];
+
+function renderChangelogHTML() {
+  return `
+    <div class="changelog">
+      <div class="changelog__header">
+        <button class="back-btn" onclick="goHome()">← 돌아가기</button>
+        <h1 class="changelog__title">업데이트 로그</h1>
+      </div>
+      <div class="changelog__list">
+        ${CHANGELOG.map((entry, i) => `
+          <div class="changelog__entry ${i === 0 ? 'changelog__entry--latest' : ''}">
+            <div class="changelog__ver-row">
+              <span class="changelog__ver">v${entry.ver}</span>
+              ${i === 0 ? '<span class="changelog__badge">NEW</span>' : ''}
+              <span class="changelog__date">${entry.date}</span>
+            </div>
+            <ul class="changelog__items">
+              ${entry.items.map(item => `<li>${item}</li>`).join('')}
+            </ul>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function goChangelog() {
+  state.screen = 'changelog';
+  render();
 }
 
 // -- Setup
