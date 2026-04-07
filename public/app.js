@@ -510,7 +510,7 @@ function renderHomeHTML() {
       <div class="home__moon"></div>
       <h1 class="home__title">한밤의<br>늑대인간</h1>
       <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
-      <p class="home__version">v${window.APP_VERSION || '1.3.0'}</p>
+      <p class="home__version">v${window.APP_VERSION || '1.4.0'}</p>
       <div class="home__actions">
         <button class="btn btn--primary btn--full" onclick="goSetup()">게임 만들기</button>
         <button class="btn btn--ghost btn--full" onclick="goJoin()">게임 참가</button>
@@ -592,6 +592,23 @@ function renderSetupHTML() {
 
 // -- Join
 function renderJoinHTML() {
+  const recentRooms = loadRecentRooms();
+  const recentHTML = recentRooms.length ? `
+      <div class="recent-rooms">
+        <div class="recent-rooms__title">최근 참가</div>
+        ${recentRooms.map(r => {
+          const decoded = decodeRoomCode(r.code);
+          const sc = decoded ? SCENARIOS.find(s => s.id === decoded.scenarioId) : null;
+          const label = sc ? `${sc.title} · ${decoded.playerCount}명` : '';
+          return `
+          <button class="recent-room" onclick="enterLobby('${r.code}')">
+            <span class="recent-room__code">${r.code}</span>
+            <span class="recent-room__info">${label}</span>
+            <span class="recent-room__time">${formatTimeAgo(r.time)}</span>
+          </button>`;
+        }).join('')}
+      </div>` : '';
+
   return `
     <div class="join">
       <button class="back-btn" onclick="goHome()" style="position:absolute;top:20px;left:20px;">← 돌아가기</button>
@@ -601,6 +618,7 @@ function renderJoinHTML() {
         <div class="join__error" id="joinError"></div>
       </div>
       <button class="btn btn--primary btn--full" style="max-width:280px;" onclick="submitJoin()">입장</button>
+      ${recentHTML}
     </div>`;
 }
 
@@ -782,7 +800,33 @@ function selectPlayerCount(n) {
   render();
 }
 
+// ===== RECENT ROOMS (localStorage) =====
+const RECENT_ROOMS_KEY = 'onw_recent_rooms';
+const MAX_RECENT_ROOMS = 5;
+
+function loadRecentRooms() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_ROOMS_KEY)) || [];
+  } catch { return []; }
+}
+
+function saveRecentRoom(code) {
+  const rooms = loadRecentRooms().filter(r => r.code !== code);
+  rooms.unshift({ code, time: Date.now() });
+  if (rooms.length > MAX_RECENT_ROOMS) rooms.length = MAX_RECENT_ROOMS;
+  localStorage.setItem(RECENT_ROOMS_KEY, JSON.stringify(rooms));
+}
+
+function formatTimeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return '방금 전';
+  if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
+  return `${Math.floor(diff / 86400)}일 전`;
+}
+
 function enterLobby(code) {
+  saveRecentRoom(code);
   state.roomCode = code;
   state.screen = 'lobby';
   render();
