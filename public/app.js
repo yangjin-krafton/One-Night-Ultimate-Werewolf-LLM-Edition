@@ -454,12 +454,15 @@ function renderLobbyHTML() {
   const roleCounts = countRoles(variant.deck);
   const centerCount = variant.deck.length - config.playerCount;
 
-  // Sort: wolf team first, then village
+  // Sort: by night wake order, then non-waking roles at end
+  const wakeOrder = variant.wakeOrder || [];
   const uniqueRoles = Object.keys(roleCounts);
   uniqueRoles.sort((a, b) => {
-    const ta = ROLES[a]?.team === 'wolf' ? 0 : 1;
-    const tb = ROLES[b]?.team === 'wolf' ? 0 : 1;
-    return ta - tb;
+    const ia = wakeOrder.indexOf(a);
+    const ib = wakeOrder.indexOf(b);
+    const oa = ia === -1 ? 9999 : ia;
+    const ob = ib === -1 ? 9999 : ib;
+    return oa - ob;
   });
 
   return `
@@ -487,9 +490,14 @@ function renderLobbyHTML() {
           const count = roleCounts[roleId];
           const teamClass = role.team === 'wolf' ? 'role-card--wolf' : 'role-card--village';
           const teamLabel = role.team === 'wolf' ? '늑대 팀' : '마을 팀';
+          const wakeIdx = wakeOrder.indexOf(roleId);
+          const orderBadge = wakeIdx !== -1
+            ? `<span class="role-card__order">${wakeIdx + 1}</span>`
+            : `<span class="role-card__order role-card__order--none">-</span>`;
           return `
             <div class="role-card ${teamClass}">
               <div class="role-card__top">
+                ${orderBadge}
                 <span class="role-card__emoji">${role.emoji}</span>
                 <span class="role-card__name">${role.name}</span>
                 ${count > 1 ? `<span class="role-card__count">×${count}</span>` : ''}
