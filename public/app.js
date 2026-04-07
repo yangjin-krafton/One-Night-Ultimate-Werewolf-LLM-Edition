@@ -17,6 +17,65 @@ const ROLES = {
   witch:        { name: '마녀',         team: 'village', emoji: '🧙', desc: '밤에 센터 카드 1장을 확인하고, 원한다면 그 카드를 다른 플레이어 카드와 바꿀 수 있습니다.' },
 };
 
+// ===== ROLE DESC HIGHLIGHTS =====
+const DESC_HIGHLIGHTS = {
+  werewolf: [
+    { t: '다른 늑대인간을 확인', c: '#fb7185' },
+    { t: '혼자라면', c: '#a78bfa' },
+    { t: '센터 카드 1장을 볼 수 있습니다', c: '#60a5fa' },
+  ],
+  seer: [
+    { t: '플레이어 1명의 카드를 보거나', c: '#22d3ee' },
+    { t: '센터 카드 2장을 확인', c: '#60a5fa' },
+  ],
+  robber: [
+    { t: '카드를 교환', c: '#fbbf24' },
+    { t: '새로 받은 카드를 확인', c: '#22d3ee' },
+  ],
+  troublemaker: [
+    { t: '카드를 서로 바꿉니다', c: '#fbbf24' },
+    { t: '확인하지 않습니다', c: '#94a3b8' },
+  ],
+  drunk: [
+    { t: '센터 카드 1장과 자신의 카드를 교환', c: '#fbbf24' },
+    { t: '확인하지 않습니다', c: '#94a3b8' },
+  ],
+  insomniac: [
+    { t: '밤의 마지막에', c: '#a78bfa' },
+    { t: '자신의 카드를 확인', c: '#22d3ee' },
+    { t: '새 역할을 알 수 있습니다', c: '#34d399' },
+  ],
+  minion: [
+    { t: '늑대인간이 누구인지 확인', c: '#fb7185' },
+    { t: '하수인을 모릅니다', c: '#94a3b8' },
+  ],
+  mason: [
+    { t: '다른 프리메이슨을 확인', c: '#2dd4bf' },
+    { t: '마을 팀의 단서', c: '#34d399' },
+  ],
+  villager: [
+    { t: '특별한 능력이 없습니다', c: '#94a3b8' },
+    { t: '토론과 추리', c: '#60a5fa' },
+    { t: '늑대인간을 찾아내세요', c: '#fb7185' },
+  ],
+  witch: [
+    { t: '센터 카드 1장을 확인', c: '#22d3ee' },
+    { t: '다른 플레이어 카드와 바꿀 수 있습니다', c: '#fbbf24' },
+  ],
+};
+
+function highlightDesc(roleId, desc) {
+  const rules = DESC_HIGHLIGHTS[roleId];
+  if (!rules || !rules.length) return desc;
+  // Sort by length desc to avoid partial matches
+  const sorted = [...rules].sort((a, b) => b.t.length - a.t.length);
+  let result = desc;
+  for (const { t, c } of sorted) {
+    result = result.replace(t, `<span style="color:${c}">${t}</span>`);
+  }
+  return result;
+}
+
 // ===== ROLE ENCODING & RANDOM DECK =====
 const ROLE_IDS = ['werewolf','seer','robber','troublemaker','drunk','insomniac','minion','mason','villager','witch'];
 const NIGHT_ORDER = ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'];
@@ -451,7 +510,7 @@ function renderHomeHTML() {
       <div class="home__moon"></div>
       <h1 class="home__title">한밤의<br>늑대인간</h1>
       <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
-      <p class="home__version">v${window.APP_VERSION || '1.2.0'}</p>
+      <p class="home__version">v${window.APP_VERSION || '1.3.0'}</p>
       <div class="home__actions">
         <button class="btn btn--primary btn--full" onclick="goSetup()">게임 만들기</button>
         <button class="btn btn--ghost btn--full" onclick="goJoin()">게임 참가</button>
@@ -614,7 +673,7 @@ function renderLobbyHTML() {
                 ${count > 1 ? `<span class="role-card__count">×${count}</span>` : ''}
               </div>
               <div class="role-card__team">${teamLabel}</div>
-              <div class="role-card__desc">${role.desc}</div>
+              <div class="role-card__desc">${highlightDesc(roleId, role.desc)}</div>
             </div>`;
         }).join('')}
       </div>
