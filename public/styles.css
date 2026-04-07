@@ -333,6 +333,23 @@ body {
 .lobby__code:active { opacity: 0.7; }
 
 /* Play button */
+.reroll-bar {
+  padding: 4px 20px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+.reroll-btn {
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.reroll-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.1); }
+
 .play-bar {
   padding: 12px 20px;
 }

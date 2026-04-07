@@ -17,6 +17,63 @@ const ROLES = {
   witch:        { name: '마녀',         team: 'village', emoji: '🧙', desc: '밤에 센터 카드 1장을 확인하고, 원한다면 그 카드를 다른 플레이어 카드와 바꿀 수 있습니다.' },
 };
 
+// ===== ROLE ENCODING & RANDOM DECK =====
+const ROLE_IDS = ['werewolf','seer','robber','troublemaker','drunk','insomniac','minion','mason','villager','witch'];
+const NIGHT_ORDER = ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'];
+
+function encodeDeck(deck) {
+  const counts = ROLE_IDS.map(r => deck.filter(d => d === r).length);
+  let val = 0;
+  for (let i = 0; i < counts.length; i++) val = val * 4 + counts[i];
+  return val.toString(36).toUpperCase().padStart(4, '0');
+}
+
+function decodeDeck(code) {
+  let val = parseInt(code.toLowerCase(), 36);
+  const counts = [];
+  for (let i = ROLE_IDS.length - 1; i >= 0; i--) {
+    counts[i] = val % 4;
+    val = Math.floor(val / 4);
+  }
+  const deck = [];
+  ROLE_IDS.forEach((r, i) => { for (let j = 0; j < counts[i]; j++) deck.push(r); });
+  return deck;
+}
+
+function deriveWakeOrder(deck) {
+  const present = new Set(deck);
+  return NIGHT_ORDER.filter(r => present.has(r));
+}
+
+function generateRandomDeck(playerCount, scenarioId) {
+  const need = playerCount + 3;
+  const deck = ['werewolf', 'seer'];
+
+  const units = [
+    ['werewolf'],
+    ['robber'],
+    ['troublemaker'],
+    ['drunk'],
+    ['insomniac'],
+    ['minion'],
+    ['mason', 'mason'],
+  ];
+  if (scenarioId === 'flexible_story') units.push(['witch']);
+
+  // Fisher-Yates shuffle
+  for (let i = units.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [units[i], units[j]] = [units[j], units[i]];
+  }
+
+  for (const unit of units) {
+    if (deck.length + unit.length <= need) deck.push(...unit);
+  }
+  while (deck.length < need) deck.push('villager');
+
+  return deck;
+}
+
 // ===== SCENARIO DATA (embedded) =====
 const SCENARIOS = [
   {
@@ -98,6 +155,7 @@ const state = {
   playerCount: null,
   // lobby
   roomCode: null,
+  deck: null,
   // playing
   playing: false,
   playlistIndex: 0,
@@ -109,27 +167,45 @@ const state = {
 const SCENARIO_CODES = { basic: 'B', flexible_story: 'F', four_player_story: 'P' };
 const SCENARIO_DECODE = { B: 'basic', F: 'flexible_story', P: 'four_player_story' };
 
-function encodeRoomCode(scenarioId, episodeId, playerCount) {
+function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
   const s = SCENARIO_CODES[scenarioId];
   const e = episodeId.replace('ep', '');
   const p = String(playerCount).padStart(2, '0');
-  return `${s}${e}${p}`;
+  const d = encodeDeck(deck);
+  return `${s}${e}${p}${d}`;
 }
 
 function decodeRoomCode(code) {
   code = code.trim().toUpperCase();
-  if (code.length < 3 || code.length > 4) return null;
-  const s = SCENARIO_DECODE[code[0]];
-  if (!s) return null;
-  const e = `ep${code[1]}`;
-  const p = parseInt(code.slice(2), 10);
-  if (isNaN(p) || p < 3 || p > 10) return null;
-  const scenario = SCENARIOS.find(sc => sc.id === s);
-  if (!scenario) return null;
-  if (!scenario.playerCounts.includes(p)) return null;
-  const episode = scenario.episodes.find(ep => ep.id === e);
-  if (!episode) return null;
-  return { scenarioId: s, episodeId: e, playerCount: p };
+  // New format: S(1) + E(1) + PP(2) + DDDD(4) = 8 chars
+  if (code.length === 8) {
+    const s = SCENARIO_DECODE[code[0]];
+    if (!s) return null;
+    const e = `ep${code[1]}`;
+    const p = parseInt(code.substring(2, 4), 10);
+    if (isNaN(p) || p < 3 || p > 10) return null;
+    const scenario = SCENARIOS.find(sc => sc.id === s);
+    if (!scenario || !scenario.playerCounts.includes(p)) return null;
+    const episode = scenario.episodes.find(ep => ep.id === e);
+    if (!episode) return null;
+    const deck = decodeDeck(code.substring(4));
+    if (deck.length !== p + 3) return null;
+    return { scenarioId: s, episodeId: e, playerCount: p, deck };
+  }
+  // Legacy format: S(1) + E(1) + P(1-2) = 3-4 chars
+  if (code.length >= 3 && code.length <= 4) {
+    const s = SCENARIO_DECODE[code[0]];
+    if (!s) return null;
+    const e = `ep${code[1]}`;
+    const p = parseInt(code.slice(2), 10);
+    if (isNaN(p) || p < 3 || p > 10) return null;
+    const scenario = SCENARIOS.find(sc => sc.id === s);
+    if (!scenario || !scenario.playerCounts.includes(p)) return null;
+    const episode = scenario.episodes.find(ep => ep.id === e);
+    if (!episode) return null;
+    return { scenarioId: s, episodeId: e, playerCount: p, deck: null };
+  }
+  return null;
 }
 
 // ===== VARIANT RESOLVER =====
@@ -258,9 +334,9 @@ async function startPlayback() {
   // MUST unlock in the same synchronous call stack as user tap
   unlockAudio();
 
-  const { scenarioId, episodeId, playerCount } = resolveCurrentConfig();
-  const scenario = SCENARIOS.find(s => s.id === scenarioId);
-  const variant = getVariant(scenario, episodeId, playerCount);
+  const config = resolveCurrentConfig();
+  const { scenarioId, episodeId, playerCount } = config;
+  const variant = resolveVariant(config);
   if (!variant) return;
 
   try {
@@ -304,11 +380,19 @@ async function startPlayback() {
 function resolveCurrentConfig() {
   if (state.roomCode) {
     const decoded = decodeRoomCode(state.roomCode);
-    return { scenarioId: decoded.scenarioId, episodeId: decoded.episodeId, playerCount: decoded.playerCount };
+    return { scenarioId: decoded.scenarioId, episodeId: decoded.episodeId, playerCount: decoded.playerCount, deck: decoded.deck };
   }
   const sc = SCENARIOS[state.scenarioIdx];
   const ep = sc.episodes[state.episodeIdx];
-  return { scenarioId: sc.id, episodeId: ep.id, playerCount: state.playerCount };
+  return { scenarioId: sc.id, episodeId: ep.id, playerCount: state.playerCount, deck: state.deck };
+}
+
+function resolveVariant(config) {
+  if (config.deck) {
+    return { deck: config.deck, wakeOrder: deriveWakeOrder(config.deck) };
+  }
+  const scenario = SCENARIOS.find(s => s.id === config.scenarioId);
+  return getVariant(scenario, config.episodeId, config.playerCount);
 }
 
 function countRoles(deck) {
@@ -371,7 +455,7 @@ function renderSetupHTML() {
   if (ready) { step = 4; stepLabel = '게임 코드가 생성되었습니다'; }
 
   let code = '';
-  if (ready) code = encodeRoomCode(sc.id, ep.id, state.playerCount);
+  if (ready) code = encodeRoomCode(sc.id, ep.id, state.playerCount, state.deck);
 
   return `
     <div class="setup">
@@ -437,7 +521,7 @@ function renderJoinHTML() {
       <button class="back-btn" onclick="goHome()" style="position:absolute;top:20px;left:20px;">← 돌아가기</button>
       <h1 class="join__title">게임 참가</h1>
       <div class="join__input-group">
-        <input class="join__input" id="codeInput" maxlength="4" placeholder="코드" autocomplete="off" autofocus>
+        <input class="join__input" id="codeInput" maxlength="8" placeholder="코드 (8자리)" autocomplete="off" autofocus>
         <div class="join__error" id="joinError"></div>
       </div>
       <button class="btn btn--primary btn--full" style="max-width:280px;" onclick="submitJoin()">입장</button>
@@ -449,8 +533,8 @@ function renderLobbyHTML() {
   const config = resolveCurrentConfig();
   const scenario = SCENARIOS.find(s => s.id === config.scenarioId);
   const episode = scenario.episodes.find(e => e.id === config.episodeId);
-  const variant = getVariant(scenario, config.episodeId, config.playerCount);
-  const code = state.roomCode || encodeRoomCode(config.scenarioId, config.episodeId, config.playerCount);
+  const variant = resolveVariant(config);
+  const code = state.roomCode || encodeRoomCode(config.scenarioId, config.episodeId, config.playerCount, variant.deck);
   const roleCounts = countRoles(variant.deck);
   const centerCount = variant.deck.length - config.playerCount;
 
@@ -473,6 +557,10 @@ function renderLobbyHTML() {
           <div class="lobby__meta">${config.playerCount}명 플레이 · 센터 카드 ${centerCount}장</div>
         </div>
         <div class="lobby__code" onclick="copyCode('${code}')" title="탭하여 복사">${code}</div>
+      </div>
+
+      <div class="reroll-bar">
+        <button class="reroll-btn" onclick="rerollDeck()">🎲 역할 다시 뽑기</button>
       </div>
 
       <div class="play-bar">
@@ -565,6 +653,7 @@ function goHome() {
   state.episodeIdx = null;
   state.playerCount = null;
   state.roomCode = null;
+  state.deck = null;
   render();
 }
 
@@ -573,6 +662,7 @@ function goSetup() {
   state.scenarioIdx = null;
   state.episodeIdx = null;
   state.playerCount = null;
+  state.deck = null;
   render();
 }
 
@@ -605,6 +695,8 @@ function selectEpisode(idx) {
 
 function selectPlayerCount(n) {
   state.playerCount = n;
+  const sc = SCENARIOS[state.scenarioIdx];
+  state.deck = generateRandomDeck(n, sc.id);
   render();
 }
 
@@ -625,6 +717,14 @@ function submitJoin() {
     return;
   }
   enterLobby(code);
+}
+
+function rerollDeck() {
+  const config = resolveCurrentConfig();
+  const deck = generateRandomDeck(config.playerCount, config.scenarioId);
+  const code = encodeRoomCode(config.scenarioId, config.episodeId, config.playerCount, deck);
+  state.roomCode = code;
+  render();
 }
 
 function copyCode(code) {
