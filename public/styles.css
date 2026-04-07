@@ -108,7 +108,13 @@ body {
 .home__subtitle {
   font-size: 14px;
   color: var(--fg-muted);
-  margin-bottom: 24px;
+  margin-bottom: 4px;
+}
+.home__version {
+  font-size: 11px;
+  color: var(--fg-muted);
+  opacity: 0.5;
+  margin-bottom: 20px;
 }
 .home__actions {
   display: flex;

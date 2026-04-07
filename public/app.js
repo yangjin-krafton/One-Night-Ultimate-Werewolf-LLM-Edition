@@ -24,10 +24,28 @@ const SCENARIOS = [
     playerCounts: [3,4,5,6,7,8,9,10],
     episodes: [
       { id: 'ep1', title: 'EP1: 안개마을의 첫 밤',
-        variants: { '10': { deck: ['werewolf','seer','robber','villager','villager','villager','werewolf','troublemaker','drunk','insomniac','minion','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] } }
+        variants: {
+          '3': { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
+          '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
+          '5': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
+          '6': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '7': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '8': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '9': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '10': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+        }
       },
       { id: 'ep2', title: 'EP2: 안개 속 진술',
-        variants: { '10': { deck: ['werewolf','seer','robber','villager','villager','villager','werewolf','troublemaker','drunk','insomniac','minion','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] } }
+        variants: {
+          '3': { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
+          '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
+          '5': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
+          '6': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '7': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '8': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '9': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '10': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+        }
       }
     ]
   },
@@ -332,6 +350,7 @@ function renderHomeHTML() {
       <div class="home__moon"></div>
       <h1 class="home__title">한밤의<br>늑대인간</h1>
       <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
+      <p class="home__version">v${window.APP_VERSION || '1.1.0'}</p>
       <div class="home__actions">
         <button class="btn btn--primary btn--full" onclick="goSetup()">게임 만들기</button>
         <button class="btn btn--ghost btn--full" onclick="goJoin()">게임 참가</button>
