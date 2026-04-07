@@ -119,10 +119,20 @@ function getVariant(scenario, episodeId, playerCount) {
   const episode = scenario.episodes.find(ep => ep.id === episodeId);
   if (!episode) return null;
   const v = episode.variants;
-  if (v[String(playerCount)]) return v[String(playerCount)];
-  // fallback: largest available
-  const keys = Object.keys(v).map(Number).sort((a, b) => a - b);
-  return v[String(keys[keys.length - 1])];
+  let variant = v[String(playerCount)];
+  if (!variant) {
+    // fallback: smallest key >= playerCount, else largest key
+    const keys = Object.keys(v).map(Number).sort((a, b) => a - b);
+    const fit = keys.find(k => k >= playerCount);
+    variant = v[String(fit != null ? fit : keys[keys.length - 1])];
+  }
+  if (!variant) return null;
+  // Trim deck to playerCount + 3 (pool-style variants may have more cards than needed)
+  const need = playerCount + 3;
+  if (variant.deck.length > need) {
+    return { ...variant, deck: variant.deck.slice(0, need) };
+  }
+  return variant;
 }
 
 // ===== MANIFEST & AUDIO =====
