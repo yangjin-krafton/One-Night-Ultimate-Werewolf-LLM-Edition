@@ -451,7 +451,7 @@ function renderHomeHTML() {
       <div class="home__moon"></div>
       <h1 class="home__title">한밤의<br>늑대인간</h1>
       <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
-      <p class="home__version">v${window.APP_VERSION || '1.1.0'}</p>
+      <p class="home__version">v${window.APP_VERSION || '1.2.0'}</p>
       <div class="home__actions">
         <button class="btn btn--primary btn--full" onclick="goSetup()">게임 만들기</button>
         <button class="btn btn--ghost btn--full" onclick="goJoin()">게임 참가</button>
