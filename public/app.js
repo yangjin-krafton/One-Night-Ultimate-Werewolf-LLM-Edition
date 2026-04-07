@@ -5,13 +5,13 @@
 
 // ===== ROLE DATA =====
 const ROLES = {
-  werewolf:     { name: '늑대인간',     team: 'wolf',    emoji: '🐺', desc: '밤에 눈을 떠서 다른 늑대인간을 확인합니다. 혼자라면 센터 카드 1장을 볼 수 있습니다.' },
+  werewolf:     { name: '늑대인간',     team: 'wolf',    emoji: '🐺', desc: '밤에 눈을 떠서 다른 늑대인간을 확인합니다. 혼자라면 센터 카드 1장을 볼 수 있습니다. 하수인 행동 시 눈을 감은 채 엄지를 올려 자신을 알립니다.' },
   seer:         { name: '점술사',       team: 'village', emoji: '🔮', desc: '밤에 다른 플레이어 1명의 카드를 보거나, 센터 카드 2장을 확인할 수 있습니다.' },
   robber:       { name: '강도',         team: 'village', emoji: '🗡️', desc: '밤에 다른 플레이어 1명과 카드를 교환하고, 새로 받은 카드를 확인합니다.' },
   troublemaker: { name: '말썽꾼',       team: 'village', emoji: '🃏', desc: '밤에 다른 두 플레이어의 카드를 서로 바꿉니다. 바꾼 카드는 확인하지 않습니다.' },
   drunk:        { name: '주정뱅이',     team: 'village', emoji: '🍺', desc: '밤에 센터 카드 1장과 자신의 카드를 교환합니다. 바꾼 카드는 확인하지 않습니다.' },
   insomniac:    { name: '불면증 환자',  team: 'village', emoji: '😵', desc: '밤의 마지막에 자신의 카드를 확인합니다. 누군가 바꿨다면 새 역할을 알 수 있습니다.' },
-  minion:       { name: '하수인',       team: 'wolf',    emoji: '👹', desc: '밤에 늑대인간이 누구인지 확인합니다. 늑대인간은 하수인을 모릅니다.' },
+  minion:       { name: '하수인',       team: 'wolf',    emoji: '👹', desc: '밤에 눈을 떠서 엄지를 올린 늑대인간을 확인합니다. 늑대인간은 하수인을 모릅니다.' },
   mason:        { name: '프리메이슨',   team: 'village', emoji: '🤝', desc: '밤에 다른 프리메이슨을 확인합니다. 서로의 존재가 마을 팀의 단서가 됩니다.' },
   villager:     { name: '마을 주민',    team: 'village', emoji: '🏠', desc: '특별한 능력이 없습니다. 토론과 추리로 늑대인간을 찾아내세요.' },
   witch:        { name: '마녀',         team: 'village', emoji: '🧙', desc: '밤에 센터 카드 1장을 확인하고, 원한다면 그 카드를 다른 플레이어 카드와 바꿀 수 있습니다.' },
@@ -23,6 +23,7 @@ const DESC_HIGHLIGHTS = {
     { t: '다른 늑대인간을 확인', c: '#fb7185' },
     { t: '혼자라면', c: '#a78bfa' },
     { t: '센터 카드 1장을 볼 수 있습니다', c: '#60a5fa' },
+    { t: '엄지를 올려 자신을 알립니다', c: '#fbbf24' },
   ],
   seer: [
     { t: '플레이어 1명의 카드를 보거나', c: '#22d3ee' },
@@ -46,7 +47,7 @@ const DESC_HIGHLIGHTS = {
     { t: '새 역할을 알 수 있습니다', c: '#34d399' },
   ],
   minion: [
-    { t: '늑대인간이 누구인지 확인', c: '#fb7185' },
+    { t: '엄지를 올린 늑대인간을 확인', c: '#fbbf24' },
     { t: '하수인을 모릅니다', c: '#94a3b8' },
   ],
   mason: [
