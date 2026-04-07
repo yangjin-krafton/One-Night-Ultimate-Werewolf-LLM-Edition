@@ -729,17 +729,38 @@ body {
   margin-bottom: 32px;
 }
 
+.playing__controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .playing__stop {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: var(--radius);
   color: var(--fg);
   font-size: 15px;
-  padding: 12px 32px;
+  padding: 12px 28px;
   cursor: pointer;
   transition: all 0.2s;
 }
 .playing__stop:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
+.playing__skip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.playing__skip:active { transform: scale(0.95); background: rgba(255,255,255,0.1); color: var(--fg); }
+.playing__skip svg { flex-shrink: 0; }
 
 /* ===== LOBBY FOOTER ===== */
 .lobby__footer {

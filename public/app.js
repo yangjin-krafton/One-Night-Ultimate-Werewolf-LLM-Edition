@@ -220,7 +220,7 @@ const state = {
   playlistIndex: 0,
   playlist: [],
   manifest: null,
-  actionDelay: 0,  // seconds of extra delay between role narrations
+  actionDelay: (() => { try { return parseInt(localStorage.getItem('onw_action_delay')) || 0; } catch { return 0; } })(),
 };
 
 // ===== ROOM CODE =====
@@ -406,6 +406,49 @@ function playClip(clip) {
   });
 }
 
+function skipToNext() {
+  if (!state.playing) return;
+  if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
+  audioEl.pause();
+  // Jump to the next role's first clip (skip remaining clips of current role)
+  const curClip = state.playlist[state.playlistIndex];
+  let target = state.playlistIndex + 1;
+  if (curClip && curClip.roleId) {
+    while (target < state.playlist.length && state.playlist[target].roleId === curClip.roleId) target++;
+  }
+  if (target >= state.playlist.length) {
+    state.playing = false;
+    render();
+    showToast('밤이 끝났습니다. 토론을 시작하세요!');
+    return;
+  }
+  state.playlistIndex = target;
+  playClip(state.playlist[target]);
+}
+
+function skipToPrev() {
+  if (!state.playing) return;
+  if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
+  audioEl.pause();
+  // Jump to the start of current role, or previous role if already at start
+  const curClip = state.playlist[state.playlistIndex];
+  let target = state.playlistIndex;
+  // Find start of current role group
+  if (curClip && curClip.roleId) {
+    while (target > 0 && state.playlist[target - 1].roleId === curClip.roleId) target--;
+  }
+  // If already at start of this role, go to previous role's start
+  if (target === state.playlistIndex && target > 0) {
+    target--;
+    const prevClip = state.playlist[target];
+    if (prevClip && prevClip.roleId) {
+      while (target > 0 && state.playlist[target - 1].roleId === prevClip.roleId) target--;
+    }
+  }
+  state.playlistIndex = target;
+  playClip(state.playlist[target]);
+}
+
 async function startPlayback() {
   // MUST unlock in the same synchronous call stack as user tap
   unlockAudio();
@@ -512,7 +555,7 @@ function renderHomeHTML() {
       <h1 class="home__title">한밤의<br>늑대인간</h1>
       <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
       <button class="home__changelog-btn" onclick="goChangelog()">
-        <span class="home__changelog-ver">v${window.APP_VERSION || '1.5.0'}</span>
+        <span class="home__changelog-ver">v${window.APP_VERSION || '1.6.0'}</span>
         <span class="home__changelog-label">업데이트 로그 →</span>
       </button>
       <div class="home__actions">
@@ -524,11 +567,15 @@ function renderHomeHTML() {
 
 // -- Changelog
 const CHANGELOG = [
+  { ver: '1.6.0', date: '2026-04-07', items: [
+    '밤 행동 간격 설정을 로컬에 저장 (재접속 시 유지)',
+    'TTS 재생 중 이전/다음 역할 건너뛰기 버튼 추가',
+  ]},
   { ver: '1.5.0', date: '2026-04-07', items: [
     '홈 화면에 업데이트 로그 페이지 추가',
     '최근 참가한 방 코드 5개를 로컬에 저장 및 참가 화면에 표시',
   ]},
-  { ver: '1.5.0', date: '2026-04-07', items: [
+  { ver: '1.6.0', date: '2026-04-07', items: [
     '역할 설명 카드에 중요 키워드 컬러 하이라이트 적용',
     '밤 행동 간격 지연 옵션 추가 (없음/3초/5초/10초/15초/20초)',
   ]},
@@ -784,7 +831,17 @@ function renderPlayingOverlayHTML() {
         <div class="progress-bar"><div class="progress-bar__fill" style="width:${pct}%"></div></div>
       </div>
       <div class="playing__count">${current} / ${total}</div>
-      <button class="playing__stop" onclick="stopPlayback()">■ 정지</button>
+      <div class="playing__controls">
+        <button class="playing__skip" onclick="skipToPrev()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          이전
+        </button>
+        <button class="playing__stop" onclick="stopPlayback()">■ 정지</button>
+        <button class="playing__skip" onclick="skipToNext()">
+          다음
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 18l8.5-6L4 6z" /></svg>
+        </button>
+      </div>
     </div>`;
 }
 
@@ -911,6 +968,7 @@ function submitJoin() {
 
 function setActionDelay(seconds) {
   state.actionDelay = seconds;
+  try { localStorage.setItem('onw_action_delay', String(seconds)); } catch {}
   render();
 }
 
