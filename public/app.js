@@ -161,6 +161,7 @@ const state = {
   playlistIndex: 0,
   playlist: [],
   manifest: null,
+  actionDelay: 0,  // seconds of extra delay between role narrations
 };
 
 // ===== ROOM CODE =====
@@ -303,6 +304,7 @@ function unlockAudio() {
 
 function stopPlayback() {
   state.playing = false;
+  if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   audioEl.pause();
   audioEl.removeAttribute('src');
   audioEl.onended = null;
@@ -313,19 +315,34 @@ function stopPlayback() {
 function playNext() {
   state.playlistIndex++;
   if (state.playlistIndex >= state.playlist.length) {
-    // Finished all clips
     state.playing = false;
     render();
     showToast('밤이 끝났습니다. 토론을 시작하세요!');
     return;
   }
+
+  const prevClip = state.playlist[state.playlistIndex - 1];
+  const nextClip = state.playlist[state.playlistIndex];
+  // Insert delay when transitioning between different roles (not opening/outro)
+  const roleChanged = prevClip && nextClip && prevClip.roleId && nextClip.roleId && prevClip.roleId !== nextClip.roleId;
+  if (roleChanged && state.actionDelay > 0) {
+    renderPlayingOverlay();
+    state._delayTimer = setTimeout(() => {
+      state._delayTimer = null;
+      playClip(nextClip);
+    }, state.actionDelay * 1000);
+    return;
+  }
+
+  playClip(nextClip);
+}
+
+function playClip(clip) {
   renderPlayingOverlay();
-  const clip = state.playlist[state.playlistIndex];
   audioEl.src = clip.url;
   audioEl.load();
   audioEl.play().catch((err) => {
     console.warn('play() rejected:', clip.url, err);
-    // Skip to next on failure
     playNext();
   });
 }
@@ -568,6 +585,12 @@ function renderLobbyHTML() {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
           밤 행동 음성 재생
         </button>
+        <div class="delay-options">
+          <span class="delay-options__label">행동 간격</span>
+          <div class="delay-options__btns">
+            ${[0,3,5,10,15,20].map(s => `<button class="delay-btn ${state.actionDelay === s ? 'selected' : ''}" onclick="setActionDelay(${s})">${s === 0 ? '없음' : s + '초'}</button>`).join('')}
+          </div>
+        </div>
       </div>
 
       <div class="center-info">카드 ${variant.deck.length}장 (플레이어 ${config.playerCount} + 센터 ${centerCount})</div>
@@ -717,6 +740,11 @@ function submitJoin() {
     return;
   }
   enterLobby(code);
+}
+
+function setActionDelay(seconds) {
+  state.actionDelay = seconds;
+  render();
 }
 
 function rerollDeck() {

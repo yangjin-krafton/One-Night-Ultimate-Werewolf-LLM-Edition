@@ -352,6 +352,9 @@ body {
 
 .play-bar {
   padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .play-btn {
   width: 100%;
@@ -371,6 +374,39 @@ body {
 }
 .play-btn:active { transform: scale(0.98); }
 .play-btn svg { flex-shrink: 0; }
+
+.delay-options {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.delay-options__label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.delay-options__btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.delay-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.delay-btn.selected {
+  background: rgba(160,100,240,0.2);
+  border-color: rgba(160,100,240,0.4);
+  color: #c8a0f0;
+}
+.delay-btn:active { transform: scale(0.95); }
 
 /* Role card grid */
 .role-grid {
