@@ -280,14 +280,20 @@ def build_voice_lock_from_map(
 ) -> dict[str, dict[str, Any]]:
     """Build a voice_lock from voice_map + voice library.
 
-    For each role's voice tag base (e.g. "lynette"), locks "{base}_기본" to a
-    specific voice entry from the library.
-    Returns dict mapping full tag (e.g. "lynette_기본") → voice dict.
+    voice_map values are used as voice tags directly (e.g. "lynette_Narrator").
+    If a tag is not found, tries "{tag}_기본" as fallback.
+    Returns dict mapping tag → voice dict.
     """
-    needed_tags: set[str] = set()
-    for voice_base in voice_map.values():
-        needed_tags.add(f"{voice_base}_기본")
-    return resolve_voice_lock(all_voices, sorted(needed_tags), seed=seed)
+    needed_tags: list[str] = sorted(set(voice_map.values()))
+    lock = resolve_voice_lock(all_voices, needed_tags, seed=seed)
+    # Fallback: for tags not found, try appending _기본
+    for tag in needed_tags:
+        if tag not in lock:
+            fallback = f"{tag}_기본"
+            fallback_lock = resolve_voice_lock(all_voices, [fallback], seed=seed)
+            if fallback in fallback_lock:
+                lock[tag] = fallback_lock[fallback]
+    return lock
 
 
 def generate_tts_for_role(
@@ -322,10 +328,11 @@ def generate_tts_for_role(
     if not clean_text:
         clean_text = text.strip()
 
-    tag = f"{voice_tag_base}_기본"
-    locked = voice_lock.get(tag)
+    # Try tag directly, then with _기본 fallback
+    locked = voice_lock.get(voice_tag_base) or voice_lock.get(f"{voice_tag_base}_기본")
+    tag = voice_tag_base
     if not locked:
-        raise RuntimeError(f"Voice lock missing for tag '{tag}'")
+        raise RuntimeError(f"Voice lock missing for tag '{voice_tag_base}'")
 
     ref_name = locked.get("audio_filename", "")
     ref_text = locked.get("prompt_text", "")

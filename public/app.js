@@ -521,6 +521,26 @@ function buildPlaylist(manifest, scenarioId, episodeId, playerCount, wakeOrder) 
   return playlist;
 }
 
+// ===== BGM =====
+const bgmEl = document.getElementById('bgmPlayer');
+const BGM_DEFAULT_VOLUME = 0.25;
+bgmEl.volume = (() => { try { return parseFloat(localStorage.getItem('onw_bgm_vol')) || BGM_DEFAULT_VOLUME; } catch { return BGM_DEFAULT_VOLUME; } })();
+
+function setBgmVolume(v) {
+  bgmEl.volume = Math.max(0, Math.min(1, v));
+  try { localStorage.setItem('onw_bgm_vol', String(bgmEl.volume)); } catch {}
+}
+
+function startBgm() {
+  bgmEl.currentTime = 0;
+  bgmEl.play().catch(() => {});
+}
+
+function stopBgm() {
+  bgmEl.pause();
+  bgmEl.currentTime = 0;
+}
+
 // ===== AUDIO PLAYBACK (mobile-safe, event-driven) =====
 const audioEl = document.getElementById('audioPlayer');
 let audioCtx = null;
@@ -539,6 +559,10 @@ function unlockAudio() {
   audioEl.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBqSAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYoRBqSAAAAAAAAAAAAAAAAAAAA';
   const p = audioEl.play();
   if (p) p.then(() => { audioEl.pause(); audioEl.muted = false; }).catch(() => { audioEl.muted = false; });
+  // Unlock BGM too
+  bgmEl.muted = true;
+  const bp = bgmEl.play();
+  if (bp) bp.then(() => { bgmEl.pause(); bgmEl.muted = false; }).catch(() => { bgmEl.muted = false; });
 }
 
 function stopPlayback() {
@@ -547,6 +571,7 @@ function stopPlayback() {
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   cancelSpeechPlayback();
   audioEl.pause();
+  stopBgm();
   audioEl.removeAttribute('src');
   audioEl.onended = null;
   audioEl.onerror = null;
@@ -575,9 +600,11 @@ function togglePause() {
         audioEl.play().catch(() => {});
       }
     }
+    bgmEl.play().catch(() => {});
   } else {
     // Pause
     state.paused = true;
+    bgmEl.pause();
     if (state._delayTimer) {
       // Pause during delay — save remaining time
       const elapsed = Date.now() - (state._delayStart || Date.now());
@@ -740,6 +767,7 @@ async function startPlayback() {
 
   state.playing = true;
   state.playlistIndex = 0;
+  startBgm();
   render();
 
   // Event-driven chain: ended → playNext (no async gaps that break mobile)
@@ -1117,6 +1145,13 @@ function renderPlayingOverlayHTML() {
           다음
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 18l8.5-6L4 6z" /></svg>
         </button>
+      </div>
+      <div class="playing__bgm">
+        <span class="playing__bgm-label">🎵 BGM</span>
+        <input type="range" min="0" max="100" value="${Math.round(bgmEl.volume * 100)}"
+          class="playing__bgm-slider"
+          oninput="setBgmVolume(this.value/100); this.nextElementSibling.textContent=this.value+'%'" />
+        <span class="playing__bgm-val">${Math.round(bgmEl.volume * 100)}%</span>
       </div>
       <button class="playing__exit" onclick="stopPlayback()">나가기</button>
     </div>`;
