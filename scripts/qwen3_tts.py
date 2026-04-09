@@ -55,8 +55,20 @@ QWEN3_DEFAULT_DO_SAMPLE = True
 QWEN3_DEFAULT_USE_XVEC = True
 
 import re as _re
+import struct as _struct
+import wave as _wave
 
-_SENTENCE_SPLIT_RE = _re.compile(r'(?<=[.?!。！？])\s*')
+_SENTENCE_SPLIT_RE = _re.compile(r'(?<=[.?!。！？…])\s*')
+
+# Pause durations (seconds) inserted between sentences during concat.
+# Keyed by the last character of the preceding sentence.
+_PAUSE_AFTER: dict[str, float] = {
+    '.': 0.55,   '。': 0.55,
+    '!': 0.50,   '！': 0.50,
+    '?': 0.50,   '？': 0.50,
+    '…': 0.60,
+}
+_PAUSE_DEFAULT = 0.35   # fallback for other endings (e.g. no punctuation)
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -64,6 +76,55 @@ def _split_sentences(text: str) -> list[str]:
     Keeps voice identity stable by avoiding long single-call generations."""
     parts = _SENTENCE_SPLIT_RE.split(text.strip())
     return [p.strip() for p in parts if p.strip()]
+
+
+def _make_silence_wav(duration_s: float, *, sample_rate: int, sampwidth: int, channels: int) -> bytes:
+    """Generate raw PCM silence bytes for the given duration."""
+    n_frames = int(sample_rate * duration_s)
+    return b'\x00' * (n_frames * sampwidth * channels)
+
+
+def concat_wavs_with_pause(wav_paths: list[Path], sentences: list[str], out_wav_path: Path) -> Path:
+    """Concat WAV files with silence gaps between sentences.
+    Gap duration depends on the trailing punctuation of each sentence."""
+    if not wav_paths:
+        raise ValueError("No wav parts to concat")
+    if len(wav_paths) == 1:
+        out_wav_path.parent.mkdir(parents=True, exist_ok=True)
+        out_wav_path.write_bytes(wav_paths[0].read_bytes())
+        return out_wav_path
+
+    out_wav_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Read first file to get WAV params
+    with _wave.open(str(wav_paths[0]), "rb") as w0:
+        channels = w0.getnchannels()
+        sampwidth = w0.getsampwidth()
+        framerate = w0.getframerate()
+        comptype = w0.getcomptype()
+        compname = w0.getcompname()
+
+    chunks: list[bytes] = []
+    for idx, p in enumerate(wav_paths):
+        with _wave.open(str(p), "rb") as w:
+            chunks.append(w.readframes(w.getnframes()))
+
+        # Insert silence after this sentence (except after the last one)
+        if idx < len(wav_paths) - 1:
+            sent = sentences[idx] if idx < len(sentences) else ""
+            last_char = sent.rstrip()[-1] if sent.rstrip() else ""
+            pause_s = _PAUSE_AFTER.get(last_char, _PAUSE_DEFAULT)
+            chunks.append(_make_silence_wav(pause_s, sample_rate=framerate, sampwidth=sampwidth, channels=channels))
+
+    with _wave.open(str(out_wav_path), "wb") as out:
+        out.setnchannels(channels)
+        out.setsampwidth(sampwidth)
+        out.setframerate(framerate)
+        if comptype != "NONE":
+            out.setcomptype(comptype, compname)
+        for chunk in chunks:
+            out.writeframes(chunk)
+    return out_wav_path
 
 
 # ============================================================================
@@ -625,6 +686,15 @@ def generate_character_tts_wav(
     if not segments:
         raise ValueError("Empty text after parsing emotion tags")
 
+    # Auto-create voice_lock if not provided (ensures consistent voice within this clip)
+    if voice_lock is None and mode == "tag":
+        try:
+            all_voices = query_voice_library(api_base, timeout_s=30)
+            needed_tags = sorted(set(emotion_voice_tags.values()))
+            voice_lock = resolve_voice_lock(all_voices, needed_tags, seed=seed or 42)
+        except Exception as e:
+            print(f"[warn] Auto voice-lock failed: {e}. Falling back to random selection.")
+
     min_ref_s = float(os.environ.get("GPT_SOVITS_REF_MIN_S", "3"))
     max_ref_s = float(os.environ.get("GPT_SOVITS_REF_MAX_S", "10"))
     max_ref_attempts = int(os.environ.get("GPT_SOVITS_MAX_REF_ATTEMPTS", str(int(max_ref_attempts or 8))))
@@ -680,7 +750,7 @@ def generate_character_tts_wav(
                                     request_retry_backoff_s=request_retry_backoff_s,
                                 )
                             else:
-                                # Long text: generate per-sentence, concat
+                                # Long text: generate per-sentence, concat with pauses
                                 sent_parts: list[Path] = []
                                 for si, sent in enumerate(sentences):
                                     sp = parts_dir / f"{out_path.stem}.part{i:03d}.s{si:03d}.wav"
@@ -694,7 +764,7 @@ def generate_character_tts_wav(
                                         request_retry_backoff_s=request_retry_backoff_s,
                                     )
                                     sent_parts.append(sp)
-                                concat_wavs(sent_parts, part_path)
+                                concat_wavs_with_pause(sent_parts, sentences, part_path)
                             tag_success = True
                             break
                         except RuntimeError as e:
