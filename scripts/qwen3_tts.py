@@ -263,6 +263,101 @@ def resolve_voice_lock(
     return lock
 
 
+def load_voice_map(voice_map_path: str | os.PathLike[str]) -> dict[str, str]:
+    """Load role→voice tag base mapping from voice_map.json.
+
+    Returns dict like {"Narrator": "lynette", "werewolf": "neuvillette", ...}
+    """
+    raw = json.loads(Path(voice_map_path).read_text("utf-8"))
+    return {k: v for k, v in raw.items() if not k.startswith("_")}
+
+
+def build_voice_lock_from_map(
+    voice_map: dict[str, str],
+    all_voices: list[dict[str, Any]],
+    *,
+    seed: int | None = 42,
+) -> dict[str, dict[str, Any]]:
+    """Build a voice_lock from voice_map + voice library.
+
+    For each role's voice tag base (e.g. "lynette"), locks "{base}_기본" to a
+    specific voice entry from the library.
+    Returns dict mapping full tag (e.g. "lynette_기본") → voice dict.
+    """
+    needed_tags: set[str] = set()
+    for voice_base in voice_map.values():
+        needed_tags.add(f"{voice_base}_기본")
+    return resolve_voice_lock(all_voices, sorted(needed_tags), seed=seed)
+
+
+def generate_tts_for_role(
+    *,
+    text: str,
+    voice_tag_base: str,
+    out_wav_path: str | os.PathLike[str],
+    voice_lock: dict[str, dict[str, Any]],
+    api_base: str = QWEN3_DEFAULT_API_BASE,
+    language: str = QWEN3_DEFAULT_LANGUAGE,
+    use_xvec: bool = QWEN3_DEFAULT_USE_XVEC,
+    max_tokens: int = QWEN3_DEFAULT_MAX_TOKENS,
+    do_sample: bool = QWEN3_DEFAULT_DO_SAMPLE,
+    temperature: float = QWEN3_DEFAULT_TEMPERATURE,
+    top_p: float = QWEN3_DEFAULT_TOP_P,
+    top_k: int = QWEN3_DEFAULT_TOP_K,
+    timeout_s: int = 120,
+    request_retries: int = 2,
+    request_retry_backoff_s: float = 1.0,
+) -> Path:
+    """Generate TTS for a single clip using voice_map + voice_lock.
+
+    Strips emotion tags from text, splits by sentence, generates each sentence
+    with the locked voice, inserts pauses, and concatenates.
+    """
+    out_path = Path(out_wav_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Strip leading emotion tag: [xxx] or {xxx}
+    import re
+    clean_text = re.sub(r'^\s*[\[{][^\]}>]+[\]}]\s*', '', text).strip()
+    if not clean_text:
+        clean_text = text.strip()
+
+    tag = f"{voice_tag_base}_기본"
+    locked = voice_lock.get(tag)
+    if not locked:
+        raise RuntimeError(f"Voice lock missing for tag '{tag}'")
+
+    ref_name = locked.get("audio_filename", "")
+    ref_text = locked.get("prompt_text", "")
+
+    sentences = _split_sentences(clean_text)
+    if len(sentences) <= 1:
+        qwen3_tts_to_wav_from_file(
+            text=clean_text, ref_voice_name=ref_name, ref_text=ref_text,
+            out_wav_path=out_path, api_base=api_base, language=language,
+            use_xvec=use_xvec, max_tokens=max_tokens, do_sample=do_sample,
+            temperature=temperature, top_p=top_p, top_k=top_k,
+            timeout_s=timeout_s, request_retries=request_retries,
+            request_retry_backoff_s=request_retry_backoff_s,
+        )
+    else:
+        with tempfile.TemporaryDirectory(prefix="tts_vm_") as td:
+            parts: list[Path] = []
+            for si, sent in enumerate(sentences):
+                sp = Path(td) / f"s{si:03d}.wav"
+                qwen3_tts_to_wav_from_file(
+                    text=sent, ref_voice_name=ref_name, ref_text=ref_text,
+                    out_wav_path=sp, api_base=api_base, language=language,
+                    use_xvec=use_xvec, max_tokens=max_tokens, do_sample=do_sample,
+                    temperature=temperature, top_p=top_p, top_k=top_k,
+                    timeout_s=timeout_s, request_retries=request_retries,
+                    request_retry_backoff_s=request_retry_backoff_s,
+                )
+                parts.append(sp)
+            concat_wavs_with_pause(parts, sentences, out_path)
+    return out_path
+
+
 # ============================================================================
 # Qwen3-TTS generation functions
 # ============================================================================

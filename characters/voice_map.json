@@ -1,0 +1,25 @@
+{
+  "_comment": "역할 ID → Qwen3-TTS voice library tag 매핑. 감정별 태그가 없으면 {tag}_기본 사용.",
+  "_voicesSource": "D:/Weeks/Qwen3-TTS/data/voices/ref/voices.json",
+
+  "Narrator":                  "lynette",
+  "werewolf":                  "neuvillette",
+  "alpha_wolf":                "yunjin",
+  "mystic_wolf":               "itto",
+  "dream_wolf":                "xilonen",
+  "minion":                    "dottore",
+  "mason":                     "mavuika",
+  "seer":                      "lisa",
+  "apprentice_seer":           "mona",
+  "paranormal_investigator":   "ganyu",
+  "robber":                    "dehya",
+  "troublemaker":              "paimon",
+  "witch":                     "xilonen",
+  "village_idiot":             "kaveh",
+  "drunk":                     "itto",
+  "sentinel":                  "albedo",
+  "curator":                   "yunjin",
+  "insomniac":                 "ganyu",
+  "revealer":                  "yaeMiko",
+  "bodyguard":                 "itto"
+}

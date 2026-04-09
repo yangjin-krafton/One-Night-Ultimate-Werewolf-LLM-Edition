@@ -493,23 +493,33 @@ def main() -> int:
     tts_mod = _load_gpt_sovits_module()
     qwen3_mod = _load_qwen3_tts_module() if args.tts == "qwen3" else None
 
-    # Pre-resolve voice library for consistent voices per role across the scenario
+    # Load voice_map and build voice_lock from Qwen3-TTS voice library
+    qwen3_voice_map: dict[str, str] | None = None
     qwen3_voice_lock: dict[str, dict[str, Any]] | None = None
-    if qwen3_mod is not None and args.qwen3_mode == "tag":
+    if qwen3_mod is not None:
+        voice_map_path = characters_dir / "voice_map.json"
+        if not voice_map_path.exists():
+            voice_map_path = ROOT / "characters" / "voice_map.json"
+        if voice_map_path.exists():
+            qwen3_voice_map = qwen3_mod.load_voice_map(voice_map_path)
+            print(f"[info] Loaded voice_map: {len(qwen3_voice_map)} roles from {voice_map_path.name}")
         try:
             print("[info] Querying Qwen3-TTS voice library for voice locking...")
             all_voices = qwen3_mod.query_voice_library(args.qwen3_api_base)
-            # Collect all voice tags needed for this scenario's speakers
-            all_tags: set[str] = set()
-            for job in jobs:
-                cfg_path = character_resolver.resolve(job.speaker_id)
-                if cfg_path:
-                    cfg = qwen3_mod.load_character_config(cfg_path)
-                    qwen3_cfg = qwen3_mod._get_qwen3_config(Path(cfg_path))
-                    voice_tag_base = qwen3_cfg.get("voiceTag", "") or qwen3_mod._guess_voice_name_from_refs(cfg) or cfg.character_id
-                    tag_map = qwen3_mod._build_emotion_voice_tag_map(voice_tag_base, cfg.tag_aliases)
-                    all_tags.update(tag_map.values())
-            qwen3_voice_lock = qwen3_mod.resolve_voice_lock(all_voices, sorted(all_tags), seed=42)
+            if qwen3_voice_map:
+                qwen3_voice_lock = qwen3_mod.build_voice_lock_from_map(qwen3_voice_map, all_voices, seed=42)
+            else:
+                # Fallback: collect tags from character configs
+                all_tags: set[str] = set()
+                for job in jobs:
+                    cfg_path = character_resolver.resolve(job.speaker_id)
+                    if cfg_path:
+                        cfg = qwen3_mod.load_character_config(cfg_path)
+                        qwen3_cfg = qwen3_mod._get_qwen3_config(Path(cfg_path))
+                        voice_tag_base = qwen3_cfg.get("voiceTag", "") or qwen3_mod._guess_voice_name_from_refs(cfg) or cfg.character_id
+                        tag_map = qwen3_mod._build_emotion_voice_tag_map(voice_tag_base, cfg.tag_aliases)
+                        all_tags.update(tag_map.values())
+                qwen3_voice_lock = qwen3_mod.resolve_voice_lock(all_voices, sorted(all_tags), seed=42)
             locked_tags = [f"{t} -> {v.get('audio_filename', '?')}" for t, v in qwen3_voice_lock.items()]
             print(f"[info] Locked {len(qwen3_voice_lock)} voice tags:")
             for desc in locked_tags[:20]:
@@ -544,33 +554,47 @@ def main() -> int:
         used_backend = backend
         try:
             if backend == "qwen3":
-                if not character_cfg:
-                    raise SystemExit(
-                        f"Missing character config for speakerId={job.speaker_id}. "
-                        f"Create {characters_dir / job.speaker_id / 'character.json'} or use --tts windows/auto."
-                    )
                 assert qwen3_mod is not None
-                qwen3_mod.generate_character_tts_wav(
-                    character_config_path=str(character_cfg),
-                    text=job.text,
-                    out_wav_path=str(job.out_wav_path),
-                    character_local_ref_base=(args.character_local_ref_base or None),
-                    character_container_ref_base=(args.character_container_ref_base or None),
-                    api_base=args.qwen3_api_base,
-                    text_lang=args.qwen3_language,
-                    qwen3_mode=args.qwen3_mode,
-                    use_xvec=args.qwen3_use_xvec,
-                    max_tokens=int(args.qwen3_max_tokens),
-                    temperature=float(args.qwen3_temperature),
-                    top_p=float(args.qwen3_top_p),
-                    top_k=int(args.qwen3_top_k),
-                    timeout_s=int(args.timeout_s),
-                    request_retries=int(args.qwen3_request_retries),
-                    request_retry_backoff_s=1.0,
-                    seed=None,
-                    keep_parts_dir=None,
-                    voice_lock=qwen3_voice_lock,
-                )
+                # Resolve voice tag base for this speaker
+                voice_tag_base = (qwen3_voice_map or {}).get(job.speaker_id)
+                if not voice_tag_base and character_cfg:
+                    cfg = qwen3_mod.load_character_config(character_cfg)
+                    voice_tag_base = qwen3_mod._guess_voice_name_from_refs(cfg) or cfg.character_id
+                if not voice_tag_base:
+                    raise SystemExit(
+                        f"No voice mapping for speakerId={job.speaker_id}. "
+                        f"Add it to characters/voice_map.json."
+                    )
+                if qwen3_voice_lock:
+                    qwen3_mod.generate_tts_for_role(
+                        text=job.text,
+                        voice_tag_base=voice_tag_base,
+                        out_wav_path=str(job.out_wav_path),
+                        voice_lock=qwen3_voice_lock,
+                        api_base=args.qwen3_api_base,
+                        language=args.qwen3_language,
+                        use_xvec=args.qwen3_use_xvec,
+                        max_tokens=int(args.qwen3_max_tokens),
+                        temperature=float(args.qwen3_temperature),
+                        top_p=float(args.qwen3_top_p),
+                        top_k=int(args.qwen3_top_k),
+                        timeout_s=int(args.timeout_s),
+                        request_retries=int(args.qwen3_request_retries),
+                        request_retry_backoff_s=1.0,
+                    )
+                else:
+                    # Fallback to old character-config-based path
+                    if not character_cfg:
+                        raise SystemExit(f"No voice_lock and no character config for {job.speaker_id}")
+                    qwen3_mod.generate_character_tts_wav(
+                        character_config_path=str(character_cfg),
+                        text=job.text,
+                        out_wav_path=str(job.out_wav_path),
+                        api_base=args.qwen3_api_base,
+                        text_lang=args.qwen3_language,
+                        timeout_s=int(args.timeout_s),
+                        request_retries=int(args.qwen3_request_retries),
+                    )
             elif backend == "gpt-sovits":
                 if not character_cfg:
                     raise SystemExit(
