@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "LLM",
+  "scenarioType": "runtime",
+  "ttsSource": "scenarios_tts/orbital_station.tts.json",
+  "scenarios": [
+    {
+      "scenarioId": "orbital_station",
+      "title": "우주 정거장",
+      "tags": ["space_station", "sci_fi", "mystery", "werewolf", "orbital"],
+      "recommendedPlayerCounts": [3, 4, 5, 6, 7, 8, 9, 10],
+      "episodes": [
+        {
+          "episodeId": "ep1",
+          "title": "EP1: 사라진 출입 로그",
+          "variantByPlayerCount": {
+            "3": {
+              "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"],
+              "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "4": {
+              "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "5": {
+              "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "6": {
+              "roleDeck": ["werewolf", "alpha_wolf", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "sentinel"],
+              "roleWakeOrder": ["sentinel", "werewolf", "alpha_wolf", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "7": {
+              "roleDeck": ["werewolf", "alpha_wolf", "minion", "seer", "apprentice_seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "alpha_wolf", "minion", "seer", "apprentice_seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "8": {
+              "roleDeck": ["werewolf", "alpha_wolf", "minion", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "mason", "mason", "sentinel"],
+              "roleWakeOrder": ["sentinel", "werewolf", "alpha_wolf", "minion", "mason", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "9": {
+              "roleDeck": ["werewolf", "alpha_wolf", "mystic_wolf", "minion", "seer", "apprentice_seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "mason", "mason"],
+              "roleWakeOrder": ["werewolf", "alpha_wolf", "mystic_wolf", "minion", "mason", "seer", "apprentice_seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "10": {
+              "roleDeck": ["werewolf", "alpha_wolf", "mystic_wolf", "minion", "seer", "paranormal_investigator", "robber", "troublemaker", "witch", "village_idiot", "drunk", "sentinel", "insomniac", "mason", "mason", "revealer"],
+              "roleWakeOrder": ["sentinel", "werewolf", "alpha_wolf", "mystic_wolf", "minion", "mason", "seer", "paranormal_investigator", "robber", "witch", "troublemaker", "village_idiot", "drunk", "insomniac", "revealer"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            }
+          }
+        },
+        {
+          "episodeId": "ep2",
+          "title": "EP2: 무중력의 침묵",
+          "variantByPlayerCount": {
+            "3": {
+              "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"],
+              "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "4": {
+              "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "5": {
+              "roleDeck": ["werewolf", "dream_wolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "6": {
+              "roleDeck": ["werewolf", "mystic_wolf", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "curator"],
+              "roleWakeOrder": ["werewolf", "mystic_wolf", "seer", "robber", "witch", "troublemaker", "drunk", "curator", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "7": {
+              "roleDeck": ["werewolf", "alpha_wolf", "minion", "seer", "paranormal_investigator", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "alpha_wolf", "minion", "seer", "paranormal_investigator", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "8": {
+              "roleDeck": ["werewolf", "alpha_wolf", "dream_wolf", "minion", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "bodyguard", "mason", "mason"],
+              "roleWakeOrder": ["werewolf", "alpha_wolf", "minion", "mason", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "bodyguard"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "9": {
+              "roleDeck": ["werewolf", "alpha_wolf", "mystic_wolf", "minion", "seer", "apprentice_seer", "robber", "troublemaker", "witch", "village_idiot", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "alpha_wolf", "mystic_wolf", "minion", "seer", "apprentice_seer", "robber", "witch", "troublemaker", "village_idiot", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            },
+            "10": {
+              "roleDeck": ["werewolf", "alpha_wolf", "mystic_wolf", "dream_wolf", "minion", "seer", "paranormal_investigator", "robber", "troublemaker", "witch", "village_idiot", "drunk", "curator", "insomniac", "revealer", "bodyguard"],
+              "roleWakeOrder": ["werewolf", "alpha_wolf", "mystic_wolf", "minion", "seer", "paranormal_investigator", "robber", "witch", "troublemaker", "village_idiot", "drunk", "curator", "insomniac", "revealer", "bodyguard"],
+              "narration": {
+                "playbackPolicy": {
+                  "narratorAllowedPhases": ["episode_start"],
+                  "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

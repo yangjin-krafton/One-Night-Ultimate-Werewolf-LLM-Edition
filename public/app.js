@@ -280,6 +280,21 @@ const SCENARIOS = [
     id: 'full_moon_modern', title: '한밤의 서울 늑대', subtitle: '현대 한국 도시 테마 · 3~10인',
     playerCounts: [3,4,5,6,7,8,9,10],
     episodes: FULL_MOON_EPISODES
+  },
+  {
+    id: 'night_shift_handover', title: '야간 병동 인계 시간', subtitle: '병원 미스터리 테마 · 3~10인',
+    playerCounts: [3,4,5,6,7,8,9,10],
+    episodes: FULL_MOON_EPISODES
+  },
+  {
+    id: 'orbital_station', title: '우주 정거장', subtitle: '폐쇄 우주정거장 미스터리 · 3~10인',
+    playerCounts: [3,4,5,6,7,8,9,10],
+    episodes: FULL_MOON_EPISODES
+  },
+  {
+    id: 'abandoned_school_shoot', title: '폐교 탐사 유튜브 촬영', subtitle: '카메라 밖의 진실 · 3~10인',
+    playerCounts: [3,4,5,6,7,8,9,10],
+    episodes: FULL_MOON_EPISODES
   }
 ];
 
