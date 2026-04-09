@@ -36,6 +36,17 @@ def _load_gpt_sovits_module() -> Any:
     return module
 
 
+def _load_qwen3_tts_module() -> Any:
+    mod_path = ROOT / "scripts" / "qwen3_tts.py"
+    spec = importlib.util.spec_from_file_location("one_night_qwen3_tts", mod_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Failed to load module: {mod_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _load_concat_module() -> Any:
     mod_path = ROOT / "scripts" / "concat_episode_wavs.py"
     spec = importlib.util.spec_from_file_location("one_night_concat_episode_wavs", mod_path)
@@ -341,8 +352,8 @@ def main() -> int:
     parser.add_argument(
         "--tts",
         default=os.environ.get("TTS_BACKEND", "auto"),
-        choices=["auto", "gpt-sovits", "windows"],
-        help="TTS backend. auto=use gpt-sovits when character config exists, else windows.",
+        choices=["auto", "gpt-sovits", "qwen3", "windows"],
+        help="TTS backend. auto=use gpt-sovits when character config exists, else windows. qwen3=Qwen3-TTS via Gradio API.",
     )
     parser.add_argument(
         "--on-error",
@@ -396,6 +407,26 @@ def main() -> int:
     parser.add_argument("--windows-rate", type=int, default=int(os.environ.get("WINDOWS_TTS_RATE", "0")))
     parser.add_argument("--windows-volume", type=int, default=int(os.environ.get("WINDOWS_TTS_VOLUME", "100")))
     parser.add_argument("--windows-sample-rate", type=int, default=int(os.environ.get("WINDOWS_TTS_SAMPLE_RATE", "16000")))
+
+    # Qwen3-TTS arguments
+    default_qwen3_api_base = os.environ.get("QWEN3_TTS_API_BASE")
+    if not default_qwen3_api_base:
+        default_qwen3_api_base = "http://100.66.10.225:3000/tools/qwen3-tts"
+    parser.add_argument("--qwen3-api-base", default=default_qwen3_api_base, help="Qwen3-TTS Gradio server URL.")
+    parser.add_argument(
+        "--qwen3-mode",
+        default=os.environ.get("QWEN3_TTS_MODE", "tag"),
+        choices=["clone", "clone_from_file", "tag"],
+        help="Qwen3-TTS generation mode: tag (voice library, default), clone (upload ref), clone_from_file (server ref).",
+    )
+    parser.add_argument("--qwen3-language", default=os.environ.get("QWEN3_TTS_LANGUAGE", "korean"))
+    parser.add_argument("--qwen3-use-xvec", action="store_true", default=False, help="Qwen3 x-vector only mode.")
+    parser.add_argument("--qwen3-max-tokens", type=int, default=int(os.environ.get("QWEN3_TTS_MAX_TOKENS", "2048")))
+    parser.add_argument("--qwen3-temperature", type=float, default=float(os.environ.get("QWEN3_TTS_TEMPERATURE", "0.7")))
+    parser.add_argument("--qwen3-top-p", type=float, default=float(os.environ.get("QWEN3_TTS_TOP_P", "0.95")))
+    parser.add_argument("--qwen3-top-k", type=int, default=int(os.environ.get("QWEN3_TTS_TOP_K", "50")))
+    parser.add_argument("--qwen3-request-retries", type=int, default=int(os.environ.get("QWEN3_TTS_REQUEST_RETRIES", "2")))
+
     parser.add_argument("--limit", type=int, default=0, help="If set, generate only first N clips.")
     parser.add_argument("--dry-run", action="store_true", help="Print planned outputs without generating.")
     parser.add_argument(
@@ -460,6 +491,34 @@ def main() -> int:
         return 0
 
     tts_mod = _load_gpt_sovits_module()
+    qwen3_mod = _load_qwen3_tts_module() if args.tts == "qwen3" else None
+
+    # Pre-resolve voice library for consistent voices per role across the scenario
+    qwen3_voice_lock: dict[str, dict[str, Any]] | None = None
+    if qwen3_mod is not None and args.qwen3_mode == "tag":
+        try:
+            print("[info] Querying Qwen3-TTS voice library for voice locking...")
+            all_voices = qwen3_mod.query_voice_library(args.qwen3_api_base)
+            # Collect all voice tags needed for this scenario's speakers
+            all_tags: set[str] = set()
+            for job in jobs:
+                cfg_path = character_resolver.resolve(job.speaker_id)
+                if cfg_path:
+                    cfg = qwen3_mod.load_character_config(cfg_path)
+                    qwen3_cfg = qwen3_mod._get_qwen3_config(Path(cfg_path))
+                    voice_tag_base = qwen3_cfg.get("voiceTag", "") or qwen3_mod._guess_voice_name_from_refs(cfg) or cfg.character_id
+                    tag_map = qwen3_mod._build_emotion_voice_tag_map(voice_tag_base, cfg.tag_aliases)
+                    all_tags.update(tag_map.values())
+            qwen3_voice_lock = qwen3_mod.resolve_voice_lock(all_voices, sorted(all_tags), seed=42)
+            locked_tags = [f"{t} -> {v.get('audio_filename', '?')}" for t, v in qwen3_voice_lock.items()]
+            print(f"[info] Locked {len(qwen3_voice_lock)} voice tags:")
+            for desc in locked_tags[:20]:
+                print(f"  {desc}")
+            if len(locked_tags) > 20:
+                print(f"  ... (+{len(locked_tags)-20} more)")
+        except Exception as e:
+            print(f"[warn] Failed to query voice library for locking: {e}. Falling back to random selection.")
+            qwen3_voice_lock = None
 
     manifest: list[dict[str, Any]] = []
     for i, job in enumerate(jobs, start=1):
@@ -475,7 +534,35 @@ def main() -> int:
         error: str | None = None
         used_backend = backend
         try:
-            if backend == "gpt-sovits":
+            if backend == "qwen3":
+                if not character_cfg:
+                    raise SystemExit(
+                        f"Missing character config for speakerId={job.speaker_id}. "
+                        f"Create {characters_dir / job.speaker_id / 'character.json'} or use --tts windows/auto."
+                    )
+                assert qwen3_mod is not None
+                qwen3_mod.generate_character_tts_wav(
+                    character_config_path=str(character_cfg),
+                    text=job.text,
+                    out_wav_path=str(job.out_wav_path),
+                    character_local_ref_base=(args.character_local_ref_base or None),
+                    character_container_ref_base=(args.character_container_ref_base or None),
+                    api_base=args.qwen3_api_base,
+                    text_lang=args.qwen3_language,
+                    qwen3_mode=args.qwen3_mode,
+                    use_xvec=args.qwen3_use_xvec,
+                    max_tokens=int(args.qwen3_max_tokens),
+                    temperature=float(args.qwen3_temperature),
+                    top_p=float(args.qwen3_top_p),
+                    top_k=int(args.qwen3_top_k),
+                    timeout_s=int(args.timeout_s),
+                    request_retries=int(args.qwen3_request_retries),
+                    request_retry_backoff_s=1.0,
+                    seed=None,
+                    keep_parts_dir=None,
+                    voice_lock=qwen3_voice_lock,
+                )
+            elif backend == "gpt-sovits":
                 if not character_cfg:
                     raise SystemExit(
                         f"Missing character config for speakerId={job.speaker_id}. "

@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "LLM",
+  "scenarioType": "runtime",
+  "ttsSource": "scenarios_tts/full_moon.tts.json",
+  "scenarios": [
+    {
+      "scenarioId": "full_moon",
+      "title": "보름달의 밤: 전역할 시나리오",
+      "tags": ["all_roles", "classic", "werewolf", "full_moon"],
+      "recommendedPlayerCounts": [3, 4, 5, 6, 7, 8, 9, 10],
+      "episodes": [
+        {
+          "episodeId": "ep1",
+          "title": "EP1: 보름달의 저주",
+          "variantByPlayerCount": {
+            "3": {
+              "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"],
+              "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            },
+            "4": {
+              "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 },
+                  "drunk": { "before": 0, "during": 1, "after": 1 },
+                  "insomniac": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            },
+            "5": {
+              "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 },
+                  "drunk": { "before": 0, "during": 1, "after": 1 },
+                  "insomniac": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            },
+            "6": {
+              "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac", "mason", "mason"],
+              "roleWakeOrder": ["werewolf", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 },
+                  "drunk": { "before": 0, "during": 1, "after": 1 },
+                  "insomniac": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            },
+            "7": {
+              "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac", "mason", "mason"],
+              "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 },
+                  "drunk": { "before": 0, "during": 1, "after": 1 },
+                  "insomniac": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            },
+            "8": {
+              "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "mason", "mason"],
+              "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 },
+                  "witch": { "before": 0, "during": 1, "after": 1 },
+                  "drunk": { "before": 0, "during": 1, "after": 1 },
+                  "insomniac": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            },
+            "9": {
+              "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "mason", "mason", "villager"],
+              "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 },
+                  "witch": { "before": 0, "during": 1, "after": 1 },
+                  "drunk": { "before": 0, "during": 1, "after": 1 },
+                  "insomniac": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            },
+            "10": {
+              "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "mason", "mason", "villager", "villager"],
+              "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 },
+                  "witch": { "before": 0, "during": 1, "after": 1 },
+                  "drunk": { "before": 0, "during": 1, "after": 1 },
+                  "insomniac": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            }
+          }
+        },
+        {
+          "episodeId": "ep2",
+          "title": "EP2: 새벽의 심판",
+          "variantByPlayerCount": {
+            "3": {
+              "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"],
+              "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            },
+            "10": {
+              "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac", "mason", "mason", "villager", "villager"],
+              "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "witch", "drunk", "insomniac"],
+              "narration": {
+                "playbackPolicy": { "narratorAllowedPhases": ["episode_start"], "silentPhases": ["debate", "vote", "vote_result", "reveal"] },
+                "openingClipCount": 1, "nightOutroClipCount": 1,
+                "roleClipCounts": {
+                  "werewolf": { "before": 0, "during": 1, "after": 1 },
+                  "minion": { "before": 0, "during": 1, "after": 0 },
+                  "mason": { "before": 0, "during": 1, "after": 0 },
+                  "seer": { "before": 0, "during": 1, "after": 1 },
+                  "robber": { "before": 0, "during": 1, "after": 1 },
+                  "troublemaker": { "before": 0, "during": 1, "after": 1 },
+                  "witch": { "before": 0, "during": 1, "after": 1 },
+                  "drunk": { "before": 0, "during": 1, "after": 1 },
+                  "insomniac": { "before": 0, "during": 1, "after": 1 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

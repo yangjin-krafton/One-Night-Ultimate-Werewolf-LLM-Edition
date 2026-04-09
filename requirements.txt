@@ -1,2 +1,2 @@
-fastapi==0.115.6
-uvicorn[standard]==0.32.1
+# Optional dependency for helper scripts.
+requests>=2.31,<3
