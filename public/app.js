@@ -5,16 +5,26 @@
 
 // ===== ROLE DATA =====
 const ROLES = {
-  werewolf:     { name: '늑대인간',     team: 'wolf',    emoji: '🐺', desc: '밤에 눈을 떠서 다른 늑대인간을 확인합니다. 혼자라면 센터 카드 1장을 볼 수 있습니다. 하수인 행동 시 눈을 감은 채 엄지를 올려 자신을 알립니다.' },
-  seer:         { name: '점술사',       team: 'village', emoji: '🔮', desc: '밤에 다른 플레이어 1명의 카드를 보거나, 센터 카드 2장을 확인할 수 있습니다.' },
-  robber:       { name: '강도',         team: 'village', emoji: '🗡️', desc: '밤에 다른 플레이어 1명과 카드를 교환하고, 새로 받은 카드를 확인합니다.' },
-  troublemaker: { name: '말썽꾼',       team: 'village', emoji: '🃏', desc: '밤에 다른 두 플레이어의 카드를 서로 바꿉니다. 바꾼 카드는 확인하지 않습니다.' },
-  drunk:        { name: '주정뱅이',     team: 'village', emoji: '🍺', desc: '밤에 센터 카드 1장과 자신의 카드를 교환합니다. 바꾼 카드는 확인하지 않습니다.' },
-  insomniac:    { name: '불면증 환자',  team: 'village', emoji: '😵', desc: '밤의 마지막에 자신의 카드를 확인합니다. 누군가 바꿨다면 새 역할을 알 수 있습니다.' },
-  minion:       { name: '하수인',       team: 'wolf',    emoji: '👹', desc: '밤에 눈을 떠서 엄지를 올린 늑대인간을 확인합니다. 늑대인간은 하수인을 모릅니다.' },
-  mason:        { name: '프리메이슨',   team: 'village', emoji: '🤝', desc: '밤에 다른 프리메이슨을 확인합니다. 서로의 존재가 마을 팀의 단서가 됩니다.' },
-  villager:     { name: '마을 주민',    team: 'village', emoji: '🏠', desc: '특별한 능력이 없습니다. 토론과 추리로 늑대인간을 찾아내세요.' },
-  witch:        { name: '마녀',         team: 'village', emoji: '🧙', desc: '밤에 센터 카드 1장을 확인하고, 원한다면 그 카드를 다른 플레이어 카드와 바꿀 수 있습니다.' },
+  werewolf:                { name: '늑대인간',       team: 'wolf',    emoji: '🐺', desc: '밤에 눈을 떠서 다른 늑대인간을 확인합니다. 혼자라면 센터 카드 1장을 볼 수 있습니다. 하수인 행동 시 눈을 감은 채 엄지를 올려 자신을 알립니다.' },
+  alpha_wolf:              { name: '알파 울프',      team: 'wolf',    emoji: '🐺‍', desc: '늑대인간처럼 동료를 확인합니다. 추가로 센터 카드 1장을 아무 플레이어에게 교환할 수 있습니다.' },
+  mystic_wolf:             { name: '미스틱 울프',    team: 'wolf',    emoji: '🔮🐺', desc: '늑대인간처럼 동료를 확인한 뒤, 다른 플레이어 1명의 카드를 몰래 볼 수 있습니다.' },
+  dream_wolf:              { name: '꿈의 늑대',     team: 'wolf',    emoji: '💤🐺', desc: '늑대 팀이지만 밤에 눈을 뜨지 않습니다. 다른 늑대는 꿈의 늑대를 확인할 수 있습니다.' },
+  seer:                    { name: '점술사',         team: 'village', emoji: '🔮', desc: '밤에 다른 플레이어 1명의 카드를 보거나, 센터 카드 2장을 확인할 수 있습니다.' },
+  apprentice_seer:         { name: '견습 점술사',    team: 'village', emoji: '🔮✨', desc: '밤에 센터 카드 1장만 확인할 수 있습니다. 점술사의 약화 버전입니다.' },
+  paranormal_investigator: { name: '초자연 수사관',  team: 'village', emoji: '🕵️', desc: '플레이어 카드를 최대 2장까지 확인합니다. 늑대/마법사를 보면 그 팀에 합류합니다.' },
+  robber:                  { name: '강도',           team: 'village', emoji: '🗡️', desc: '밤에 다른 플레이어 1명과 카드를 교환하고, 새로 받은 카드를 확인합니다.' },
+  troublemaker:            { name: '말썽꾼',         team: 'village', emoji: '🃏', desc: '밤에 다른 두 플레이어의 카드를 서로 바꿉니다. 바꾼 카드는 확인하지 않습니다.' },
+  witch:                   { name: '마녀',           team: 'village', emoji: '🧙', desc: '밤에 센터 카드 1장을 확인하고, 원한다면 그 카드를 다른 플레이어 카드와 바꿀 수 있습니다.' },
+  village_idiot:           { name: '마을 바보',      team: 'village', emoji: '🤪', desc: '자신을 제외한 모든 플레이어의 카드를 왼쪽 또는 오른쪽으로 한 칸씩 이동시킬 수 있습니다.' },
+  drunk:                   { name: '주정뱅이',       team: 'village', emoji: '🍺', desc: '밤에 센터 카드 1장과 자신의 카드를 교환합니다. 바꾼 카드는 확인하지 않습니다.' },
+  sentinel:                { name: '파수꾼',         team: 'village', emoji: '🛡️', desc: '밤에 플레이어 1명의 카드에 방패 토큰을 놓습니다. 그 카드는 교환으로부터 보호됩니다.' },
+  curator:                 { name: '큐레이터',       team: 'village', emoji: '🏺', desc: '밤에 플레이어 1명에게 유물 토큰을 놓습니다. 유물이 놓인 카드는 낮에 공개될 수 있습니다.' },
+  insomniac:               { name: '불면증 환자',    team: 'village', emoji: '😵', desc: '밤의 마지막에 자신의 카드를 확인합니다. 누군가 바꿨다면 새 역할을 알 수 있습니다.' },
+  revealer:                { name: '폭로자',         team: 'village', emoji: '👁️', desc: '플레이어 1명의 카드를 뒤집어 공개합니다. 늑대/마법사면 다시 덮습니다.' },
+  bodyguard:               { name: '경호원',         team: 'village', emoji: '💪', desc: '플레이어 2명을 선택해 교환/이동으로부터 보호합니다.' },
+  minion:                  { name: '하수인',         team: 'wolf',    emoji: '👹', desc: '밤에 눈을 떠서 엄지를 올린 늑대인간을 확인합니다. 늑대인간은 하수인을 모릅니다.' },
+  mason:                   { name: '프리메이슨',     team: 'village', emoji: '🤝', desc: '밤에 다른 프리메이슨을 확인합니다. 서로의 존재가 마을 팀의 단서가 됩니다.' },
+  villager:                { name: '마을 주민',      team: 'village', emoji: '🏠', desc: '특별한 능력이 없습니다. 토론과 추리로 늑대인간을 찾아내세요.' },
 };
 
 // ===== ROLE DESC HIGHLIGHTS =====
@@ -63,6 +73,44 @@ const DESC_HIGHLIGHTS = {
     { t: '센터 카드 1장을 확인', c: '#22d3ee' },
     { t: '다른 플레이어 카드와 바꿀 수 있습니다', c: '#fbbf24' },
   ],
+  alpha_wolf: [
+    { t: '동료를 확인', c: '#fb7185' },
+    { t: '센터 카드 1장을 아무 플레이어에게 교환', c: '#fbbf24' },
+  ],
+  mystic_wolf: [
+    { t: '동료를 확인', c: '#fb7185' },
+    { t: '1명의 카드를 몰래 볼 수 있습니다', c: '#22d3ee' },
+  ],
+  dream_wolf: [
+    { t: '눈을 뜨지 않습니다', c: '#a78bfa' },
+    { t: '다른 늑대는 꿈의 늑대를 확인', c: '#fb7185' },
+  ],
+  apprentice_seer: [
+    { t: '센터 카드 1장만 확인', c: '#22d3ee' },
+  ],
+  paranormal_investigator: [
+    { t: '최대 2장까지 확인', c: '#22d3ee' },
+    { t: '그 팀에 합류', c: '#fb7185' },
+  ],
+  village_idiot: [
+    { t: '왼쪽 또는 오른쪽으로 한 칸씩 이동', c: '#fbbf24' },
+  ],
+  sentinel: [
+    { t: '방패 토큰', c: '#60a5fa' },
+    { t: '교환으로부터 보호', c: '#34d399' },
+  ],
+  curator: [
+    { t: '유물 토큰', c: '#fbbf24' },
+    { t: '낮에 공개', c: '#22d3ee' },
+  ],
+  revealer: [
+    { t: '카드를 뒤집어 공개', c: '#fb7185' },
+    { t: '다시 덮습니다', c: '#94a3b8' },
+  ],
+  bodyguard: [
+    { t: '2명을 선택', c: '#60a5fa' },
+    { t: '보호합니다', c: '#34d399' },
+  ],
 };
 
 function highlightDesc(roleId, desc) {
@@ -78,22 +126,39 @@ function highlightDesc(roleId, desc) {
 }
 
 // ===== ROLE ENCODING & RANDOM DECK =====
-const ROLE_IDS = ['werewolf','seer','robber','troublemaker','drunk','insomniac','minion','mason','villager','witch'];
-const NIGHT_ORDER = ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'];
+const ROLE_IDS = [
+  'werewolf','alpha_wolf','mystic_wolf','dream_wolf',
+  'seer','apprentice_seer','paranormal_investigator',
+  'robber','troublemaker','witch','village_idiot',
+  'drunk','sentinel','curator','insomniac','revealer','bodyguard',
+  'minion','mason','villager',
+];
+const NIGHT_ORDER = [
+  'sentinel',
+  'werewolf','alpha_wolf','mystic_wolf',
+  'minion','mason',
+  'seer','apprentice_seer','paranormal_investigator',
+  'robber','witch','troublemaker',
+  'village_idiot','drunk','curator',
+  'insomniac','revealer','bodyguard',
+];
 
 function encodeDeck(deck) {
+  // Each role can appear 0-3 times → 2 bits each. Pack into a big integer, base36 encode.
   const counts = ROLE_IDS.map(r => deck.filter(d => d === r).length);
-  let val = 0;
-  for (let i = 0; i < counts.length; i++) val = val * 4 + counts[i];
-  return val.toString(36).toUpperCase().padStart(4, '0');
+  let val = 0n;
+  for (let i = 0; i < counts.length; i++) val = val * 4n + BigInt(counts[i]);
+  let hex = val.toString(36).toUpperCase();
+  return hex.padStart(8, '0');
 }
 
 function decodeDeck(code) {
-  let val = parseInt(code.toLowerCase(), 36);
+  let val = BigInt('0x0');
+  try { val = [...code.toLowerCase()].reduce((acc, ch) => acc * 36n + BigInt(parseInt(ch, 36)), 0n); } catch { return []; }
   const counts = [];
   for (let i = ROLE_IDS.length - 1; i >= 0; i--) {
-    counts[i] = val % 4;
-    val = Math.floor(val / 4);
+    counts[i] = Number(val % 4n);
+    val = val / 4n;
   }
   const deck = [];
   ROLE_IDS.forEach((r, i) => { for (let j = 0; j < counts[i]; j++) deck.push(r); });
@@ -109,7 +174,7 @@ function generateRandomDeck(playerCount, scenarioId) {
   const need = playerCount + 3;
   const deck = ['werewolf', 'seer'];
 
-  const units = [
+  const baseUnits = [
     ['werewolf'],
     ['robber'],
     ['troublemaker'],
@@ -118,7 +183,27 @@ function generateRandomDeck(playerCount, scenarioId) {
     ['minion'],
     ['mason', 'mason'],
   ];
-  if (scenarioId === 'flexible_story') units.push(['witch']);
+  const extraUnits = [
+    ['witch'],
+    ['alpha_wolf'],
+    ['mystic_wolf'],
+    ['dream_wolf'],
+    ['apprentice_seer'],
+    ['paranormal_investigator'],
+    ['village_idiot'],
+    ['sentinel'],
+    ['curator'],
+    ['revealer'],
+    ['bodyguard'],
+  ];
+
+  let units;
+  if (scenarioId === 'full_moon') {
+    units = [...baseUnits, ...extraUnits];
+  } else {
+    units = [...baseUnits];
+    if (scenarioId === 'flexible_story') units.push(['witch']);
+  }
 
   // Fisher-Yates shuffle
   for (let i = units.length - 1; i > 0; i--) {
@@ -137,75 +222,7 @@ function generateRandomDeck(playerCount, scenarioId) {
 // ===== SCENARIO DATA (embedded) =====
 const SCENARIOS = [
   {
-    id: 'basic', title: '초보자용 기본', subtitle: '안개마을 이야기',
-    playerCounts: [3,4,5,6,7,8,9,10],
-    episodes: [
-      { id: 'ep1', title: 'EP1: 안개마을의 첫 밤',
-        variants: {
-          '3': { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
-          '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-          '5': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-          '6': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '7': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '8': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '9': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '10': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-        }
-      },
-      { id: 'ep2', title: 'EP2: 안개 속 진술',
-        variants: {
-          '3': { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
-          '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-          '5': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-          '6': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '7': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '8': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '9': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '10': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-        }
-      }
-    ]
-  },
-  {
-    id: 'flexible_story', title: '유연한 시나리오', subtitle: '3~8인용',
-    playerCounts: [3,4,5,6,7,8],
-    episodes: [
-      { id: 'ep1', title: 'EP1: 가면 무도회',
-        variants: {
-          '3': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk'] },
-          '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-          '5': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-          '6': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '7': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '8': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','witch'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac','witch'] },
-        }
-      },
-      { id: 'ep2', title: 'EP2: 혼돈의 아침',
-        variants: {
-          '3': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk'] },
-          '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-          '5': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-          '6': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '7': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '8': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason','witch'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac','witch'] },
-        }
-      }
-    ]
-  },
-  {
-    id: 'four_player_story', title: '4인용: 불면의 밤', subtitle: '4인 전용',
-    playerCounts: [4],
-    episodes: [
-      { id: 'ep1', title: 'EP1: 잠들지 못하는 밤',
-        variants: { '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] } }
-      },
-      { id: 'ep2', title: 'EP2: 깊어지는 의심',
-        variants: { '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] } }
-      }
-    ]
-  },
-  {
-    id: 'full_moon', title: '보름달의 밤', subtitle: '전역할 시나리오',
+    id: 'full_moon', title: '보름달의 밤', subtitle: '전역할 시나리오 · 3~10인',
     playerCounts: [3,4,5,6,7,8,9,10],
     episodes: [
       { id: 'ep1', title: 'EP1: 보름달의 저주',
@@ -213,23 +230,23 @@ const SCENARIOS = [
           '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
           '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
           '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-          '6':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '7':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '8':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
-          '9':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
-          '10': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '6':  { deck: ['werewolf','alpha_wolf','seer','robber','troublemaker','witch','drunk','insomniac','sentinel'], wakeOrder: ['sentinel','werewolf','alpha_wolf','seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '7':  { deck: ['werewolf','alpha_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '8':  { deck: ['werewolf','alpha_wolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','sentinel'], wakeOrder: ['sentinel','werewolf','alpha_wolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '9':  { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','mason','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '10': { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','village_idiot','drunk','sentinel','insomniac','mason','mason','revealer'], wakeOrder: ['sentinel','werewolf','alpha_wolf','mystic_wolf','minion','mason','seer','paranormal_investigator','robber','witch','troublemaker','village_idiot','drunk','insomniac','revealer'] },
         }
       },
       { id: 'ep2', title: 'EP2: 새벽의 심판',
         variants: {
           '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
           '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-          '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-          '6':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '7':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-          '8':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
-          '9':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
-          '10': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '5':  { deck: ['werewolf','dream_wolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
+          '6':  { deck: ['werewolf','mystic_wolf','seer','robber','troublemaker','witch','drunk','insomniac','curator'], wakeOrder: ['werewolf','mystic_wolf','seer','robber','witch','troublemaker','drunk','curator','insomniac'] },
+          '7':  { deck: ['werewolf','alpha_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','drunk','insomniac'] },
+          '8':  { deck: ['werewolf','alpha_wolf','dream_wolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','bodyguard','mason','mason'], wakeOrder: ['werewolf','alpha_wolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac','bodyguard'] },
+          '9':  { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','village_idiot','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','witch','troublemaker','village_idiot','drunk','insomniac'] },
+          '10': { deck: ['werewolf','alpha_wolf','mystic_wolf','dream_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','village_idiot','drunk','curator','insomniac','revealer','bodyguard'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','paranormal_investigator','robber','witch','troublemaker','village_idiot','drunk','curator','insomniac','revealer','bodyguard'] },
         }
       }
     ]
@@ -256,8 +273,8 @@ const state = {
 };
 
 // ===== ROOM CODE =====
-const SCENARIO_CODES = { basic: 'B', flexible_story: 'F', four_player_story: 'P', full_moon: 'M' };
-const SCENARIO_DECODE = { B: 'basic', F: 'flexible_story', P: 'four_player_story' };
+const SCENARIO_CODES = { full_moon: 'M' };
+const SCENARIO_DECODE = { M: 'full_moon' };
 
 function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
   const s = SCENARIO_CODES[scenarioId];
@@ -269,20 +286,20 @@ function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
 
 function decodeRoomCode(code) {
   code = code.trim().toUpperCase();
-  // New format: S(1) + E(1) + PP(2) + DDDD(4) = 8 chars
-  if (code.length === 8) {
+  // Format: S(1) + E(1) + PP(2) + DECK(rest) — deck length varies with ROLE_IDS count
+  if (code.length >= 6) {
     const s = SCENARIO_DECODE[code[0]];
     if (!s) return null;
     const e = `ep${code[1]}`;
     const p = parseInt(code.substring(2, 4), 10);
-    if (isNaN(p) || p < 3 || p > 10) return null;
+    if (isNaN(p) || p < 3 || p > 20) return null;
     const scenario = SCENARIOS.find(sc => sc.id === s);
     if (!scenario || !scenario.playerCounts.includes(p)) return null;
     const episode = scenario.episodes.find(ep => ep.id === e);
     if (!episode) return null;
     const deck = decodeDeck(code.substring(4));
-    if (deck.length !== p + 3) return null;
-    return { scenarioId: s, episodeId: e, playerCount: p, deck };
+    if (deck.length > 0 && deck.length !== p + 3) return null;
+    return { scenarioId: s, episodeId: e, playerCount: p, deck: deck.length > 0 ? deck : null };
   }
   // Legacy format: S(1) + E(1) + P(1-2) = 3-4 chars
   if (code.length >= 3 && code.length <= 4) {
@@ -290,7 +307,7 @@ function decodeRoomCode(code) {
     if (!s) return null;
     const e = `ep${code[1]}`;
     const p = parseInt(code.slice(2), 10);
-    if (isNaN(p) || p < 3 || p > 10) return null;
+    if (isNaN(p) || p < 3 || p > 20) return null;
     const scenario = SCENARIOS.find(sc => sc.id === s);
     if (!scenario || !scenario.playerCounts.includes(p)) return null;
     const episode = scenario.episodes.find(ep => ep.id === e);
@@ -571,6 +588,7 @@ async function startPlayback() {
 function resolveCurrentConfig() {
   if (state.roomCode) {
     const decoded = decodeRoomCode(state.roomCode);
+    if (!decoded) return { scenarioId: null, episodeId: null, playerCount: null, deck: null };
     return { scenarioId: decoded.scenarioId, episodeId: decoded.episodeId, playerCount: decoded.playerCount, deck: decoded.deck };
   }
   const sc = SCENARIOS[state.scenarioIdx];
@@ -797,7 +815,7 @@ function renderJoinHTML() {
       <button class="back-btn" onclick="goHome()" style="position:absolute;top:20px;left:20px;">← 돌아가기</button>
       <h1 class="join__title">게임 참가</h1>
       <div class="join__input-group">
-        <input class="join__input" id="codeInput" maxlength="8" placeholder="코드 (8자리)" autocomplete="off" autofocus>
+        <input class="join__input" id="codeInput" maxlength="16" placeholder="코드 입력" autocomplete="off" autofocus>
         <div class="join__error" id="joinError"></div>
       </div>
       <button class="btn btn--primary btn--full" style="max-width:280px;" onclick="submitJoin()">입장</button>
