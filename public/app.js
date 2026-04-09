@@ -203,6 +203,36 @@ const SCENARIOS = [
         variants: { '4': { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] } }
       }
     ]
+  },
+  {
+    id: 'full_moon', title: '보름달의 밤', subtitle: '전역할 시나리오',
+    playerCounts: [3,4,5,6,7,8,9,10],
+    episodes: [
+      { id: 'ep1', title: 'EP1: 보름달의 저주',
+        variants: {
+          '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
+          '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
+          '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
+          '6':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '7':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '8':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '9':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '10': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+        }
+      },
+      { id: 'ep2', title: 'EP2: 새벽의 심판',
+        variants: {
+          '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
+          '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
+          '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
+          '6':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '7':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
+          '8':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '9':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+          '10': { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+        }
+      }
+    ]
   }
 ];
 
@@ -226,7 +256,7 @@ const state = {
 };
 
 // ===== ROOM CODE =====
-const SCENARIO_CODES = { basic: 'B', flexible_story: 'F', four_player_story: 'P' };
+const SCENARIO_CODES = { basic: 'B', flexible_story: 'F', four_player_story: 'P', full_moon: 'M' };
 const SCENARIO_DECODE = { B: 'basic', F: 'flexible_story', P: 'four_player_story' };
 
 function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
