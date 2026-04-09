@@ -172,22 +172,30 @@ function deriveWakeOrder(deck) {
 
 function generateRandomDeck(playerCount, scenarioId) {
   const need = playerCount + 3;
-  const deck = ['werewolf', 'seer'];
+  const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
 
-  const baseUnits = [
-    ['werewolf'],
+  // Wolf team budget by player count (includes werewolf variants + minion)
+  const maxWolf = playerCount <= 4 ? 2 : playerCount <= 6 ? 3 : playerCount <= 8 ? 3 : 4;
+
+  // Wolf pool: pick wolf cards up to budget
+  const wolfPool = shuffle([
+    ['werewolf'],           // always available as base
+    ['werewolf'],           // second werewolf
+    ['alpha_wolf'],
+    ['mystic_wolf'],
+    ['dream_wolf'],
+    ['minion'],
+  ]);
+
+  // Village pool: shuffled village role units
+  const villagePool = shuffle([
+    ['seer'],
     ['robber'],
     ['troublemaker'],
     ['drunk'],
     ['insomniac'],
-    ['minion'],
     ['mason', 'mason'],
-  ];
-  const extraUnits = [
     ['witch'],
-    ['alpha_wolf'],
-    ['mystic_wolf'],
-    ['dream_wolf'],
     ['apprentice_seer'],
     ['paranormal_investigator'],
     ['village_idiot'],
@@ -195,61 +203,83 @@ function generateRandomDeck(playerCount, scenarioId) {
     ['curator'],
     ['revealer'],
     ['bodyguard'],
-  ];
+  ]);
 
-  let units;
-  if (scenarioId === 'full_moon') {
-    units = [...baseUnits, ...extraUnits];
-  } else {
-    units = [...baseUnits];
-    if (scenarioId === 'flexible_story') units.push(['witch']);
+  const deck = [];
+  let wolfCount = 0;
+
+  // Guarantee at least 1 werewolf and 1 seer
+  deck.push('werewolf'); wolfCount++;
+  deck.push('seer');
+
+  // Fill wolf cards (skip the first ['werewolf'] since already added)
+  for (const unit of wolfPool) {
+    if (deck.length + unit.length > need) continue;
+    const unitWolves = unit.filter(r => ROLES[r] && ROLES[r].team === 'wolf').length;
+    if (wolfCount + unitWolves > maxWolf) continue;
+    // Skip duplicate: already have base werewolf
+    if (unit.length === 1 && unit[0] === 'werewolf' && deck.filter(r => r === 'werewolf').length >= 1 && wolfCount >= 1) {
+      // Allow second werewolf only if budget permits
+      if (wolfCount + 1 <= maxWolf && deck.length + 1 <= need) {
+        deck.push(...unit); wolfCount += unitWolves;
+      }
+      continue;
+    }
+    deck.push(...unit); wolfCount += unitWolves;
   }
 
-  // Fisher-Yates shuffle
-  for (let i = units.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [units[i], units[j]] = [units[j], units[i]];
+  // Fill village cards (skip seer, already added)
+  for (const unit of villagePool) {
+    if (deck.length >= need) break;
+    if (unit.length === 1 && unit[0] === 'seer') continue; // already in deck
+    if (deck.length + unit.length > need) continue;
+    deck.push(...unit);
   }
 
-  for (const unit of units) {
-    if (deck.length + unit.length <= need) deck.push(...unit);
-  }
+  // Pad with villager if needed
   while (deck.length < need) deck.push('villager');
 
   return deck;
 }
 
 // ===== SCENARIO DATA (embedded) =====
+const FULL_MOON_EPISODES = [
+  { id: 'ep1', title: 'EP1: 보름달의 저주',
+    variants: {
+      '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
+      '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
+      '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
+      '6':  { deck: ['werewolf','alpha_wolf','seer','robber','troublemaker','witch','drunk','insomniac','sentinel'], wakeOrder: ['sentinel','werewolf','alpha_wolf','seer','robber','troublemaker','witch','drunk','insomniac'] },
+      '7':  { deck: ['werewolf','alpha_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'] },
+      '8':  { deck: ['werewolf','alpha_wolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','sentinel'], wakeOrder: ['sentinel','werewolf','alpha_wolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
+      '9':  { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','mason','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'] },
+      '10': { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','village_idiot','drunk','sentinel','insomniac','mason','mason','revealer'], wakeOrder: ['sentinel','werewolf','alpha_wolf','mystic_wolf','minion','mason','seer','paranormal_investigator','robber','witch','troublemaker','village_idiot','drunk','insomniac','revealer'] },
+    }
+  },
+  { id: 'ep2', title: 'EP2: 새벽의 심판',
+    variants: {
+      '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
+      '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
+      '5':  { deck: ['werewolf','dream_wolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
+      '6':  { deck: ['werewolf','mystic_wolf','seer','robber','troublemaker','witch','drunk','insomniac','curator'], wakeOrder: ['werewolf','mystic_wolf','seer','robber','witch','troublemaker','drunk','curator','insomniac'] },
+      '7':  { deck: ['werewolf','alpha_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','drunk','insomniac'] },
+      '8':  { deck: ['werewolf','alpha_wolf','dream_wolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','bodyguard','mason','mason'], wakeOrder: ['werewolf','alpha_wolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac','bodyguard'] },
+      '9':  { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','village_idiot','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','witch','troublemaker','village_idiot','drunk','insomniac'] },
+      '10': { deck: ['werewolf','alpha_wolf','mystic_wolf','dream_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','village_idiot','drunk','curator','insomniac','revealer','bodyguard'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','paranormal_investigator','robber','witch','troublemaker','village_idiot','drunk','curator','insomniac','revealer','bodyguard'] },
+    }
+  }
+];
+
 const SCENARIOS = [
   {
     id: 'full_moon', title: '보름달의 밤', subtitle: '전역할 시나리오 · 3~10인',
     playerCounts: [3,4,5,6,7,8,9,10],
-    episodes: [
-      { id: 'ep1', title: 'EP1: 보름달의 저주',
-        variants: {
-          '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
-          '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-          '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-          '6':  { deck: ['werewolf','alpha_wolf','seer','robber','troublemaker','witch','drunk','insomniac','sentinel'], wakeOrder: ['sentinel','werewolf','alpha_wolf','seer','robber','troublemaker','witch','drunk','insomniac'] },
-          '7':  { deck: ['werewolf','alpha_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'] },
-          '8':  { deck: ['werewolf','alpha_wolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','mason','mason','sentinel'], wakeOrder: ['sentinel','werewolf','alpha_wolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac'] },
-          '9':  { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac','mason','mason'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','mason','seer','apprentice_seer','robber','troublemaker','witch','drunk','insomniac'] },
-          '10': { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','village_idiot','drunk','sentinel','insomniac','mason','mason','revealer'], wakeOrder: ['sentinel','werewolf','alpha_wolf','mystic_wolf','minion','mason','seer','paranormal_investigator','robber','witch','troublemaker','village_idiot','drunk','insomniac','revealer'] },
-        }
-      },
-      { id: 'ep2', title: 'EP2: 새벽의 심판',
-        variants: {
-          '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
-          '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-          '5':  { deck: ['werewolf','dream_wolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-          '6':  { deck: ['werewolf','mystic_wolf','seer','robber','troublemaker','witch','drunk','insomniac','curator'], wakeOrder: ['werewolf','mystic_wolf','seer','robber','witch','troublemaker','drunk','curator','insomniac'] },
-          '7':  { deck: ['werewolf','alpha_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','drunk','insomniac'] },
-          '8':  { deck: ['werewolf','alpha_wolf','dream_wolf','minion','seer','robber','troublemaker','witch','drunk','insomniac','bodyguard','mason','mason'], wakeOrder: ['werewolf','alpha_wolf','minion','mason','seer','robber','troublemaker','witch','drunk','insomniac','bodyguard'] },
-          '9':  { deck: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','troublemaker','witch','village_idiot','drunk','insomniac'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','apprentice_seer','robber','witch','troublemaker','village_idiot','drunk','insomniac'] },
-          '10': { deck: ['werewolf','alpha_wolf','mystic_wolf','dream_wolf','minion','seer','paranormal_investigator','robber','troublemaker','witch','village_idiot','drunk','curator','insomniac','revealer','bodyguard'], wakeOrder: ['werewolf','alpha_wolf','mystic_wolf','minion','seer','paranormal_investigator','robber','witch','troublemaker','village_idiot','drunk','curator','insomniac','revealer','bodyguard'] },
-        }
-      }
-    ]
+    episodes: FULL_MOON_EPISODES
+  },
+  {
+    id: 'full_moon_modern', title: '한밤의 서울 늑대', subtitle: '현대 한국 도시 테마 · 3~10인',
+    playerCounts: [3,4,5,6,7,8,9,10],
+    episodes: FULL_MOON_EPISODES
   }
 ];
 
@@ -273,48 +303,57 @@ const state = {
 };
 
 // ===== ROOM CODE =====
-const SCENARIO_CODES = { full_moon: 'M' };
-const SCENARIO_DECODE = { M: 'full_moon' };
+// ===== ROOM CODE: compact base62, 8 chars =====
+// Encodes: scenario(4 bits, max 16) + episode(1 bit) + deck(40 bits) = 45 bits → base62(8 chars)
+// Player count derived from deck.length - 3.
+const _B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 
 function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
-  const s = SCENARIO_CODES[scenarioId];
-  const e = episodeId.replace('ep', '');
-  const p = String(playerCount).padStart(2, '0');
-  const d = encodeDeck(deck);
-  return `${s}${e}${p}${d}`;
+  const sIdx = BigInt(Math.max(0, SCENARIOS.findIndex(s => s.id === scenarioId)));
+  const epBit = episodeId === 'ep2' ? 1n : 0n;
+  const counts = ROLE_IDS.map(r => deck.filter(d => d === r).length);
+  let deckVal = 0n;
+  for (let i = 0; i < counts.length; i++) deckVal = deckVal * 4n + BigInt(counts[i]);
+  const val = (sIdx << 41n) | (epBit << 40n) | deckVal;
+  let code = '';
+  let v = val;
+  do { code = _B62[Number(v % 62n)] + code; v = v / 62n; } while (v > 0n);
+  return code.padStart(8, '0');
 }
 
 function decodeRoomCode(code) {
-  code = code.trim().toUpperCase();
-  // Format: S(1) + E(1) + PP(2) + DECK(rest) — deck length varies with ROLE_IDS count
-  if (code.length >= 6) {
-    const s = SCENARIO_DECODE[code[0]];
-    if (!s) return null;
-    const e = `ep${code[1]}`;
-    const p = parseInt(code.substring(2, 4), 10);
-    if (isNaN(p) || p < 3 || p > 20) return null;
-    const scenario = SCENARIOS.find(sc => sc.id === s);
-    if (!scenario || !scenario.playerCounts.includes(p)) return null;
-    const episode = scenario.episodes.find(ep => ep.id === e);
-    if (!episode) return null;
-    const deck = decodeDeck(code.substring(4));
-    if (deck.length > 0 && deck.length !== p + 3) return null;
-    return { scenarioId: s, episodeId: e, playerCount: p, deck: deck.length > 0 ? deck : null };
+  code = code.trim();
+  if (code.length < 6 || code.length > 10) return null;
+  let val = 0n;
+  for (const ch of code) {
+    const idx = _B62.indexOf(ch);
+    if (idx < 0) return null;
+    val = val * 62n + BigInt(idx);
   }
-  // Legacy format: S(1) + E(1) + P(1-2) = 3-4 chars
-  if (code.length >= 3 && code.length <= 4) {
-    const s = SCENARIO_DECODE[code[0]];
-    if (!s) return null;
-    const e = `ep${code[1]}`;
-    const p = parseInt(code.slice(2), 10);
-    if (isNaN(p) || p < 3 || p > 20) return null;
-    const scenario = SCENARIOS.find(sc => sc.id === s);
-    if (!scenario || !scenario.playerCounts.includes(p)) return null;
-    const episode = scenario.episodes.find(ep => ep.id === e);
-    if (!episode) return null;
-    return { scenarioId: s, episodeId: e, playerCount: p, deck: null };
+  const sIdx = Number((val >> 41n) & 0xFn);
+  const epBit = Number((val >> 40n) & 1n);
+  const deckVal = val & ((1n << 40n) - 1n);
+  const episodeId = `ep${epBit + 1}`;
+
+  const scenario = SCENARIOS[sIdx];
+  if (!scenario) return null;
+
+  let dv = deckVal;
+  const counts = [];
+  for (let i = ROLE_IDS.length - 1; i >= 0; i--) {
+    counts[i] = Number(dv % 4n);
+    dv = dv / 4n;
   }
-  return null;
+  const deck = [];
+  ROLE_IDS.forEach((r, i) => { for (let j = 0; j < counts[i]; j++) deck.push(r); });
+
+  if (deck.length < 6 || deck.length > 23) return null;
+  const playerCount = deck.length - 3;
+  if (!scenario.playerCounts.includes(playerCount)) return null;
+  const episode = scenario.episodes.find(ep => ep.id === episodeId);
+  if (!episode) return null;
+
+  return { scenarioId: scenario.id, episodeId, playerCount, deck };
 }
 
 // ===== VARIANT RESOLVER =====
@@ -340,10 +379,12 @@ function getVariant(scenario, episodeId, playerCount) {
 
 // ===== MANIFEST & AUDIO =====
 const manifestCache = {};
+const ttsScenarioCache = {};
 
 async function loadManifest(scenarioId) {
   if (manifestCache[scenarioId]) return manifestCache[scenarioId];
   const resp = await fetch(`./assets/voices/${scenarioId}/_manifest.json`);
+  if (!resp.ok) throw new Error(`manifest not found: ${scenarioId}`);
   const data = await resp.json();
   // Convert absolute URLs to relative (for subpath hosting like /games/one-night-werewolf/)
   data.clips.forEach(c => {
@@ -353,6 +394,96 @@ async function loadManifest(scenarioId) {
   });
   manifestCache[scenarioId] = data;
   return data;
+}
+
+async function loadTtsScenario(scenarioId) {
+  if (ttsScenarioCache[scenarioId]) return ttsScenarioCache[scenarioId];
+  const resp = await fetch(`./assets/scenarios_tts/${scenarioId}.tts.json`);
+  if (!resp.ok) throw new Error(`tts scenario not found: ${scenarioId}`);
+  const data = await resp.json();
+  ttsScenarioCache[scenarioId] = data;
+  return data;
+}
+
+function coerceClipItems(raw, defaultSpeakerId) {
+  const list = raw == null ? [] : (Array.isArray(raw) ? raw : [raw]);
+  return list
+    .map((item) => (typeof item === 'string' ? { speakerId: defaultSpeakerId, text: item } : item))
+    .filter((item) => item && typeof item.text === 'string' && item.text.trim());
+}
+
+function buildPlaylistFromTts(ttsScenario, scenarioId, episodeId, wakeOrder) {
+  const episodes = ttsScenario && ttsScenario.episodes;
+  const episode = Array.isArray(episodes)
+    ? episodes.find((ep) => ep && (ep.episodeId === episodeId || ep.id === episodeId))
+    : episodes && episodes[episodeId];
+  if (!episode) return [];
+
+  const playerKey = `p${ttsScenario.playerCount || 10}`;
+  const playlist = [];
+  const pushClips = (basePath, raw, phase, roleId, label, defaultSpeakerId) => {
+    const items = coerceClipItems(raw, defaultSpeakerId);
+    items.forEach((clip, idx) => {
+      playlist.push({
+        clipId: `${basePath}/${String(idx + 1).padStart(3, '0')}`,
+        speakerId: clip.speakerId || defaultSpeakerId || 'Narrator',
+        text: clip.text,
+        url: clip.url || null,
+        backend: clip.backend || 'browser_tts',
+        phase,
+        roleId,
+        label,
+      });
+    });
+  };
+
+  pushClips(`${scenarioId}/${episodeId}/${playerKey}/opening`, episode.openingClips, 'opening', null, '오프닝', 'Narrator');
+
+  const roleClips = episode.roleClips || {};
+  for (const roleId of wakeOrder) {
+    const roleInfo = ROLES[roleId];
+    const label = roleInfo ? roleInfo.name : roleId;
+    const roleData = roleClips[roleId];
+    if (!roleData) continue;
+
+    if (typeof roleData === 'string' || Array.isArray(roleData)) {
+      pushClips(`${scenarioId}/${episodeId}/${playerKey}/role/${roleId}/during`, roleData, 'during', roleId, label, roleId);
+      continue;
+    }
+
+    const hasSteps = ['before', 'during', 'after'].some((step) => roleData[step] != null);
+    if (hasSteps) {
+      ['before', 'during', 'after'].forEach((step) => {
+        pushClips(`${scenarioId}/${episodeId}/${playerKey}/role/${roleId}/${step}`, roleData[step], step, roleId, label, roleId);
+      });
+      continue;
+    }
+
+    pushClips(`${scenarioId}/${episodeId}/${playerKey}/role/${roleId}/during`, roleData, 'during', roleId, label, roleId);
+  }
+
+  pushClips(`${scenarioId}/${episodeId}/${playerKey}/outro`, episode.nightOutroClips, 'outro', null, '아웃트로', 'Narrator');
+
+  return playlist;
+}
+
+function isSpeechClip(clip) {
+  return !!clip && !clip.url && typeof clip.text === 'string' && !!clip.text.trim();
+}
+
+function stripEmotionTags(text) {
+  return String(text || '')
+    .replace(/\[[^\]]+\]/g, ' ')
+    .replace(/\{[^}]+\}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cancelSpeechPlayback() {
+  state._speechUtterance = null;
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 function getManifestPlayerPrefix(manifest) {
@@ -414,6 +545,7 @@ function stopPlayback() {
   state.playing = false;
   state.paused = false;
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
+  cancelSpeechPlayback();
   audioEl.pause();
   audioEl.removeAttribute('src');
   audioEl.onended = null;
@@ -423,6 +555,7 @@ function stopPlayback() {
 
 function togglePause() {
   if (!state.playing) return;
+  const curClip = state.playlist[state.playlistIndex];
   if (state.paused) {
     // Resume
     state.paused = false;
@@ -435,7 +568,12 @@ function togglePause() {
       }, state._pausedDelay.remaining);
       state._pausedDelay = null;
     } else {
-      audioEl.play().catch(() => {});
+      if (isSpeechClip(curClip)) {
+        if (state._speechUtterance) window.speechSynthesis.resume();
+        else playClip(curClip);
+      } else {
+        audioEl.play().catch(() => {});
+      }
     }
   } else {
     // Pause
@@ -448,7 +586,8 @@ function togglePause() {
       state._delayTimer = null;
       state._pausedDelay = { remaining: Math.max(0, total - elapsed) };
     } else {
-      audioEl.pause();
+      if (isSpeechClip(curClip) && window.speechSynthesis) window.speechSynthesis.pause();
+      else audioEl.pause();
     }
   }
   renderPlayingOverlay();
@@ -483,6 +622,35 @@ function playNext() {
 
 function playClip(clip) {
   renderPlayingOverlay();
+  cancelSpeechPlayback();
+  audioEl.pause();
+
+  if (isSpeechClip(clip)) {
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      showToast('브라우저 음성 읽기를 지원하지 않습니다');
+      playNext();
+      return;
+    }
+
+    const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
+    utter.lang = 'ko-KR';
+    utter.rate = 1;
+    utter.pitch = 1;
+    utter.onend = () => {
+      if (state._speechUtterance !== utter) return;
+      state._speechUtterance = null;
+      playNext();
+    };
+    utter.onerror = () => {
+      if (state._speechUtterance !== utter) return;
+      state._speechUtterance = null;
+      playNext();
+    };
+    state._speechUtterance = utter;
+    window.speechSynthesis.speak(utter);
+    return;
+  }
+
   audioEl.src = clip.url;
   audioEl.load();
   audioEl.play().catch((err) => {
@@ -496,6 +664,7 @@ function skipToNext() {
   state.paused = false;
   state._pausedDelay = null;
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
+  cancelSpeechPlayback();
   audioEl.pause();
   // Jump to the next role's first clip (skip remaining clips of current role)
   const curClip = state.playlist[state.playlistIndex];
@@ -518,6 +687,7 @@ function skipToPrev() {
   state.paused = false;
   state._pausedDelay = null;
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
+  cancelSpeechPlayback();
   audioEl.pause();
   // Jump to the start of current role, or previous role if already at start
   const curClip = state.playlist[state.playlistIndex];
@@ -552,8 +722,15 @@ async function startPlayback() {
     state.manifest = manifest;
     state.playlist = buildPlaylist(manifest, scenarioId, episodeId, playerCount, variant.wakeOrder);
   } catch (e) {
-    showToast('오디오 매니페스트를 불러올 수 없습니다');
-    return;
+    try {
+      const ttsScenario = await loadTtsScenario(scenarioId);
+      state.manifest = null;
+      state.playlist = buildPlaylistFromTts(ttsScenario, scenarioId, episodeId, variant.wakeOrder);
+      showToast('오디오가 없어 브라우저 음성 읽기로 재생합니다');
+    } catch (ttsErr) {
+      showToast('오디오와 텍스트 시나리오를 불러올 수 없습니다');
+      return;
+    }
   }
 
   if (state.playlist.length === 0) {
@@ -574,14 +751,18 @@ async function startPlayback() {
 
   // Start first clip
   const firstClip = state.playlist[0];
-  audioEl.src = firstClip.url;
-  audioEl.load();
-  audioEl.play().catch((err) => {
-    console.warn('First play() rejected:', err);
-    showToast('오디오 재생에 실패했습니다. 다시 시도해주세요.');
-    state.playing = false;
-    render();
-  });
+  if (isSpeechClip(firstClip)) {
+    playClip(firstClip);
+  } else {
+    audioEl.src = firstClip.url;
+    audioEl.load();
+    audioEl.play().catch((err) => {
+      console.warn('First play() rejected:', err);
+      showToast('오디오 재생에 실패했습니다. 다시 시도해주세요.');
+      state.playing = false;
+      render();
+    });
+  }
 }
 
 // ===== HELPERS =====
@@ -815,7 +996,7 @@ function renderJoinHTML() {
       <button class="back-btn" onclick="goHome()" style="position:absolute;top:20px;left:20px;">← 돌아가기</button>
       <h1 class="join__title">게임 참가</h1>
       <div class="join__input-group">
-        <input class="join__input" id="codeInput" maxlength="16" placeholder="코드 입력" autocomplete="off" autofocus>
+        <input class="join__input" id="codeInput" maxlength="10" placeholder="코드 (8자리)" autocomplete="off" autofocus>
         <div class="join__error" id="joinError"></div>
       </div>
       <button class="btn btn--primary btn--full" style="max-width:280px;" onclick="submitJoin()">입장</button>
@@ -978,6 +1159,7 @@ function goHome() {
   state.playerCount = null;
   state.roomCode = null;
   state.deck = null;
+  try { history.replaceState(null, '', location.pathname); } catch {}
   render();
 }
 
@@ -1053,6 +1235,8 @@ function enterLobby(code) {
   saveRecentRoom(code);
   state.roomCode = code;
   state.screen = 'lobby';
+  // Update URL with room code for shareable link
+  try { history.replaceState(null, '', '?room=' + encodeURIComponent(code)); } catch {}
   render();
 }
 
@@ -1084,8 +1268,10 @@ function rerollDeck() {
 }
 
 function copyCode(code) {
+  // Build shareable URL with room code
+  const url = location.origin + location.pathname + '?room=' + encodeURIComponent(code);
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(code).then(() => showToast('코드 복사됨!'));
+    navigator.clipboard.writeText(url).then(() => showToast('링크 복사됨!'));
   } else {
     showToast(code);
   }
@@ -1093,6 +1279,16 @@ function copyCode(code) {
 
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
+  // Auto-join if URL has ?room= parameter
+  try {
+    const params = new URLSearchParams(location.search);
+    const roomParam = (params.get('room') || '').trim().toUpperCase();
+    if (roomParam && decodeRoomCode(roomParam)) {
+      enterLobby(roomParam);
+      return;
+    }
+  } catch {}
+
   render();
 
   // Enter key in join input

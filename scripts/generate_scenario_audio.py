@@ -529,6 +529,15 @@ def main() -> int:
         if backend == "auto":
             backend = "gpt-sovits" if character_cfg else "windows"
 
+        # Skip if output already exists (resume support)
+        if job.out_wav_path.exists() and job.out_wav_path.stat().st_size > 0:
+            print(f"[{i}/{len(jobs)}] SKIP (exists) {job.clip_id}")
+            manifest.append({
+                "clipId": job.clip_id, "speakerId": job.speaker_id, "backend": backend,
+                "text": job.text, "wavPath": str(job.out_wav_path).replace("\\", "/"), "url": job.url_path,
+            })
+            continue
+
         print(f"[{i}/{len(jobs)}] {backend} {job.clip_id} ({job.speaker_id}) -> {job.out_wav_path}")
 
         error: str | None = None
