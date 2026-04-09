@@ -78,6 +78,47 @@ def _split_sentences(text: str) -> list[str]:
     return [p.strip() for p in parts if p.strip()]
 
 
+FADE_IN_MS = 30
+FADE_OUT_MS = 50
+
+
+def _apply_fade(wav_path: Path, *, fade_in_ms: int = FADE_IN_MS, fade_out_ms: int = FADE_OUT_MS) -> None:
+    """Apply fade-in/out to a WAV file in-place to eliminate click/pop artifacts."""
+    with _wave.open(str(wav_path), "rb") as w:
+        channels = w.getnchannels()
+        sampwidth = w.getsampwidth()
+        framerate = w.getframerate()
+        comptype = w.getcomptype()
+        compname = w.getcompname()
+        raw = w.readframes(w.getnframes())
+
+    if sampwidth != 2:
+        return  # only handle 16-bit PCM
+
+    import array
+    samples = array.array('h', raw)
+    n = len(samples)
+    fade_in_samples = int(framerate * fade_in_ms / 1000) * channels
+    fade_out_samples = int(framerate * fade_out_ms / 1000) * channels
+
+    # Fade in
+    for i in range(min(fade_in_samples, n)):
+        samples[i] = int(samples[i] * (i / fade_in_samples))
+
+    # Fade out
+    for i in range(min(fade_out_samples, n)):
+        idx = n - 1 - i
+        samples[idx] = int(samples[idx] * (i / fade_out_samples))
+
+    with _wave.open(str(wav_path), "wb") as out:
+        out.setnchannels(channels)
+        out.setsampwidth(sampwidth)
+        out.setframerate(framerate)
+        if comptype != "NONE":
+            out.setcomptype(comptype, compname)
+        out.writeframes(samples.tobytes())
+
+
 def _make_silence_wav(duration_s: float, *, sample_rate: int, sampwidth: int, channels: int) -> bytes:
     """Generate raw PCM silence bytes for the given duration."""
     n_frames = int(sample_rate * duration_s)
@@ -161,7 +202,7 @@ def _gradio_upload_file(api_base: str, file_path: Path, *, timeout_s: int = 60) 
 
 
 def _gradio_download_file(api_base: str, server_path: str, out_path: Path, *, timeout_s: int = 120) -> Path:
-    """Download a file from the Gradio server using its temp path."""
+    """Download a file from the Gradio server using its temp path. Applies fade in/out."""
     url = f"{api_base.rstrip('/')}/gradio_api/file={server_path}"
     req = Request(url, method="GET")
     with urlopen(req, timeout=timeout_s) as resp:
@@ -170,6 +211,11 @@ def _gradio_download_file(api_base: str, server_path: str, out_path: Path, *, ti
         raise RuntimeError(f"Empty response downloading {url}")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_bytes(data)
+    # Apply fade in/out to eliminate click artifacts
+    try:
+        _apply_fade(out_path)
+    except Exception:
+        pass  # non-critical
     return out_path
 
 
