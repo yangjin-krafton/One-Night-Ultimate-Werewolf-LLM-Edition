@@ -112,29 +112,30 @@ def step_update_manifest(voices_dir: Path):
     print(f"[manifest] updated {len(m['clips'])} clips")
 
 
-def step_preview():
+def step_preview(scenario_id: str, voices_dir: Path):
     """5) 에피소드별 미리듣기 통합본 생성"""
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         print("[preview] ERROR: ffmpeg not found")
         return
 
-    PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    preview_dir = voices_dir / "preview"
+    preview_dir.mkdir(parents=True, exist_ok=True)
 
     for ep in ["ep1", "ep2"]:
         files: list[Path] = []
         # Opening
-        f = VOICES_DIR / ep / "p10" / "opening" / "001" / "voice.m4a"
+        f = voices_dir / ep / "p10" / "opening" / "001" / "voice.m4a"
         if f.exists():
             files.append(f)
         # Role clips in wake order
         for role in WAKE_ORDER:
             for part in ["during", "after"]:
-                f = VOICES_DIR / ep / "p10" / "role" / role / part / "001" / "voice.m4a"
+                f = voices_dir / ep / "p10" / "role" / role / part / "001" / "voice.m4a"
                 if f.exists():
                     files.append(f)
         # Outro
-        f = VOICES_DIR / ep / "p10" / "outro" / "001" / "voice.m4a"
+        f = voices_dir / ep / "p10" / "outro" / "001" / "voice.m4a"
         if f.exists():
             files.append(f)
 
@@ -142,13 +143,13 @@ def step_preview():
             print(f"[preview] {ep}: no files found")
             continue
 
-        list_file = PREVIEW_DIR / f"_{ep}_list.txt"
+        list_file = preview_dir / f"_{ep}_list.txt"
         list_file.write_text(
             "\n".join(f"file '{p}'" for p in files),
             encoding="utf-8",
         )
 
-        out = PREVIEW_DIR / f"full_moon_{ep}_preview.m4a"
+        out = preview_dir / f"{scenario_id}_{ep}_preview.m4a"
         result = subprocess.run(
             [ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(list_file),
              "-c:a", "aac", "-b:a", "64k", "-ar", "32000", "-ac", "1", str(out)],
