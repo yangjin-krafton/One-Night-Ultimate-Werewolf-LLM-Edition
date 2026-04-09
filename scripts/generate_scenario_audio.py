@@ -565,36 +565,32 @@ def main() -> int:
                         f"No voice mapping for speakerId={job.speaker_id}. "
                         f"Add it to characters/voice_map.json."
                     )
-                if qwen3_voice_lock:
-                    qwen3_mod.generate_tts_for_role(
-                        text=job.text,
-                        voice_tag_base=voice_tag_base,
-                        out_wav_path=str(job.out_wav_path),
-                        voice_lock=qwen3_voice_lock,
-                        api_base=args.qwen3_api_base,
-                        language=args.qwen3_language,
-                        use_xvec=args.qwen3_use_xvec,
-                        max_tokens=int(args.qwen3_max_tokens),
-                        temperature=float(args.qwen3_temperature),
-                        top_p=float(args.qwen3_top_p),
-                        top_k=int(args.qwen3_top_k),
-                        timeout_s=int(args.timeout_s),
-                        request_retries=int(args.qwen3_request_retries),
-                        request_retry_backoff_s=1.0,
-                    )
-                else:
-                    # Fallback to old character-config-based path
-                    if not character_cfg:
-                        raise SystemExit(f"No voice_lock and no character config for {job.speaker_id}")
-                    qwen3_mod.generate_character_tts_wav(
-                        character_config_path=str(character_cfg),
-                        text=job.text,
-                        out_wav_path=str(job.out_wav_path),
-                        api_base=args.qwen3_api_base,
-                        text_lang=args.qwen3_language,
-                        timeout_s=int(args.timeout_s),
-                        request_retries=int(args.qwen3_request_retries),
-                    )
+                # Lazy-init voice_lock on first qwen3 clip (in case initial query failed)
+                if qwen3_voice_lock is None and qwen3_voice_map:
+                    try:
+                        all_voices = qwen3_mod.query_voice_library(args.qwen3_api_base)
+                        qwen3_voice_lock = qwen3_mod.build_voice_lock_from_map(qwen3_voice_map, all_voices, seed=42)
+                        print(f"[info] Voice lock recovered: {len(qwen3_voice_lock)} tags")
+                    except Exception as e2:
+                        raise SystemExit(f"Cannot connect to Qwen3-TTS server: {e2}")
+                if not qwen3_voice_lock:
+                    raise SystemExit("No voice_lock available. Check Qwen3-TTS server and voice_map.json.")
+                qwen3_mod.generate_tts_for_role(
+                    text=job.text,
+                    voice_tag_base=voice_tag_base,
+                    out_wav_path=str(job.out_wav_path),
+                    voice_lock=qwen3_voice_lock,
+                    api_base=args.qwen3_api_base,
+                    language=args.qwen3_language,
+                    use_xvec=args.qwen3_use_xvec,
+                    max_tokens=int(args.qwen3_max_tokens),
+                    temperature=float(args.qwen3_temperature),
+                    top_p=float(args.qwen3_top_p),
+                    top_k=int(args.qwen3_top_k),
+                    timeout_s=int(args.timeout_s),
+                    request_retries=int(args.qwen3_request_retries),
+                    request_retry_backoff_s=1.0,
+                )
             elif backend == "gpt-sovits":
                 if not character_cfg:
                     raise SystemExit(

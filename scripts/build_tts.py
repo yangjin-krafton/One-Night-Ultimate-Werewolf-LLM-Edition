@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CHARACTERS_DIR = ROOT / "characters" / "Thema_01"
+CHARACTERS_DIR = ROOT / "characters"
 
 # Night wake order for preview concat
 WAKE_ORDER = [

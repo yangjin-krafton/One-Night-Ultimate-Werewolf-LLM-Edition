@@ -1237,8 +1237,10 @@ function selectEpisode(idx) {
 function selectPlayerCount(n) {
   state.playerCount = n;
   const sc = SCENARIOS[state.scenarioIdx];
+  const ep = sc.episodes[state.episodeIdx];
   state.deck = generateRandomDeck(n, sc.id);
-  render();
+  const code = encodeRoomCode(sc.id, ep.id, n, state.deck);
+  enterLobby(code);
 }
 
 // ===== RECENT ROOMS (localStorage) =====
