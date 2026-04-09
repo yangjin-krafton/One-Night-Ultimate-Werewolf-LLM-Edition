@@ -14,8 +14,8 @@
 
 ### 규칙
 
-- 감정 태그는 **클립 맨 앞에 하나만**: `[default]대사 내용.`
-- **중간 태그 전환 금지** → 목소리 변경 원인
+- 감정 태그를 넣지 말고 **대사만 순수 텍스트로 작성**: `대사 내용.`
+- `default`, `fearful` 같은 감정 태그 표기는 Qwen TTS에서 사용하지 않습니다.
 - 문장 끝에 **마침표(`.`) 필수** → 문장 분할 + pause 삽입 기준
 - 한 문장이 3줄 이상이면 마침표로 분리 (긴 문장에서 음색 변화 방지)
 
@@ -75,7 +75,7 @@ cd D:\Weeks\One-Night-Ultimate-Werewolf-LLM-Edition\scripts
 $env:PYTHONUTF8 = "1"
 
 # 특정 캐릭터로 단일 클립 테스트
-python qwen3_tts.py --mode tag --character ..\characters\Thema_01\Narrator.json --text "[default]테스트 문장입니다." --out ..\out\test.wav
+python qwen3_tts.py --mode tag --character ..\characters\Thema_01\Narrator.json --text "테스트 문장입니다." --out ..\out\test.wav
 
 # 서버 연결 확인
 python tts_smoke_test.py --backend qwen3 --ping-only

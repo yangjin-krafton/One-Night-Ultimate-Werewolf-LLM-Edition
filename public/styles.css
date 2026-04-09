@@ -751,8 +751,35 @@ body {
 }
 .playing__pause:active { transform: scale(0.96); background: rgba(160,100,240,0.25); }
 .playing__pause svg { flex-shrink: 0; }
-.playing__exit {
+.playing__bgm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 16px;
+  padding: 0 12px;
+  width: 100%;
+  max-width: 280px;
+}
+.playing__bgm-label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.playing__bgm-slider {
+  flex: 1;
+  height: 4px;
+  accent-color: #a78bfa;
+  cursor: pointer;
+}
+.playing__bgm-val {
+  font-size: 11px;
+  color: var(--fg-muted);
+  min-width: 32px;
+  text-align: right;
+}
+
+.playing__exit {
+  margin-top: 12px;
   background: none;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius);
