@@ -164,38 +164,73 @@ def step_preview(scenario_id: str, voices_dir: Path):
             print(f"[preview] {ep} FAILED")
 
 
+def _find_all_scenario_tts() -> list[Path]:
+    """scenarios_tts/ 아래 모든 *.tts.json 파일을 찾는다."""
+    d = ROOT / "scenarios_tts"
+    return sorted(d.glob("*.tts.json")) if d.exists() else []
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Full TTS build pipeline")
+    all_tts = _find_all_scenario_tts()
+    choices = [p.stem.replace(".tts", "") for p in all_tts]
+
+    parser = argparse.ArgumentParser(
+        description="Full TTS build pipeline",
+        epilog=f"사용 가능한 시나리오: {', '.join(choices) or '(없음)'}",
+    )
+    parser.add_argument(
+        "scenario",
+        nargs="?",
+        default=None,
+        help="시나리오 이름 (예: full_moon). 생략하면 모든 시나리오를 빌드합니다.",
+    )
     parser.add_argument("--skip-generate", action="store_true", help="WAV 생성 건너뛰기 (M4A 변환 + preview만)")
     parser.add_argument("--skip-clean", action="store_true", help="기존 파일 삭제 건너뛰기")
     parser.add_argument("--dry-run", action="store_true", help="생성 없이 클립 목록만 출력")
     parser.add_argument("--no-preview", action="store_true", help="Preview 생성 건너뛰기")
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("  TTS Build Pipeline: full_moon scenario")
-    print("=" * 60)
+    # Resolve which scenarios to build
+    if args.scenario:
+        tts_path = ROOT / "scenarios_tts" / f"{args.scenario}.tts.json"
+        if not tts_path.exists():
+            print(f"[error] 시나리오를 찾을 수 없습니다: {tts_path}")
+            print(f"  사용 가능: {', '.join(choices)}")
+            sys.exit(1)
+        targets = [tts_path]
+    else:
+        targets = all_tts
+        if not targets:
+            print("[error] scenarios_tts/ 에 *.tts.json 파일이 없습니다.")
+            sys.exit(1)
 
-    if not args.skip_clean and not args.skip_generate:
-        step_clean()
+    for tts_path in targets:
+        scenario_id, voices_dir = _resolve_paths(tts_path)
 
-    if not args.skip_generate:
-        step_generate(dry_run=args.dry_run)
-        if args.dry_run:
-            return
+        print("=" * 60)
+        print(f"  TTS Build: {scenario_id}  ({tts_path.name})")
+        print("=" * 60)
 
-    step_convert_m4a()
-    step_update_manifest()
+        if not args.skip_clean and not args.skip_generate:
+            step_clean(voices_dir)
 
-    if not args.no_preview:
-        step_preview()
+        if not args.skip_generate:
+            step_generate(tts_path, dry_run=args.dry_run)
+            if args.dry_run:
+                continue
 
-    # Summary
-    m4a_count = len(list(VOICES_DIR.rglob("voice.m4a")))
-    total_size = sum(f.stat().st_size for f in VOICES_DIR.rglob("*") if f.is_file())
-    print()
-    print(f"  DONE: {m4a_count} clips, {total_size // 1024 // 1024}MB total")
-    print("=" * 60)
+        step_convert_m4a(voices_dir)
+        step_update_manifest(voices_dir)
+
+        if not args.no_preview:
+            step_preview(scenario_id, voices_dir)
+
+        # Summary
+        m4a_count = len(list(voices_dir.rglob("voice.m4a")))
+        total_size = sum(f.stat().st_size for f in voices_dir.rglob("*") if f.is_file())
+        print()
+        print(f"  DONE [{scenario_id}]: {m4a_count} clips, {total_size // 1024 // 1024}MB total")
+        print("=" * 60)
 
 
 if __name__ == "__main__":
