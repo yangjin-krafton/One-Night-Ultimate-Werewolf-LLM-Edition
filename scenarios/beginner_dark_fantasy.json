@@ -1,56 +1,200 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedBy": "Codex",
   "scenarioType": "runtime",
   "scenarioMode": "beginner",
+  "assemblyMode": "runtime_deck_builder",
   "ttsSource": "scenarios_tts/beginner_dark_fantasy.tts.json",
   "scenarios": [
     {
       "scenarioId": "beginner_dark_fantasy",
       "title": "검은 성벽의 첫 순찰",
-      "tags": ["beginner", "dark_fantasy", "rules_first", "basic"],
+      "tags": ["beginner", "dark_fantasy", "rules_first", "runtime_assembled"],
       "recommendedPlayerCounts": [3, 4, 5, 6, 7, 8, 9, 10],
+      "defaultEnabledExpansions": ["base", "daybreak"],
+      "optionalExpansions": ["daybreak_bonus1", "bonus2", "vampire", "alien"],
+      "runtimeDeckBuilder": {
+        "source": "game_runtime",
+        "usesPlayerCountOption": true,
+        "usesExpansionOptions": true,
+        "centerCardCount": 3,
+        "minPlayers": 3,
+        "maxPlayers": 10,
+        "notes": [
+          "이 시나리오는 미리 고정된 덱을 쓰지 않는다.",
+          "실제 플레이 덱은 참가 인원 수와 확장 활성화 옵션에 따라 게임이 런타임에 조립한다.",
+          "이 파일은 전체 역할 풀, 권장 순서, 에피소드별 나레이션 밀도 규칙을 보관하는 기준 데이터다."
+        ]
+      },
+      "roleCatalogByExpansion": {
+        "base": [
+          "doppelganger",
+          "werewolf",
+          "minion",
+          "mason",
+          "seer",
+          "robber",
+          "troublemaker",
+          "drunk",
+          "insomniac",
+          "hunter",
+          "tanner",
+          "villager"
+        ],
+        "daybreak": [
+          "sentinel",
+          "alpha_wolf",
+          "mystic_wolf",
+          "dream_wolf",
+          "apprentice_seer",
+          "paranormal_investigator",
+          "witch",
+          "village_idiot",
+          "revealer",
+          "curator",
+          "bodyguard"
+        ],
+        "daybreak_bonus1": [
+          "aura_seer",
+          "prince",
+          "cursed"
+        ],
+        "bonus2": [
+          "apprentice_tanner",
+          "thing",
+          "squire",
+          "beholder"
+        ],
+        "vampire": [
+          "copycat",
+          "vampire",
+          "the_count",
+          "renfield",
+          "diseased",
+          "cupid",
+          "instigator",
+          "priest",
+          "assassin",
+          "apprentice_assassin",
+          "marksman",
+          "pickpocket",
+          "gremlin",
+          "vampire_lord"
+        ],
+        "alien": [
+          "oracle",
+          "alien",
+          "synthetic_alien",
+          "cow",
+          "groob",
+          "zerb",
+          "leader",
+          "psychic",
+          "rascal",
+          "exposer",
+          "blob"
+        ]
+      },
+      "runtimeOrders": {
+        "duskOrder": [
+          "copycat",
+          "vampire",
+          "the_count",
+          "renfield",
+          "diseased",
+          "cupid",
+          "instigator",
+          "priest",
+          "assassin",
+          "apprentice_assassin",
+          "marksman",
+          "pickpocket"
+        ],
+        "nightOrder": [
+          "doppelganger",
+          "sentinel",
+          "werewolf",
+          "alpha_wolf",
+          "mystic_wolf",
+          "minion",
+          "mason",
+          "seer",
+          "apprentice_seer",
+          "paranormal_investigator",
+          "robber",
+          "witch",
+          "troublemaker",
+          "village_idiot",
+          "drunk",
+          "aura_seer",
+          "thing",
+          "beholder",
+          "squire",
+          "gremlin",
+          "marksman",
+          "oracle",
+          "alien",
+          "synthetic_alien",
+          "cow",
+          "groob",
+          "zerb",
+          "leader",
+          "psychic",
+          "rascal",
+          "exposer",
+          "blob",
+          "insomniac",
+          "curator",
+          "revealer"
+        ]
+      },
       "episodes": [
         {
           "episodeId": "ep1",
           "title": "EP1: 초심자의 서약",
-          "variantByPlayerCount": {
-            "3": { "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"] },
-            "4": { "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "5": { "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "6": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk"] },
-            "7": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "8": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "9": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "10": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] }
+          "assemblyProfile": "tutorial_long",
+          "guidanceRatio": { "rules": 70, "acting": 30 },
+          "playerCountGuides": {
+            "3": "기본판 중심. 늑대, 정보 역할, 교환 역할 위주.",
+            "4": "기본판 중심. 주정뱅이와 불면증환자까지 포함 가능.",
+            "5": "기본판 중심. 하수인까지 포함해 팀 추리를 학습.",
+            "6": "기본판과 프리메이슨 조합을 권장.",
+            "7": "기본판 안정형에 일부 Daybreak를 더할 수 있음.",
+            "8": "기본판 + Daybreak 일부를 천천히 도입.",
+            "9": "확장 역할은 1~2개씩만 추가 권장.",
+            "10": "역할 수가 많아져도 규칙 설명 우선 유지."
           }
         },
         {
           "episodeId": "ep2",
           "title": "EP2: 횃불과 맹세",
-          "variantByPlayerCount": {
-            "3": { "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"] },
-            "4": { "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "5": { "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "6": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk"] },
-            "7": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "8": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "9": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "10": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] }
+          "assemblyProfile": "standard_mid",
+          "guidanceRatio": { "rules": 70, "acting": 30 },
+          "playerCountGuides": {
+            "3": "기본판 표준형.",
+            "4": "기본판 표준형.",
+            "5": "기본판 + 하수인 조합 권장.",
+            "6": "기본판 + 메이슨 또는 Daybreak 1개 정도 권장.",
+            "7": "확장 역할을 넣더라도 밤 이동 역할은 과하게 겹치지 않게 조절.",
+            "8": "기본판 위주에 Daybreak 일부를 혼합.",
+            "9": "표식과 특수 승리 조건은 아직 소량 권장.",
+            "10": "설명량은 줄이되 초보자형 톤은 유지."
           }
         },
         {
           "episodeId": "ep3",
           "title": "EP3: 잿빛 새벽",
-          "variantByPlayerCount": {
-            "3": { "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"] },
-            "4": { "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "5": { "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "6": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk"] },
-            "7": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "8": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "9": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
-            "10": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] }
+          "assemblyProfile": "expert_fast",
+          "guidanceRatio": { "rules": 70, "acting": 30 },
+          "playerCountGuides": {
+            "3": "빠른 기본판 진행.",
+            "4": "빠른 기본판 진행.",
+            "5": "하수인 포함 빠른 진행.",
+            "6": "메이슨까지 포함해도 설명은 짧게 유지.",
+            "7": "확장 사용 시에도 밤 호출은 명령형으로 압축.",
+            "8": "여러 역할이 섞여도 빠른 리듬 우선.",
+            "9": "조립된 덱 기준으로 필요한 역할만 호출.",
+            "10": "숙련자 리듬으로 빠르게 진행."
           }
         }
       ]
