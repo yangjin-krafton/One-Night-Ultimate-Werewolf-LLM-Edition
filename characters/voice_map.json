@@ -70,7 +70,7 @@
     "empath":                  { "name": "엠패스",          "desc": "앱 지시에 따라 주변 감정·거짓 감지" }
   },
 
-  "Narrator": "The_Great_Spirit_of_This_Land",
+  "Narrator": "Lynette",
 
   "doppelganger": "Wriothesley",
   "villager": "Gorou",
@@ -124,7 +124,7 @@
   "synthetic_alien": "Kamisato_Ayaka",
   "cow": "Furina",
   "groob": "Xbalanque",
-  "zerb": "dottore_minion",
+  "zerb": "Cusco",
   "leader": "Yun_Jin",
   "psychic": "Layla",
   "rascal": "Yaoyao",

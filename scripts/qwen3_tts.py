@@ -362,8 +362,9 @@ def generate_tts_for_role(
 ) -> Path:
     """Generate TTS for a single clip using voice_map + voice_lock.
 
-    Strips emotion tags from text, splits by sentence, generates each sentence
-    with the locked voice, inserts pauses, and concatenates.
+    Strips emotion tags from text, sends the FULL text to the server in one call.
+    The Qwen3-TTS server internally handles sentence splitting, per-segment
+    generation, audio validation, and smooth concatenation (generate_clone_managed).
     """
     out_path = Path(out_wav_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -376,38 +377,21 @@ def generate_tts_for_role(
 
     # Try tag directly, then with _기본 fallback
     locked = voice_lock.get(voice_tag_base) or voice_lock.get(f"{voice_tag_base}_기본")
-    tag = voice_tag_base
     if not locked:
         raise RuntimeError(f"Voice lock missing for tag '{voice_tag_base}'")
 
     ref_name = locked.get("audio_filename", "")
     ref_text = locked.get("prompt_text", "")
 
-    sentences = _split_sentences(clean_text)
-    if len(sentences) <= 1:
-        qwen3_tts_to_wav_from_file(
-            text=clean_text, ref_voice_name=ref_name, ref_text=ref_text,
-            out_wav_path=out_path, api_base=api_base, language=language,
-            use_xvec=use_xvec, max_tokens=max_tokens, do_sample=do_sample,
-            temperature=temperature, top_p=top_p, top_k=top_k,
-            timeout_s=timeout_s, request_retries=request_retries,
-            request_retry_backoff_s=request_retry_backoff_s,
-        )
-    else:
-        with tempfile.TemporaryDirectory(prefix="tts_vm_") as td:
-            parts: list[Path] = []
-            for si, sent in enumerate(sentences):
-                sp = Path(td) / f"s{si:03d}.wav"
-                qwen3_tts_to_wav_from_file(
-                    text=sent, ref_voice_name=ref_name, ref_text=ref_text,
-                    out_wav_path=sp, api_base=api_base, language=language,
-                    use_xvec=use_xvec, max_tokens=max_tokens, do_sample=do_sample,
-                    temperature=temperature, top_p=top_p, top_k=top_k,
-                    timeout_s=timeout_s, request_retries=request_retries,
-                    request_retry_backoff_s=request_retry_backoff_s,
-                )
-                parts.append(sp)
-            concat_wavs_with_pause(parts, sentences, out_path)
+    # Send full text in one call — server handles splitting & concatenation
+    qwen3_tts_to_wav_from_file(
+        text=clean_text, ref_voice_name=ref_name, ref_text=ref_text,
+        out_wav_path=out_path, api_base=api_base, language=language,
+        use_xvec=use_xvec, max_tokens=max_tokens, do_sample=do_sample,
+        temperature=temperature, top_p=top_p, top_k=top_k,
+        timeout_s=timeout_s, request_retries=request_retries,
+        request_retry_backoff_s=request_retry_backoff_s,
+    )
     return out_path
 
 
