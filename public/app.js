@@ -39,7 +39,7 @@ const ROLES = {
   village_idiot:           { name: '동네 얼간이',    team: 'village', emoji: '🤪', desc: '자신을 제외한 모든 플레이어의 카드를 왼쪽 또는 오른쪽으로 한 칸씩 이동시킬 수 있습니다.', expansion: 'daybreak' },
   revealer:                { name: '계시자',         team: 'village', emoji: '👁️', desc: '플레이어 1명의 카드를 뒤집어 공개합니다. 늑대인간이나 무두장이면 다시 덮습니다.', expansion: 'daybreak' },
   curator:                 { name: '유물 관리자',    team: 'village', emoji: '🏺', desc: '밤에 플레이어 1명에게 유물 토큰을 놓습니다. 유물 효과로 역할이나 승리 조건이 바뀔 수 있습니다.', expansion: 'daybreak' },
-  bodyguard:               { name: '호위병',         team: 'village', emoji: '💪', desc: '자신이 투표한 사람은 죽지 않습니다. 최다 득표자가 보호 대상이면 다음 득표자가 대신 죽습니다.', expansion: 'daybreak' },
+  bodyguard:               { name: '호위병',         team: 'village', emoji: '💪', desc: '밤에 보호 대상을 정합니다. 진행 규칙에 따라 보호 대상은 특정 이동이나 효과에서 지켜질 수 있습니다.', expansion: 'daybreak' },
 
   // ── 데이브레이크 보너스팩 1 ──
   aura_seer:               { name: '영기 예언자',    team: 'village', emoji: '✨🔮', desc: '밤 동안 카드를 이동하거나 확인한 플레이어가 누구인지 감지합니다.', expansion: 'daybreak_bonus1' },
@@ -55,7 +55,7 @@ const ROLES = {
   // ── 뱀파이어 확장 ──
   copycat:                 { name: '카피캣',         team: 'village', emoji: '🐱', desc: '황혼에 센터 카드 1장을 보고 그 역할이 됩니다. 밤 행동이 있는 역할이면 해당 순서에 다시 행동합니다.', expansion: 'vampire' },
   vampire:                 { name: '뱀파이어',       team: 'vampire', emoji: '🧛', desc: '다른 뱀파이어를 확인하고, 뱀파이어가 아닌 사람 1명에게 뱀파이어 표식을 줘서 뱀파이어 팀으로 만듭니다.', expansion: 'vampire' },
-  the_count:               { name: '백작',           team: 'vampire', emoji: '🧛‍♂️', desc: '공포의 표식을 줘서 대상의 밤 행동을 막을 수 있습니다.', expansion: 'vampire' },
+  count:                   { name: '백작',           team: 'vampire', emoji: '🧛‍♂️', desc: '공포의 표식을 줘서 대상의 밤 행동을 막을 수 있습니다.', expansion: 'vampire' },
   renfield:                { name: '랜필드',         team: 'vampire', emoji: '🦇', desc: '뱀파이어 팀 보조 역할입니다. 뱀파이어가 표식을 준 대상을 확인할 수 있습니다.', expansion: 'vampire' },
   diseased:                { name: '감염자',         team: 'village', emoji: '🤒', desc: '옆 사람에게 질병의 표식을 줍니다. 질병 표식은 투표 패배 조건에 영향을 줍니다.', expansion: 'vampire' },
   cupid:                   { name: '큐피트',         team: 'village', emoji: '💘', desc: '두 사람에게 사랑의 표식을 줍니다. 한 명이 죽으면 다른 한 명도 함께 죽습니다.', expansion: 'vampire' },
@@ -78,8 +78,12 @@ const ROLES = {
   leader:                  { name: '리더',           team: 'alien',   emoji: '👽👑', desc: '에일리언들을 확인하고, 일부 특수 승리 조건을 가집니다.', expansion: 'alien' },
   psychic:                 { name: '초능력자',       team: 'village', emoji: '🧠', desc: '앱 지시에 따라 카드를 확인합니다.', expansion: 'alien' },
   rascal:                  { name: '악동',           team: 'village', emoji: '😈', desc: '앱 지시에 따라 카드를 이동시킵니다.', expansion: 'alien' },
-  exposer:                 { name: '폭로자',         team: 'village', emoji: '📸', desc: '앱 지시에 따라 카드를 공개합니다.', expansion: 'alien' },
+  exposure:                { name: '폭로자',         team: 'village', emoji: '📸', desc: '앱 지시에 따라 카드를 공개합니다.', expansion: 'alien' },
   blob:                    { name: '방울',           team: 'village', emoji: '🫧', desc: '자신과 양옆 플레이어 전체가 살아남아야 승리하는 특수 역할입니다.', expansion: 'alien' },
+  mortician:               { name: '장의사',         team: 'village', emoji: '⚰️', desc: '앱 지시에 따라 죽음과 관련된 정보를 확인합니다.', expansion: 'alien' },
+  body_snatcher:           { name: '바디 스내쳐',    team: 'village', emoji: '🫥', desc: '다른 플레이어 1명과 카드를 바꾸고, 새로 받은 카드를 확인합니다.', expansion: 'alien' },
+  nostradamus:             { name: '노스트라다무스', team: 'village', emoji: '📜', desc: '앱 지시에 따라 예측이나 선언을 남기는 예언형 역할입니다.', expansion: 'alien' },
+  empath:                  { name: '엠패스',         team: 'village', emoji: '💗', desc: '앱 지시에 따라 주변 반응이나 감정 단서를 감지합니다.', expansion: 'alien' },
 };
 
 // ===== ROLE DESC HIGHLIGHTS =====
@@ -178,8 +182,8 @@ const DESC_HIGHLIGHTS = {
     { t: '역할이나 승리 조건이 바뀔 수 있습니다', c: '#22d3ee' },
   ],
   bodyguard: [
-    { t: '자신이 투표한 사람은 죽지 않습니다', c: '#34d399' },
-    { t: '다음 득표자가 대신 죽습니다', c: '#fb7185' },
+    { t: '밤에 보호 대상을 정합니다', c: '#34d399' },
+    { t: '특정 이동이나 효과에서 지켜질 수 있습니다', c: '#60a5fa' },
   ],
   // 보너스팩 1
   aura_seer: [
@@ -218,7 +222,7 @@ const DESC_HIGHLIGHTS = {
     { t: '뱀파이어 표식', c: '#fb7185' },
     { t: '뱀파이어 팀으로 만듭니다', c: '#fbbf24' },
   ],
-  the_count: [
+  count: [
     { t: '공포의 표식', c: '#fb7185' },
     { t: '밤 행동을 막을 수 있습니다', c: '#fbbf24' },
   ],
@@ -296,12 +300,28 @@ const DESC_HIGHLIGHTS = {
   rascal: [
     { t: '앱 지시에 따라 카드를 이동', c: '#fbbf24' },
   ],
-  exposer: [
+  exposure: [
     { t: '앱 지시에 따라 카드를 공개', c: '#fb7185' },
   ],
   blob: [
     { t: '양옆 플레이어 전체가 살아남아야', c: '#22d3ee' },
     { t: '특수 역할', c: '#fbbf24' },
+  ],
+  mortician: [
+    { t: '죽음과 관련된 정보를 확인', c: '#fbbf24' },
+    { t: '앱 지시', c: '#22d3ee' },
+  ],
+  body_snatcher: [
+    { t: '카드를 바꾸고', c: '#fbbf24' },
+    { t: '새로 받은 카드를 확인', c: '#22d3ee' },
+  ],
+  nostradamus: [
+    { t: '예측이나 선언', c: '#c4b5fd' },
+    { t: '앱 지시', c: '#22d3ee' },
+  ],
+  empath: [
+    { t: '감정 단서를 감지', c: '#fda4af' },
+    { t: '앱 지시', c: '#22d3ee' },
   ],
 };
 
@@ -366,17 +386,18 @@ const ROLE_IDS = [
   // 보너스팩2 (4)
   'apprentice_tanner','thing','squire','beholder',
   // 뱀파이어 확장 (14)
-  'copycat','vampire','the_count','renfield','diseased','cupid',
+  'copycat','vampire','count','renfield','diseased','cupid',
   'instigator','priest','assassin','apprentice_assassin',
   'marksman','pickpocket','gremlin','vampire_lord',
-  // 에일리언 확장 (11)
+  // 에일리언 확장 (15)
   'oracle','alien','synthetic_alien','cow','groob','zerb',
-  'leader','psychic','rascal','exposer','blob',
+  'leader','psychic','rascal','exposure','blob',
+  'mortician','body_snatcher','nostradamus','empath',
 ];
 
 // 황혼 단계 (뱀파이어 확장)
 const DUSK_ORDER = [
-  'copycat','vampire','the_count','renfield',
+  'copycat','vampire','count','renfield',
   'diseased','cupid','instigator','priest',
   'assassin','apprentice_assassin','marksman','pickpocket',
 ];
@@ -384,30 +405,31 @@ const DUSK_ORDER = [
 // 밤 단계
 const NIGHT_ORDER = [
   'doppelganger','sentinel',
-  'werewolf','alpha_wolf','mystic_wolf',
+  'werewolf','alpha_wolf','mystic_wolf','dream_wolf',
   'minion','mason',
   'seer','apprentice_seer','paranormal_investigator',
-  'robber','witch','troublemaker',
+  'psychic',
+  'robber','witch','body_snatcher','troublemaker',
   'village_idiot','drunk',
-  'aura_seer','thing','beholder','squire',
+  'aura_seer','thing','beholder','squire','empath',
   'gremlin','marksman',
   // 에일리언
   'oracle','alien','synthetic_alien','cow',
-  'groob','zerb','leader','psychic','rascal','exposer','blob',
+  'groob','zerb','leader','rascal','exposure','nostradamus','blob','mortician',
   // 마지막
-  'insomniac','curator','revealer',
+  'insomniac','curator','revealer','bodyguard','renfield',
 ];
 
 function encodeDeck(deck) {
-  // Each role can appear 0-3 times → 2 bits each. 55 roles × 2 = 110 bits → base62(~20 chars)
+  // Each role can appear 0-3 times → 2 bits each. 59 roles × 2 = 118 bits → base62(~21 chars)
   const counts = ROLE_IDS.map(r => deck.filter(d => d === r).length);
   let val = 0n;
   for (let i = 0; i < counts.length; i++) val = val * 4n + BigInt(counts[i]);
   let code = '';
   let v = val;
-  if (v === 0n) return '0'.padStart(19, '0');
+  if (v === 0n) return '0'.padStart(21, '0');
   while (v > 0n) { code = _B62[Number(v % 62n)] + code; v = v / 62n; }
-  return code.padStart(19, '0');
+  return code.padStart(21, '0');
 }
 
 function decodeDeck(code) {
@@ -430,7 +452,8 @@ function deriveDuskOrder(deck) {
 
 function deriveWakeOrder(deck) {
   const present = new Set(deck);
-  return NIGHT_ORDER.filter(r => present.has(r));
+  const merged = [...DUSK_ORDER, ...NIGHT_ORDER];
+  return merged.filter((r, idx) => present.has(r) && merged.indexOf(r) === idx);
 }
 
 function generateRandomDeck(playerCount, scenarioId) {
@@ -495,15 +518,19 @@ function generateRandomDeck(playerCount, scenarioId) {
     ['cow'],
     ['psychic'],
     ['rascal'],
-    ['exposer'],
+    ['exposure'],
     ['blob'],
+    ['mortician'],
+    ['body_snatcher'],
+    ['nostradamus'],
+    ['empath'],
   ].filter(u => u.every(allowed));
 
   // Vampire pool
   const vampireUnits = [
     ['vampire'],
     ['vampire'],
-    ['the_count'],
+    ['count'],
     ['renfield'],
     ['vampire_lord'],
   ].filter(u => u.every(allowed));
@@ -601,7 +628,7 @@ function generateRandomDeck(playerCount, scenarioId) {
 
 // ===== SCENARIO DATA (embedded) =====
 const BEGINNER_DARK_FANTASY_EPISODES = [
-  { id: 'ep1', title: 'EP1: 초심자의 서약',
+  { id: 'ep1', title: 'EP1: 첫 밤 안내',
     variants: {
       '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
       '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
@@ -613,7 +640,7 @@ const BEGINNER_DARK_FANTASY_EPISODES = [
       '10': { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
     }
   },
-  { id: 'ep2', title: 'EP2: 횃불과 맹세',
+  { id: 'ep2', title: 'EP2: 표준 진행',
     variants: {
       '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
       '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
@@ -625,7 +652,7 @@ const BEGINNER_DARK_FANTASY_EPISODES = [
       '10': { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
     }
   },
-  { id: 'ep3', title: 'EP3: 잿빛 새벽',
+  { id: 'ep3', title: 'EP3: 빠른 진행',
     variants: {
       '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
       '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
@@ -641,7 +668,7 @@ const BEGINNER_DARK_FANTASY_EPISODES = [
 
 const SCENARIOS = [
   {
-    id: 'beginner_dark_fantasy', title: '검은 성벽의 첫 순찰', subtitle: '초보자형 기본 · 다크 판타지 · 3~10인',
+    id: 'beginner_dark_fantasy', title: '한밤의 늑대인간: 첫 밤 안내', subtitle: '초보자형 · 원작 테마 · 전체 역할 풀 · 3~10인',
     playerCounts: [3,4,5,6,7,8,9,10],
     episodes: BEGINNER_DARK_FANTASY_EPISODES
   }
@@ -668,7 +695,7 @@ const state = {
 };
 
 // ===== ROOM CODE =====
-// v3: scenario(4 bits) + episode(2 bits) + deck(55 roles × 2 bits = 110 bits) = 116 bits → base62(20 chars)
+// v3: scenario(4 bits) + episode(2 bits) + deck(59 roles × 2 bits = 118 bits) = 124 bits → base62(21 chars)
 // Player count derived from deck.length - 3.
 const _B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
 const _DECK_BITS = BigInt(ROLE_IDS.length * 2); // 110
@@ -683,9 +710,9 @@ function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
   const val = (sIdx << (_DECK_BITS + 2n)) | (epBits << _DECK_BITS) | deckVal;
   let code = '';
   let v = val;
-  if (v === 0n) return '0'.padStart(20, '0');
+  if (v === 0n) return '0'.padStart(21, '0');
   while (v > 0n) { code = _B62[Number(v % 62n)] + code; v = v / 62n; }
-  return code.padStart(20, '0');
+  return code.padStart(21, '0');
 }
 
 function decodeRoomCode(code) {
