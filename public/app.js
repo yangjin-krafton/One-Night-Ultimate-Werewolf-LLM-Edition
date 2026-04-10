@@ -666,11 +666,22 @@ const BEGINNER_DARK_FANTASY_EPISODES = [
   }
 ];
 
+const DARK_CITADEL_EPISODES = [
+  { id: 'ep1', title: 'EP1: 성채의 첫 번째 밤', variants: {} },
+  { id: 'ep2', title: 'EP2: 저주가 깊어지는 밤', variants: {} },
+  { id: 'ep3', title: 'EP3: 심연의 속삭임', variants: {} },
+];
+
 const SCENARIOS = [
   {
     id: 'beginner_dark_fantasy', title: '한밤의 늑대인간: 첫 밤 안내', subtitle: '초보자형 · 원작 테마 · 전체 역할 풀 · 3~10인',
     playerCounts: [3,4,5,6,7,8,9,10],
     episodes: BEGINNER_DARK_FANTASY_EPISODES
+  },
+  {
+    id: 'dark_citadel', title: '흑염의 성채', subtitle: '숙련자형 · 다크 판타지 · 전체 역할 풀 · 3~10인',
+    playerCounts: [3,4,5,6,7,8,9,10],
+    episodes: DARK_CITADEL_EPISODES
   }
 ];
 
@@ -755,15 +766,21 @@ function decodeRoomCode(code) {
 function getVariant(scenario, episodeId, playerCount) {
   const episode = scenario.episodes.find(ep => ep.id === episodeId);
   if (!episode) return null;
-  const v = episode.variants;
+  const v = episode.variants || {};
   let variant = v[String(playerCount)];
   if (!variant) {
     // fallback: smallest key >= playerCount, else largest key
-    const keys = Object.keys(v).map(Number).sort((a, b) => a - b);
-    const fit = keys.find(k => k >= playerCount);
-    variant = v[String(fit != null ? fit : keys[keys.length - 1])];
+    const keys = Object.keys(v).map(Number).filter(k => !isNaN(k)).sort((a, b) => a - b);
+    if (keys.length > 0) {
+      const fit = keys.find(k => k >= playerCount);
+      variant = v[String(fit != null ? fit : keys[keys.length - 1])];
+    }
   }
-  if (!variant) return null;
+  if (!variant) {
+    // No pre-defined variants — generate random deck on the fly
+    const deck = generateRandomDeck(playerCount, scenario.id);
+    return { deck, wakeOrder: deriveWakeOrder(deck) };
+  }
   // Trim deck to playerCount + 3 (pool-style variants may have more cards than needed)
   const need = playerCount + 3;
   if (variant.deck.length > need) {
@@ -814,7 +831,7 @@ function buildPlaylistFromTts(ttsScenario, scenarioId, episodeId, wakeOrder) {
     : episodes && episodes[episodeId];
   if (!episode) return [];
 
-  const playerKey = `p${ttsScenario.playerCount || 10}`;
+  const playerKey = ttsScenario.playerCount ? `p${ttsScenario.playerCount}` : 'pall';
   const playlist = [];
   const pushClips = (basePath, raw, phase, roleId, label, defaultSpeakerId) => {
     const items = coerceClipItems(raw, defaultSpeakerId);
@@ -883,7 +900,7 @@ function cancelSpeechPlayback() {
 
 function getManifestPlayerPrefix(manifest) {
   if (!manifest.clips.length) return null;
-  const m = manifest.clips[0].clipId.match(/\/p(\d+)\//);
+  const m = manifest.clips[0].clipId.match(/\/p(\w+)\//);
   return m ? m[1] : null;
 }
 
