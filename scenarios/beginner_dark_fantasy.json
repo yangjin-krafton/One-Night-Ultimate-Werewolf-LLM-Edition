@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "Codex",
+  "scenarioType": "runtime",
+  "scenarioMode": "beginner",
+  "ttsSource": "scenarios_tts/beginner_dark_fantasy.tts.json",
+  "scenarios": [
+    {
+      "scenarioId": "beginner_dark_fantasy",
+      "title": "검은 성벽의 첫 순찰",
+      "tags": ["beginner", "dark_fantasy", "rules_first", "basic"],
+      "recommendedPlayerCounts": [3, 4, 5, 6, 7, 8, 9, 10],
+      "episodes": [
+        {
+          "episodeId": "ep1",
+          "title": "EP1: 초심자의 서약",
+          "variantByPlayerCount": {
+            "3": { "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"] },
+            "4": { "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "5": { "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "6": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk"] },
+            "7": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "8": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "9": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "10": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] }
+          }
+        },
+        {
+          "episodeId": "ep2",
+          "title": "EP2: 횃불과 맹세",
+          "variantByPlayerCount": {
+            "3": { "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"] },
+            "4": { "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "5": { "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "6": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk"] },
+            "7": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "8": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "9": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "10": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] }
+          }
+        },
+        {
+          "episodeId": "ep3",
+          "title": "EP3: 잿빛 새벽",
+          "variantByPlayerCount": {
+            "3": { "roleDeck": ["werewolf", "seer", "robber", "troublemaker", "villager", "villager"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker"] },
+            "4": { "roleDeck": ["werewolf", "werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "5": { "roleDeck": ["werewolf", "werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "6": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk"] },
+            "7": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "8": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "9": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] },
+            "10": { "roleDeck": ["werewolf", "werewolf", "minion", "mason", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac", "villager", "villager", "villager"], "roleWakeOrder": ["werewolf", "minion", "mason", "seer", "robber", "troublemaker", "drunk", "insomniac"] }
+          }
+        }
+      ]
+    }
+  ]
+}
