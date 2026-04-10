@@ -226,7 +226,7 @@ def build_jobs(
                         )
                 continue
 
-            # Compact tts-only format (single variant)
+            # Compact tts-only format (single variant or runtime_deck_builder)
             player_key = str(
                 scenario.get("playerCount")
                 or scenario.get("variantPlayerCount")
@@ -237,9 +237,8 @@ def build_jobs(
                 or ""
             ).strip()
             if not player_key.isdigit():
-                raise ValueError(
-                    f"Compact TTS JSON requires playerCount (number) at scenario or episode level: {scenario_json_path}"
-                )
+                # runtime_deck_builder: no fixed playerCount, use "all" as universal key
+                player_key = "all"
 
             narration = (episode.get("narration") or {}) if isinstance(episode.get("narration"), dict) else dict(episode)
             for section_key, speaker_id, text in _iter_clips_from_variant(narration):
