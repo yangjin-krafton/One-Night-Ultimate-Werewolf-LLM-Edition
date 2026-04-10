@@ -10,6 +10,12 @@
   --wolf-bg: rgba(224,64,64,0.12);
   --village: #4090e0;
   --village-bg: rgba(64,144,224,0.12);
+  --tanner: #c88030;
+  --tanner-bg: rgba(200,128,48,0.12);
+  --vampire: #9040c0;
+  --vampire-bg: rgba(144,64,192,0.12);
+  --alien: #40c060;
+  --alien-bg: rgba(64,192,96,0.12);
   --radius: 14px;
   --radius-sm: 8px;
   --shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -334,12 +340,15 @@ body {
   margin-bottom: 8px;
 }
 .room-code-display__code {
-  font-size: 40px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 6px;
+  letter-spacing: 2px;
   color: var(--accent);
   font-family: 'Courier New', monospace;
+  cursor: pointer;
+  word-break: break-all;
 }
+.room-code-display__code:active { opacity: 0.7; }
 .room-code-display__hint {
   font-size: 12px;
   color: var(--fg-muted);
@@ -372,13 +381,12 @@ body {
   border: 1.5px solid rgba(255,255,255,0.15);
   border-radius: var(--radius);
   color: var(--accent);
-  font-size: 32px;
+  font-size: 18px;
   font-weight: 700;
   text-align: center;
   padding: 16px;
-  letter-spacing: 6px;
+  letter-spacing: 2px;
   font-family: 'Courier New', monospace;
-  text-transform: uppercase;
   outline: none;
   transition: border-color 0.2s;
 }
@@ -432,8 +440,10 @@ body {
 .recent-room__code {
   font-weight: 700;
   font-family: var(--font-mono, monospace);
-  letter-spacing: 1px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
   flex-shrink: 0;
+  color: var(--accent);
 }
 .recent-room__info {
   flex: 1;
@@ -479,14 +489,17 @@ body {
 }
 .lobby__code {
   font-family: 'Courier New', monospace;
-  font-size: 18px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--accent);
-  letter-spacing: 3px;
-  padding: 6px 12px;
+  letter-spacing: 1px;
+  padding: 6px 10px;
   background: var(--accent-dim);
   border-radius: var(--radius-sm);
   cursor: pointer;
+  word-break: break-all;
+  text-align: center;
+  line-height: 1.4;
 }
 .lobby__code:active { opacity: 0.7; }
 
@@ -639,10 +652,87 @@ body {
 }
 .role-card--wolf .role-card__team { color: var(--wolf); }
 .role-card--village .role-card__team { color: var(--village); }
+.role-card--tanner { border-color: rgba(200,128,48,0.2); background: var(--tanner-bg); }
+.role-card--tanner .role-card__team { color: var(--tanner); }
+.role-card--vampire { border-color: rgba(144,64,192,0.2); background: var(--vampire-bg); }
+.role-card--vampire .role-card__team { color: var(--vampire); }
+.role-card--alien { border-color: rgba(64,192,96,0.2); background: var(--alien-bg); }
+.role-card--alien .role-card__team { color: var(--alien); }
 .role-card__desc {
   font-size: 12px;
   color: var(--fg-muted);
   line-height: 1.5;
+}
+
+/* ===== EXPANSION GRID (setup) ===== */
+.expansion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+}
+.expansion-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--fg-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.expansion-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+}
+.expansion-btn--active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--fg);
+}
+.expansion-btn--locked {
+  opacity: 0.6;
+  cursor: default;
+}
+.expansion-btn__name {
+  font-size: 13px;
+  font-weight: 700;
+}
+.expansion-btn__desc {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* ===== EXPANSION TOGGLES (lobby reroll bar) ===== */
+.expansion-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.exp-tag {
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--bg-card);
+  color: var(--fg-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.exp-tag:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+}
+.exp-tag--active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--fg);
+}
+.exp-tag--locked {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* Center card info */

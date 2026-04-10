@@ -4,36 +4,104 @@
    ============================================================ */
 
 // ===== ROLE DATA =====
+// Teams: village, wolf, tanner, vampire, alien
+const TEAM_META = {
+  village: { label: '마을 팀',     css: 'role-card--village' },
+  wolf:    { label: '늑대 팀',     css: 'role-card--wolf' },
+  tanner:  { label: '독립 (무두장이)', css: 'role-card--tanner' },
+  vampire: { label: '뱀파이어 팀', css: 'role-card--vampire' },
+  alien:   { label: '에일리언 팀', css: 'role-card--alien' },
+};
+
 const ROLES = {
-  werewolf:                { name: '늑대인간',       team: 'wolf',    emoji: '🐺', desc: '밤에 눈을 떠서 다른 늑대인간을 확인합니다. 혼자라면 센터 카드 1장을 볼 수 있습니다. 하수인 행동 시 눈을 감은 채 엄지를 올려 자신을 알립니다.' },
-  alpha_wolf:              { name: '알파 울프',      team: 'wolf',    emoji: '🐺‍', desc: '늑대인간처럼 동료를 확인합니다. 추가로 센터 카드 1장을 아무 플레이어에게 교환할 수 있습니다.' },
-  mystic_wolf:             { name: '미스틱 울프',    team: 'wolf',    emoji: '🔮🐺', desc: '늑대인간처럼 동료를 확인한 뒤, 다른 플레이어 1명의 카드를 몰래 볼 수 있습니다.' },
-  dream_wolf:              { name: '꿈의 늑대',     team: 'wolf',    emoji: '💤🐺', desc: '늑대 팀이지만 밤에 눈을 뜨지 않습니다. 다른 늑대는 꿈의 늑대를 확인할 수 있습니다.' },
-  seer:                    { name: '점술사',         team: 'village', emoji: '🔮', desc: '밤에 다른 플레이어 1명의 카드를 보거나, 센터 카드 2장을 확인할 수 있습니다.' },
-  apprentice_seer:         { name: '견습 점술사',    team: 'village', emoji: '🔮✨', desc: '밤에 센터 카드 1장만 확인할 수 있습니다. 점술사의 약화 버전입니다.' },
-  paranormal_investigator: { name: '초자연 수사관',  team: 'village', emoji: '🕵️', desc: '플레이어 카드를 최대 2장까지 확인합니다. 늑대/마법사를 보면 그 팀에 합류합니다.' },
-  robber:                  { name: '강도',           team: 'village', emoji: '🗡️', desc: '밤에 다른 플레이어 1명과 카드를 교환하고, 새로 받은 카드를 확인합니다.' },
-  troublemaker:            { name: '말썽꾼',         team: 'village', emoji: '🃏', desc: '밤에 다른 두 플레이어의 카드를 서로 바꿉니다. 바꾼 카드는 확인하지 않습니다.' },
-  witch:                   { name: '마녀',           team: 'village', emoji: '🧙', desc: '밤에 센터 카드 1장을 확인하고, 원한다면 그 카드를 다른 플레이어 카드와 바꿀 수 있습니다.' },
-  village_idiot:           { name: '마을 바보',      team: 'village', emoji: '🤪', desc: '자신을 제외한 모든 플레이어의 카드를 왼쪽 또는 오른쪽으로 한 칸씩 이동시킬 수 있습니다.' },
-  drunk:                   { name: '주정뱅이',       team: 'village', emoji: '🍺', desc: '밤에 센터 카드 1장과 자신의 카드를 교환합니다. 바꾼 카드는 확인하지 않습니다.' },
-  sentinel:                { name: '파수꾼',         team: 'village', emoji: '🛡️', desc: '밤에 플레이어 1명의 카드에 방패 토큰을 놓습니다. 그 카드는 교환으로부터 보호됩니다.' },
-  curator:                 { name: '큐레이터',       team: 'village', emoji: '🏺', desc: '밤에 플레이어 1명에게 유물 토큰을 놓습니다. 유물이 놓인 카드는 낮에 공개될 수 있습니다.' },
-  insomniac:               { name: '불면증 환자',    team: 'village', emoji: '😵', desc: '밤의 마지막에 자신의 카드를 확인합니다. 누군가 바꿨다면 새 역할을 알 수 있습니다.' },
-  revealer:                { name: '폭로자',         team: 'village', emoji: '👁️', desc: '플레이어 1명의 카드를 뒤집어 공개합니다. 늑대/마법사면 다시 덮습니다.' },
-  bodyguard:               { name: '경호원',         team: 'village', emoji: '💪', desc: '플레이어 2명을 선택해 교환/이동으로부터 보호합니다.' },
-  minion:                  { name: '하수인',         team: 'wolf',    emoji: '👹', desc: '밤에 눈을 떠서 엄지를 올린 늑대인간을 확인합니다. 늑대인간은 하수인을 모릅니다.' },
-  mason:                   { name: '프리메이슨',     team: 'village', emoji: '🤝', desc: '밤에 다른 프리메이슨을 확인합니다. 서로의 존재가 마을 팀의 단서가 됩니다.' },
-  villager:                { name: '마을 주민',      team: 'village', emoji: '🏠', desc: '특별한 능력이 없습니다. 토론과 추리로 늑대인간을 찾아내세요.' },
+  // ── 기본판 ──
+  doppelganger:            { name: '도플갱어',       team: 'village', emoji: '🪞', desc: '다른 플레이어 1명의 카드를 보고 그 역할을 복제합니다. 복제한 역할의 팀에 속하며, 역할에 따라 즉시 행동하거나 해당 순서에 다시 행동합니다.', expansion: 'base' },
+  werewolf:                { name: '늑대인간',       team: 'wolf',    emoji: '🐺', desc: '밤에 눈을 떠서 다른 늑대인간을 확인합니다. 혼자라면 센터 카드 1장을 볼 수 있습니다. 하수인 행동 시 눈을 감은 채 엄지를 올려 자신을 알립니다.', expansion: 'base' },
+  minion:                  { name: '하수인',         team: 'wolf',    emoji: '👹', desc: '밤에 눈을 떠서 엄지를 올린 늑대인간을 확인합니다. 늑대인간은 하수인을 모릅니다.', expansion: 'base' },
+  mason:                   { name: '프리메이슨',     team: 'village', emoji: '🤝', desc: '밤에 다른 프리메이슨을 확인합니다. 서로의 존재가 마을 팀의 단서가 됩니다.', expansion: 'base' },
+  seer:                    { name: '예언자',         team: 'village', emoji: '🔮', desc: '밤에 다른 플레이어 1명의 카드를 보거나, 센터 카드 2장을 확인할 수 있습니다.', expansion: 'base' },
+  robber:                  { name: '강도',           team: 'village', emoji: '🗡️', desc: '밤에 다른 플레이어 1명과 카드를 교환하고, 새로 받은 카드를 확인합니다.', expansion: 'base' },
+  troublemaker:            { name: '말썽쟁이',       team: 'village', emoji: '🃏', desc: '밤에 다른 두 플레이어의 카드를 서로 바꿉니다. 바꾼 카드는 확인하지 않습니다.', expansion: 'base' },
+  drunk:                   { name: '주정뱅이',       team: 'village', emoji: '🍺', desc: '밤에 센터 카드 1장과 자신의 카드를 교환합니다. 바꾼 카드는 확인하지 않습니다.', expansion: 'base' },
+  insomniac:               { name: '불면증환자',     team: 'village', emoji: '😵', desc: '밤의 마지막에 자신의 카드를 확인합니다. 누군가 바꿨다면 새 역할을 알 수 있습니다.', expansion: 'base' },
+  hunter:                  { name: '사냥꾼',         team: 'village', emoji: '🏹', desc: '밤 행동이 없습니다. 자신이 죽으면, 자신이 투표한 사람도 함께 죽습니다.', expansion: 'base' },
+  tanner:                  { name: '무두장이',       team: 'tanner',  emoji: '💀', desc: '자신이 죽는 것이 목표인 독립 역할입니다. 투표로 죽으면 혼자 승리합니다.', expansion: 'base' },
+  villager:                { name: '마을 주민',      team: 'village', emoji: '🏠', desc: '특별한 능력이 없습니다. 토론과 추리로 늑대인간을 찾아내세요.', expansion: 'base' },
+
+  // ── 데이브레이크 확장 ──
+  sentinel:                { name: '경비병',         team: 'village', emoji: '🛡️', desc: '밤에 플레이어 1명의 카드에 방패 토큰을 놓습니다. 방패를 받은 플레이어의 카드는 다른 사람이 보거나 옮길 수 없습니다.', expansion: 'daybreak' },
+  alpha_wolf:              { name: '태초의 늑대인간', team: 'wolf',   emoji: '🐺‍', desc: '늑대인간처럼 동료를 확인합니다. 추가로 센터 카드 1장을 비늑대 플레이어 카드와 교환해 새 늑대인간을 만들 수 있습니다.', expansion: 'daybreak' },
+  mystic_wolf:             { name: '신비한 늑대인간', team: 'wolf',   emoji: '🔮🐺', desc: '늑대인간처럼 동료를 확인한 뒤, 다른 플레이어 1명의 카드를 몰래 볼 수 있습니다.', expansion: 'daybreak' },
+  dream_wolf:              { name: '잠자는 늑대인간', team: 'wolf',   emoji: '💤🐺', desc: '늑대 팀이지만 밤에 눈을 뜨지 않습니다. 다른 늑대는 잠자는 늑대인간의 존재를 확인할 수 있습니다.', expansion: 'daybreak' },
+  apprentice_seer:         { name: '견습 예언자',    team: 'village', emoji: '🔮✨', desc: '밤에 센터 카드 1장만 확인할 수 있습니다. 예언자의 약화 버전입니다.', expansion: 'daybreak' },
+  paranormal_investigator: { name: '심령 수사관',    team: 'village', emoji: '🕵️', desc: '플레이어 카드를 최대 2장까지 차례로 확인합니다. 늑대인간이나 무두장이를 보면 즉시 그 팀에 합류하고 확인을 멈춥니다.', expansion: 'daybreak' },
+  witch:                   { name: '마녀',           team: 'village', emoji: '🧙', desc: '밤에 센터 카드 1장을 확인합니다. 원한다면 그 카드를 다른 플레이어 카드와 바꿔야 합니다.', expansion: 'daybreak' },
+  village_idiot:           { name: '동네 얼간이',    team: 'village', emoji: '🤪', desc: '자신을 제외한 모든 플레이어의 카드를 왼쪽 또는 오른쪽으로 한 칸씩 이동시킬 수 있습니다.', expansion: 'daybreak' },
+  revealer:                { name: '계시자',         team: 'village', emoji: '👁️', desc: '플레이어 1명의 카드를 뒤집어 공개합니다. 늑대인간이나 무두장이면 다시 덮습니다.', expansion: 'daybreak' },
+  curator:                 { name: '유물 관리자',    team: 'village', emoji: '🏺', desc: '밤에 플레이어 1명에게 유물 토큰을 놓습니다. 유물 효과로 역할이나 승리 조건이 바뀔 수 있습니다.', expansion: 'daybreak' },
+  bodyguard:               { name: '호위병',         team: 'village', emoji: '💪', desc: '자신이 투표한 사람은 죽지 않습니다. 최다 득표자가 보호 대상이면 다음 득표자가 대신 죽습니다.', expansion: 'daybreak' },
+
+  // ── 데이브레이크 보너스팩 1 ──
+  aura_seer:               { name: '영기 예언자',    team: 'village', emoji: '✨🔮', desc: '밤 동안 카드를 이동하거나 확인한 플레이어가 누구인지 감지합니다.', expansion: 'daybreak_bonus1' },
+  prince:                  { name: '왕자',           team: 'village', emoji: '👑', desc: '투표로 죽지 않습니다. 최다 득표를 받아도 생존하며, 다음 득표자가 대신 죽습니다.', expansion: 'daybreak_bonus1' },
+  cursed:                  { name: '저주받은 자',    team: 'village', emoji: '🌑', desc: '예언자나 견습 예언자가 이 카드를 보면 늑대인간으로 변합니다.', expansion: 'daybreak_bonus1' },
+
+  // ── 보너스팩 2 ──
+  apprentice_tanner:       { name: '견습 무두장이',  team: 'tanner',  emoji: '💀✨', desc: '무두장이가 죽으면 함께 승리합니다. 무두장이가 없으면 마을 팀으로 행동합니다.', expansion: 'bonus2' },
+  thing:                   { name: '어떤것',         team: 'village', emoji: '👆', desc: '밤에 바로 옆 사람의 어깨를 톡 쳐서 자신의 존재를 알립니다.', expansion: 'bonus2' },
+  squire:                  { name: '종자',           team: 'wolf',    emoji: '🛡️🐺', desc: '늑대인간이 누구인지 확인할 수 있는 늑대 팀 보조 역할입니다. 하수인과 비슷하지만 별도로 행동합니다.', expansion: 'bonus2' },
+  beholder:                { name: '주시자',         team: 'village', emoji: '👀', desc: '예언자가 누구인지 확인합니다. 예언자의 정체를 아는 마을 보조 역할입니다.', expansion: 'bonus2' },
+
+  // ── 뱀파이어 확장 ──
+  copycat:                 { name: '카피캣',         team: 'village', emoji: '🐱', desc: '황혼에 센터 카드 1장을 보고 그 역할이 됩니다. 밤 행동이 있는 역할이면 해당 순서에 다시 행동합니다.', expansion: 'vampire' },
+  vampire:                 { name: '뱀파이어',       team: 'vampire', emoji: '🧛', desc: '다른 뱀파이어를 확인하고, 뱀파이어가 아닌 사람 1명에게 뱀파이어 표식을 줘서 뱀파이어 팀으로 만듭니다.', expansion: 'vampire' },
+  the_count:               { name: '백작',           team: 'vampire', emoji: '🧛‍♂️', desc: '공포의 표식을 줘서 대상의 밤 행동을 막을 수 있습니다.', expansion: 'vampire' },
+  renfield:                { name: '랜필드',         team: 'vampire', emoji: '🦇', desc: '뱀파이어 팀 보조 역할입니다. 뱀파이어가 표식을 준 대상을 확인할 수 있습니다.', expansion: 'vampire' },
+  diseased:                { name: '감염자',         team: 'village', emoji: '🤒', desc: '옆 사람에게 질병의 표식을 줍니다. 질병 표식은 투표 패배 조건에 영향을 줍니다.', expansion: 'vampire' },
+  cupid:                   { name: '큐피트',         team: 'village', emoji: '💘', desc: '두 사람에게 사랑의 표식을 줍니다. 한 명이 죽으면 다른 한 명도 함께 죽습니다.', expansion: 'vampire' },
+  instigator:              { name: '선동가',         team: 'village', emoji: '📢', desc: '배신의 표식을 줍니다. 표식을 받은 사람의 승리 조건이 뒤바뀝니다.', expansion: 'vampire' },
+  priest:                  { name: '성직자',         team: 'village', emoji: '⛪', desc: '결백의 표식으로 다른 나쁜 표식을 정화합니다.', expansion: 'vampire' },
+  assassin:                { name: '암살자',         team: 'village', emoji: '🗡️💀', desc: '암살 표식을 줍니다. 표식을 받은 사람이 죽으면 암살자가 승리하는 독립 승리 조건입니다.', expansion: 'vampire' },
+  apprentice_assassin:     { name: '견습 암살자',    team: 'village', emoji: '🗡️✨', desc: '암살자와 함께 행동합니다. 암살자가 없으면 일반 마을 주민처럼 행동합니다.', expansion: 'vampire' },
+  marksman:                { name: '저격수',         team: 'village', emoji: '🎯', desc: '카드와 표식을 각각 확인할 수 있습니다. 황혼과 밤에 각각 행동합니다.', expansion: 'vampire' },
+  pickpocket:              { name: '소매치기',       team: 'village', emoji: '🤏', desc: '다른 플레이어와 표식을 바꾸고, 가져온 표식을 확인합니다.', expansion: 'vampire' },
+  gremlin:                 { name: '그렘린',         team: 'village', emoji: '👺', desc: '다른 플레이어의 카드 또는 표식을 뒤섞을 수 있습니다.', expansion: 'vampire' },
+  vampire_lord:            { name: '뱀파이어 군주',  team: 'vampire', emoji: '🧛👑', desc: '뱀파이어입니다. 뱀파이어가 최다 득표자인 특정 투표 상황에서 죽지 않습니다.', expansion: 'vampire' },
+
+  // ── 에일리언 확장 ──
+  oracle:                  { name: '오라클',         team: 'village', emoji: '🌀', desc: '앱의 질문에 답하고, 결과를 앱이 처리합니다. 답에 따라 다른 정보를 얻습니다.', expansion: 'alien' },
+  alien:                   { name: '에일리언',       team: 'alien',   emoji: '👽', desc: '다른 에일리언을 확인하고 앱 지시를 수행합니다. 에일리언 팀으로 행동합니다.', expansion: 'alien' },
+  synthetic_alien:         { name: '인조 외계인',    team: 'village', emoji: '🤖👽', desc: '에일리언처럼 눈을 뜨지만 에일리언 팀이 아닙니다. 별도의 승리 조건을 가집니다.', expansion: 'alien' },
+  cow:                     { name: '소',             team: 'village', emoji: '🐄', desc: '양옆에 에일리언이 있는지 신호로 확인합니다. 에일리언 탐지 보조 역할입니다.', expansion: 'alien' },
+  groob:                   { name: '그루브',         team: 'alien',   emoji: '👾', desc: '제르브와 함께 있을 때 특수 승리 조건을 가집니다.', expansion: 'alien' },
+  zerb:                    { name: '제르브',         team: 'alien',   emoji: '👾✨', desc: '그루브와 함께 있을 때 특수 승리 조건을 가집니다.', expansion: 'alien' },
+  leader:                  { name: '리더',           team: 'alien',   emoji: '👽👑', desc: '에일리언들을 확인하고, 일부 특수 승리 조건을 가집니다.', expansion: 'alien' },
+  psychic:                 { name: '초능력자',       team: 'village', emoji: '🧠', desc: '앱 지시에 따라 카드를 확인합니다.', expansion: 'alien' },
+  rascal:                  { name: '악동',           team: 'village', emoji: '😈', desc: '앱 지시에 따라 카드를 이동시킵니다.', expansion: 'alien' },
+  exposer:                 { name: '폭로자',         team: 'village', emoji: '📸', desc: '앱 지시에 따라 카드를 공개합니다.', expansion: 'alien' },
+  blob:                    { name: '방울',           team: 'village', emoji: '🫧', desc: '자신과 양옆 플레이어 전체가 살아남아야 승리하는 특수 역할입니다.', expansion: 'alien' },
 };
 
 // ===== ROLE DESC HIGHLIGHTS =====
 const DESC_HIGHLIGHTS = {
+  // 기본판
+  doppelganger: [
+    { t: '역할을 복제', c: '#a78bfa' },
+    { t: '복제한 역할의 팀에 속하며', c: '#fb7185' },
+  ],
   werewolf: [
     { t: '다른 늑대인간을 확인', c: '#fb7185' },
     { t: '혼자라면', c: '#a78bfa' },
     { t: '센터 카드 1장을 볼 수 있습니다', c: '#60a5fa' },
     { t: '엄지를 올려 자신을 알립니다', c: '#fbbf24' },
+  ],
+  minion: [
+    { t: '엄지를 올린 늑대인간을 확인', c: '#fbbf24' },
+    { t: '하수인을 모릅니다', c: '#94a3b8' },
+  ],
+  mason: [
+    { t: '다른 프리메이슨을 확인', c: '#2dd4bf' },
+    { t: '마을 팀의 단서', c: '#34d399' },
   ],
   seer: [
     { t: '플레이어 1명의 카드를 보거나', c: '#22d3ee' },
@@ -56,26 +124,27 @@ const DESC_HIGHLIGHTS = {
     { t: '자신의 카드를 확인', c: '#22d3ee' },
     { t: '새 역할을 알 수 있습니다', c: '#34d399' },
   ],
-  minion: [
-    { t: '엄지를 올린 늑대인간을 확인', c: '#fbbf24' },
-    { t: '하수인을 모릅니다', c: '#94a3b8' },
+  hunter: [
+    { t: '밤 행동이 없습니다', c: '#94a3b8' },
+    { t: '자신이 투표한 사람도 함께 죽습니다', c: '#fb7185' },
   ],
-  mason: [
-    { t: '다른 프리메이슨을 확인', c: '#2dd4bf' },
-    { t: '마을 팀의 단서', c: '#34d399' },
+  tanner: [
+    { t: '자신이 죽는 것이 목표', c: '#c88030' },
+    { t: '혼자 승리', c: '#fbbf24' },
   ],
   villager: [
     { t: '특별한 능력이 없습니다', c: '#94a3b8' },
     { t: '토론과 추리', c: '#60a5fa' },
     { t: '늑대인간을 찾아내세요', c: '#fb7185' },
   ],
-  witch: [
-    { t: '센터 카드 1장을 확인', c: '#22d3ee' },
-    { t: '다른 플레이어 카드와 바꿀 수 있습니다', c: '#fbbf24' },
+  // 데이브레이크
+  sentinel: [
+    { t: '방패 토큰', c: '#60a5fa' },
+    { t: '보거나 옮길 수 없습니다', c: '#34d399' },
   ],
   alpha_wolf: [
     { t: '동료를 확인', c: '#fb7185' },
-    { t: '센터 카드 1장을 아무 플레이어에게 교환', c: '#fbbf24' },
+    { t: '새 늑대인간을 만들 수 있습니다', c: '#fbbf24' },
   ],
   mystic_wolf: [
     { t: '동료를 확인', c: '#fb7185' },
@@ -83,33 +152,156 @@ const DESC_HIGHLIGHTS = {
   ],
   dream_wolf: [
     { t: '눈을 뜨지 않습니다', c: '#a78bfa' },
-    { t: '다른 늑대는 꿈의 늑대를 확인', c: '#fb7185' },
+    { t: '존재를 확인할 수 있습니다', c: '#fb7185' },
   ],
   apprentice_seer: [
     { t: '센터 카드 1장만 확인', c: '#22d3ee' },
   ],
   paranormal_investigator: [
-    { t: '최대 2장까지 확인', c: '#22d3ee' },
-    { t: '그 팀에 합류', c: '#fb7185' },
+    { t: '최대 2장까지 차례로 확인', c: '#22d3ee' },
+    { t: '늑대인간이나 무두장이를 보면', c: '#fb7185' },
+    { t: '그 팀에 합류', c: '#fbbf24' },
+  ],
+  witch: [
+    { t: '센터 카드 1장을 확인', c: '#22d3ee' },
+    { t: '다른 플레이어 카드와 바꿔야 합니다', c: '#fbbf24' },
   ],
   village_idiot: [
     { t: '왼쪽 또는 오른쪽으로 한 칸씩 이동', c: '#fbbf24' },
   ],
-  sentinel: [
-    { t: '방패 토큰', c: '#60a5fa' },
-    { t: '교환으로부터 보호', c: '#34d399' },
+  revealer: [
+    { t: '카드를 뒤집어 공개', c: '#fb7185' },
+    { t: '늑대인간이나 무두장이면 다시 덮습니다', c: '#94a3b8' },
   ],
   curator: [
     { t: '유물 토큰', c: '#fbbf24' },
-    { t: '낮에 공개', c: '#22d3ee' },
-  ],
-  revealer: [
-    { t: '카드를 뒤집어 공개', c: '#fb7185' },
-    { t: '다시 덮습니다', c: '#94a3b8' },
+    { t: '역할이나 승리 조건이 바뀔 수 있습니다', c: '#22d3ee' },
   ],
   bodyguard: [
-    { t: '2명을 선택', c: '#60a5fa' },
-    { t: '보호합니다', c: '#34d399' },
+    { t: '자신이 투표한 사람은 죽지 않습니다', c: '#34d399' },
+    { t: '다음 득표자가 대신 죽습니다', c: '#fb7185' },
+  ],
+  // 보너스팩 1
+  aura_seer: [
+    { t: '이동하거나 확인한 플레이어', c: '#22d3ee' },
+    { t: '감지합니다', c: '#a78bfa' },
+  ],
+  prince: [
+    { t: '투표로 죽지 않습니다', c: '#34d399' },
+    { t: '다음 득표자가 대신 죽습니다', c: '#fb7185' },
+  ],
+  cursed: [
+    { t: '늑대인간으로 변합니다', c: '#fb7185' },
+  ],
+  // 보너스팩 2
+  apprentice_tanner: [
+    { t: '무두장이가 죽으면 함께 승리', c: '#c88030' },
+    { t: '마을 팀으로 행동', c: '#60a5fa' },
+  ],
+  thing: [
+    { t: '어깨를 톡 쳐서', c: '#fbbf24' },
+    { t: '존재를 알립니다', c: '#22d3ee' },
+  ],
+  squire: [
+    { t: '늑대인간이 누구인지 확인', c: '#fb7185' },
+    { t: '늑대 팀 보조', c: '#fbbf24' },
+  ],
+  beholder: [
+    { t: '예언자가 누구인지 확인', c: '#22d3ee' },
+  ],
+  // 뱀파이어 확장
+  copycat: [
+    { t: '센터 카드 1장을 보고 그 역할이 됩니다', c: '#a78bfa' },
+  ],
+  vampire: [
+    { t: '다른 뱀파이어를 확인', c: '#9040c0' },
+    { t: '뱀파이어 표식', c: '#fb7185' },
+    { t: '뱀파이어 팀으로 만듭니다', c: '#fbbf24' },
+  ],
+  the_count: [
+    { t: '공포의 표식', c: '#fb7185' },
+    { t: '밤 행동을 막을 수 있습니다', c: '#fbbf24' },
+  ],
+  renfield: [
+    { t: '뱀파이어 팀 보조', c: '#9040c0' },
+    { t: '표식을 준 대상을 확인', c: '#22d3ee' },
+  ],
+  diseased: [
+    { t: '질병의 표식', c: '#fb7185' },
+    { t: '투표 패배 조건에 영향', c: '#fbbf24' },
+  ],
+  cupid: [
+    { t: '사랑의 표식', c: '#fb7185' },
+    { t: '함께 죽습니다', c: '#fbbf24' },
+  ],
+  instigator: [
+    { t: '배신의 표식', c: '#fb7185' },
+    { t: '승리 조건이 뒤바뀝니다', c: '#fbbf24' },
+  ],
+  priest: [
+    { t: '결백의 표식', c: '#34d399' },
+    { t: '정화합니다', c: '#22d3ee' },
+  ],
+  assassin: [
+    { t: '암살 표식', c: '#fb7185' },
+    { t: '독립 승리 조건', c: '#c88030' },
+  ],
+  apprentice_assassin: [
+    { t: '암살자와 함께 행동', c: '#fb7185' },
+  ],
+  marksman: [
+    { t: '카드와 표식을 각각 확인', c: '#22d3ee' },
+  ],
+  pickpocket: [
+    { t: '표식을 바꾸고', c: '#fbbf24' },
+    { t: '가져온 표식을 확인', c: '#22d3ee' },
+  ],
+  gremlin: [
+    { t: '카드 또는 표식을 뒤섞을 수 있습니다', c: '#fbbf24' },
+  ],
+  vampire_lord: [
+    { t: '죽지 않습니다', c: '#34d399' },
+  ],
+  // 에일리언 확장
+  oracle: [
+    { t: '앱의 질문에 답하고', c: '#22d3ee' },
+  ],
+  alien: [
+    { t: '다른 에일리언을 확인', c: '#40c060' },
+    { t: '앱 지시를 수행', c: '#fbbf24' },
+  ],
+  synthetic_alien: [
+    { t: '에일리언 팀이 아닙니다', c: '#94a3b8' },
+    { t: '별도의 승리 조건', c: '#c88030' },
+  ],
+  cow: [
+    { t: '에일리언이 있는지', c: '#40c060' },
+    { t: '신호로 확인', c: '#22d3ee' },
+  ],
+  groob: [
+    { t: '제르브와 함께', c: '#40c060' },
+    { t: '특수 승리 조건', c: '#fbbf24' },
+  ],
+  zerb: [
+    { t: '그루브와 함께', c: '#40c060' },
+    { t: '특수 승리 조건', c: '#fbbf24' },
+  ],
+  leader: [
+    { t: '에일리언들을 확인', c: '#40c060' },
+    { t: '특수 승리 조건', c: '#fbbf24' },
+  ],
+  psychic: [
+    { t: '앱 지시에 따라 카드를 확인', c: '#22d3ee' },
+  ],
+  rascal: [
+    { t: '앱 지시에 따라 카드를 이동', c: '#fbbf24' },
+  ],
+  exposer: [
+    { t: '앱 지시에 따라 카드를 공개', c: '#fb7185' },
+  ],
+  blob: [
+    { t: '양옆 플레이어 전체가 살아남아야', c: '#22d3ee' },
+    { t: '특수 역할', c: '#fbbf24' },
   ],
 };
 
@@ -125,36 +317,102 @@ function highlightDesc(roleId, desc) {
   return result;
 }
 
+// ===== EXPANSION DEFINITIONS =====
+const EXPANSIONS = [
+  { id: 'base',            name: '기본판',           desc: '필수 포함', required: true },
+  { id: 'daybreak',        name: '데이브레이크',     desc: '늑대 변종, 경비병, 마녀 등' },
+  { id: 'daybreak_bonus1', name: '보너스팩 1',       desc: '영기 예언자, 왕자, 저주받은 자' },
+  { id: 'bonus2',          name: '보너스팩 2',       desc: '종자, 주시자, 견습 무두장이 등' },
+  { id: 'vampire',         name: '뱀파이어',         desc: '황혼 단계, 표식 시스템' },
+  { id: 'alien',           name: '에일리언',         desc: '앱 연동, 에일리언 팀' },
+];
+
+function loadExpansions() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('onw_expansions'));
+    if (saved && typeof saved === 'object') return saved;
+  } catch {}
+  // Default: base + daybreak
+  return { base: true, daybreak: true, daybreak_bonus1: false, bonus2: false, vampire: false, alien: false };
+}
+
+function saveExpansions(exps) {
+  try { localStorage.setItem('onw_expansions', JSON.stringify(exps)); } catch {}
+}
+
+function toggleExpansion(expId, skipRender) {
+  const exp = EXPANSIONS.find(e => e.id === expId);
+  if (exp && exp.required) return;
+  state.expansions[expId] = !state.expansions[expId];
+  saveExpansions(state.expansions);
+  if (!skipRender) render();
+}
+
+function getActiveRoleIds() {
+  return ROLE_IDS.filter(r => state.expansions[ROLES[r].expansion]);
+}
+
 // ===== ROLE ENCODING & RANDOM DECK =====
 const ROLE_IDS = [
-  'werewolf','alpha_wolf','mystic_wolf','dream_wolf',
-  'seer','apprentice_seer','paranormal_investigator',
-  'robber','troublemaker','witch','village_idiot',
-  'drunk','sentinel','curator','insomniac','revealer','bodyguard',
-  'minion','mason','villager',
+  // 기본판 (12)
+  'doppelganger','werewolf','minion','mason','seer','robber','troublemaker',
+  'drunk','insomniac','hunter','tanner','villager',
+  // 데이브레이크 (11)
+  'sentinel','alpha_wolf','mystic_wolf','dream_wolf',
+  'apprentice_seer','paranormal_investigator','witch','village_idiot',
+  'revealer','curator','bodyguard',
+  // 보너스팩1 (3)
+  'aura_seer','prince','cursed',
+  // 보너스팩2 (4)
+  'apprentice_tanner','thing','squire','beholder',
+  // 뱀파이어 확장 (14)
+  'copycat','vampire','the_count','renfield','diseased','cupid',
+  'instigator','priest','assassin','apprentice_assassin',
+  'marksman','pickpocket','gremlin','vampire_lord',
+  // 에일리언 확장 (11)
+  'oracle','alien','synthetic_alien','cow','groob','zerb',
+  'leader','psychic','rascal','exposer','blob',
 ];
+
+// 황혼 단계 (뱀파이어 확장)
+const DUSK_ORDER = [
+  'copycat','vampire','the_count','renfield',
+  'diseased','cupid','instigator','priest',
+  'assassin','apprentice_assassin','marksman','pickpocket',
+];
+
+// 밤 단계
 const NIGHT_ORDER = [
-  'sentinel',
+  'doppelganger','sentinel',
   'werewolf','alpha_wolf','mystic_wolf',
   'minion','mason',
   'seer','apprentice_seer','paranormal_investigator',
   'robber','witch','troublemaker',
-  'village_idiot','drunk','curator',
-  'insomniac','revealer','bodyguard',
+  'village_idiot','drunk',
+  'aura_seer','thing','beholder','squire',
+  'gremlin','marksman',
+  // 에일리언
+  'oracle','alien','synthetic_alien','cow',
+  'groob','zerb','leader','psychic','rascal','exposer','blob',
+  // 마지막
+  'insomniac','curator','revealer',
 ];
 
 function encodeDeck(deck) {
-  // Each role can appear 0-3 times → 2 bits each. Pack into a big integer, base36 encode.
+  // Each role can appear 0-3 times → 2 bits each. 55 roles × 2 = 110 bits → base62(~20 chars)
   const counts = ROLE_IDS.map(r => deck.filter(d => d === r).length);
   let val = 0n;
   for (let i = 0; i < counts.length; i++) val = val * 4n + BigInt(counts[i]);
-  let hex = val.toString(36).toUpperCase();
-  return hex.padStart(8, '0');
+  let code = '';
+  let v = val;
+  if (v === 0n) return '0'.padStart(19, '0');
+  while (v > 0n) { code = _B62[Number(v % 62n)] + code; v = v / 62n; }
+  return code.padStart(19, '0');
 }
 
 function decodeDeck(code) {
-  let val = BigInt('0x0');
-  try { val = [...code.toLowerCase()].reduce((acc, ch) => acc * 36n + BigInt(parseInt(ch, 36)), 0n); } catch { return []; }
+  let val = 0n;
+  try { for (const ch of code) { const idx = _B62.indexOf(ch); if (idx < 0) return []; val = val * 62n + BigInt(idx); } } catch { return []; }
   const counts = [];
   for (let i = ROLE_IDS.length - 1; i >= 0; i--) {
     counts[i] = Number(val % 4n);
@@ -165,6 +423,11 @@ function decodeDeck(code) {
   return deck;
 }
 
+function deriveDuskOrder(deck) {
+  const present = new Set(deck);
+  return DUSK_ORDER.filter(r => present.has(r));
+}
+
 function deriveWakeOrder(deck) {
   const present = new Set(deck);
   return NIGHT_ORDER.filter(r => present.has(r));
@@ -173,28 +436,33 @@ function deriveWakeOrder(deck) {
 function generateRandomDeck(playerCount, scenarioId) {
   const need = playerCount + 3;
   const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+  const exps = state.expansions;
+  const allowed = id => exps[ROLES[id]?.expansion];
 
-  // Wolf team budget by player count (includes werewolf variants + minion)
+  // Wolf team budget by player count
   const maxWolf = playerCount <= 4 ? 2 : playerCount <= 6 ? 3 : playerCount <= 8 ? 3 : 4;
 
-  // Wolf pool: pick wolf cards up to budget
-  const wolfPool = shuffle([
-    ['werewolf'],           // always available as base
-    ['werewolf'],           // second werewolf
+  // Build pools dynamically based on active expansions
+  const wolfUnits = [
+    ['werewolf'],
+    ['werewolf'],
     ['alpha_wolf'],
     ['mystic_wolf'],
     ['dream_wolf'],
     ['minion'],
-  ]);
+    ['squire'],
+  ].filter(u => u.every(allowed));
 
-  // Village pool: shuffled village role units
-  const villagePool = shuffle([
+  const villageUnits = [
     ['seer'],
     ['robber'],
     ['troublemaker'],
     ['drunk'],
     ['insomniac'],
     ['mason', 'mason'],
+    ['hunter'],
+    ['doppelganger'],
+    // 데이브레이크
     ['witch'],
     ['apprentice_seer'],
     ['paranormal_investigator'],
@@ -203,35 +471,124 @@ function generateRandomDeck(playerCount, scenarioId) {
     ['curator'],
     ['revealer'],
     ['bodyguard'],
-  ]);
+    // 보너스팩1
+    ['aura_seer'],
+    ['prince'],
+    ['cursed'],
+    // 보너스팩2
+    ['thing'],
+    ['beholder'],
+    // 뱀파이어 마을 역할
+    ['copycat'],
+    ['diseased'],
+    ['cupid'],
+    ['instigator'],
+    ['priest'],
+    ['assassin'],
+    ['apprentice_assassin'],
+    ['marksman'],
+    ['pickpocket'],
+    ['gremlin'],
+    // 에일리언 마을 역할
+    ['oracle'],
+    ['synthetic_alien'],
+    ['cow'],
+    ['psychic'],
+    ['rascal'],
+    ['exposer'],
+    ['blob'],
+  ].filter(u => u.every(allowed));
+
+  // Vampire pool
+  const vampireUnits = [
+    ['vampire'],
+    ['vampire'],
+    ['the_count'],
+    ['renfield'],
+    ['vampire_lord'],
+  ].filter(u => u.every(allowed));
+
+  // Alien pool
+  const alienUnits = [
+    ['alien'],
+    ['alien'],
+    ['groob'],
+    ['zerb'],
+    ['leader'],
+  ].filter(u => u.every(allowed));
+
+  // Tanner / independent pool
+  const specialUnits = [
+    ['tanner'],
+    ['apprentice_tanner'],
+  ].filter(u => u.every(allowed));
+
+  // === Budget calculation ===
+  // Multi-team balancing: enemies = wolf + vampire + alien budget total
+  const hasVampire = exps.vampire && vampireUnits.length > 0;
+  const hasAlien = exps.alien && alienUnits.length > 0;
+  // Total enemy budget (wolf + others) stays proportional
+  const maxVampire = hasVampire ? (playerCount <= 6 ? 1 : playerCount <= 8 ? 2 : 2) : 0;
+  const maxAlien = hasAlien ? (playerCount <= 6 ? 1 : playerCount <= 8 ? 2 : 2) : 0;
+  // Reduce wolf budget when other enemy teams present
+  const wolfBudget = Math.max(1, maxWolf - (hasVampire ? 1 : 0) - (hasAlien ? 1 : 0));
 
   const deck = [];
   let wolfCount = 0;
+  let vampCount = 0;
+  let alienCount = 0;
 
   // Guarantee at least 1 werewolf and 1 seer
   deck.push('werewolf'); wolfCount++;
   deck.push('seer');
 
-  // Fill wolf cards (skip the first ['werewolf'] since already added)
-  for (const unit of wolfPool) {
+  // Fill wolf cards
+  for (const unit of shuffle([...wolfUnits])) {
     if (deck.length + unit.length > need) continue;
-    const unitWolves = unit.filter(r => ROLES[r] && ROLES[r].team === 'wolf').length;
-    if (wolfCount + unitWolves > maxWolf) continue;
-    // Skip duplicate: already have base werewolf
-    if (unit.length === 1 && unit[0] === 'werewolf' && deck.filter(r => r === 'werewolf').length >= 1 && wolfCount >= 1) {
-      // Allow second werewolf only if budget permits
-      if (wolfCount + 1 <= maxWolf && deck.length + 1 <= need) {
-        deck.push(...unit); wolfCount += unitWolves;
+    const uw = unit.filter(r => ROLES[r]?.team === 'wolf').length;
+    if (wolfCount + uw > wolfBudget) continue;
+    if (unit.length === 1 && unit[0] === 'werewolf') {
+      const wwCount = deck.filter(r => r === 'werewolf').length;
+      if (wwCount >= 2) continue; // max 2 werewolf cards
+      if (wwCount >= 1 && wolfCount + 1 <= wolfBudget && deck.length + 1 <= need) {
+        deck.push(...unit); wolfCount += uw;
       }
       continue;
     }
-    deck.push(...unit); wolfCount += unitWolves;
+    deck.push(...unit); wolfCount += uw;
+  }
+
+  // Fill vampire cards
+  if (maxVampire > 0) {
+    for (const unit of shuffle([...vampireUnits])) {
+      if (deck.length + unit.length > need) continue;
+      if (vampCount + unit.length > maxVampire) continue;
+      deck.push(...unit); vampCount += unit.length;
+    }
+  }
+
+  // Fill alien cards
+  if (maxAlien > 0) {
+    for (const unit of shuffle([...alienUnits])) {
+      if (deck.length + unit.length > need) continue;
+      if (alienCount + unit.length > maxAlien) continue;
+      deck.push(...unit); alienCount += unit.length;
+    }
+  }
+
+  // Maybe add tanner (30% chance)
+  if (deck.length < need && specialUnits.length > 0 && Math.random() < 0.3) {
+    for (const unit of shuffle([...specialUnits])) {
+      if (deck.length + unit.length > need) continue;
+      deck.push(...unit);
+      break;
+    }
   }
 
   // Fill village cards (skip seer, already added)
-  for (const unit of villagePool) {
+  for (const unit of shuffle([...villageUnits])) {
     if (deck.length >= need) break;
-    if (unit.length === 1 && unit[0] === 'seer') continue; // already in deck
+    if (unit.length === 1 && unit[0] === 'seer') continue;
     if (deck.length + unit.length > need) continue;
     deck.push(...unit);
   }
@@ -305,6 +662,7 @@ const state = {
   scenarioIdx: null,
   episodeIdx: null,
   playerCount: null,
+  expansions: loadExpansions(),
   // lobby
   roomCode: null,
   deck: null,
@@ -318,10 +676,10 @@ const state = {
 };
 
 // ===== ROOM CODE =====
-// ===== ROOM CODE: compact base62, 8 chars =====
-// Encodes: scenario(4 bits, max 16) + episode(1 bit) + deck(40 bits) = 45 bits → base62(8 chars)
+// v2: scenario(4 bits) + episode(1 bit) + deck(55 roles × 2 bits = 110 bits) = 115 bits → base62(20 chars)
 // Player count derived from deck.length - 3.
 const _B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+const _DECK_BITS = BigInt(ROLE_IDS.length * 2); // 110
 
 function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
   const sIdx = BigInt(Math.max(0, SCENARIOS.findIndex(s => s.id === scenarioId)));
@@ -329,25 +687,27 @@ function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
   const counts = ROLE_IDS.map(r => deck.filter(d => d === r).length);
   let deckVal = 0n;
   for (let i = 0; i < counts.length; i++) deckVal = deckVal * 4n + BigInt(counts[i]);
-  const val = (sIdx << 41n) | (epBit << 40n) | deckVal;
+  const val = (sIdx << (_DECK_BITS + 1n)) | (epBit << _DECK_BITS) | deckVal;
   let code = '';
   let v = val;
-  do { code = _B62[Number(v % 62n)] + code; v = v / 62n; } while (v > 0n);
-  return code.padStart(8, '0');
+  if (v === 0n) return '0'.padStart(20, '0');
+  while (v > 0n) { code = _B62[Number(v % 62n)] + code; v = v / 62n; }
+  return code.padStart(20, '0');
 }
 
 function decodeRoomCode(code) {
   code = code.trim();
-  if (code.length < 6 || code.length > 10) return null;
+  if (code.length < 6 || code.length > 22) return null;
   let val = 0n;
   for (const ch of code) {
     const idx = _B62.indexOf(ch);
     if (idx < 0) return null;
     val = val * 62n + BigInt(idx);
   }
-  const sIdx = Number((val >> 41n) & 0xFn);
-  const epBit = Number((val >> 40n) & 1n);
-  const deckVal = val & ((1n << 40n) - 1n);
+  const deckMask = (1n << _DECK_BITS) - 1n;
+  const deckVal = val & deckMask;
+  const sIdx = Number((val >> (_DECK_BITS + 1n)) & 0xFn);
+  const epBit = Number((val >> _DECK_BITS) & 1n);
   const episodeId = `ep${epBit + 1}`;
 
   const scenario = SCENARIOS[sIdx];
@@ -552,9 +912,56 @@ function startBgm() {
 }
 
 function stopBgm() {
+  if (state._bgmFadeTimer) { clearInterval(state._bgmFadeTimer); state._bgmFadeTimer = null; }
   bgmEl.pause();
   bgmEl.currentTime = 0;
+  // Restore saved volume so next play starts at user-set level
+  const saved = (() => { try { return parseFloat(localStorage.getItem('onw_bgm_vol')) || BGM_DEFAULT_VOLUME; } catch { return BGM_DEFAULT_VOLUME; } })();
+  bgmEl.volume = saved;
 }
+
+function fadeOutBgm(duration = 3000) {
+  const step = 50; // ms per tick
+  const steps = duration / step;
+  const volDec = bgmEl.volume / steps;
+  state._bgmFadeTimer = setInterval(() => {
+    bgmEl.volume = Math.max(0, bgmEl.volume - volDec);
+    if (bgmEl.volume <= 0) {
+      clearInterval(state._bgmFadeTimer);
+      state._bgmFadeTimer = null;
+      bgmEl.pause();
+      bgmEl.currentTime = 0;
+      // Restore saved volume for next play
+      const saved = (() => { try { return parseFloat(localStorage.getItem('onw_bgm_vol')) || BGM_DEFAULT_VOLUME; } catch { return BGM_DEFAULT_VOLUME; } })();
+      bgmEl.volume = saved;
+    }
+  }, step);
+}
+
+// ===== WAKE LOCK (prevent screen off during playback) =====
+let wakeLockSentinel = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLockSentinel = await navigator.wakeLock.request('screen');
+    wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+  } catch {}
+}
+
+function releaseWakeLock() {
+  if (wakeLockSentinel) {
+    wakeLockSentinel.release().catch(() => {});
+    wakeLockSentinel = null;
+  }
+}
+
+// Re-acquire wake lock when returning to foreground (browser releases it on tab hide)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state.playing) {
+    requestWakeLock();
+  }
+});
 
 // ===== AUDIO PLAYBACK (mobile-safe, event-driven) =====
 const audioEl = document.getElementById('audioPlayer');
@@ -587,6 +994,7 @@ function stopPlayback() {
   cancelSpeechPlayback();
   audioEl.pause();
   stopBgm();
+  releaseWakeLock();
   audioEl.removeAttribute('src');
   audioEl.onended = null;
   audioEl.onerror = null;
@@ -639,6 +1047,8 @@ function playNext() {
   state.playlistIndex++;
   if (state.playlistIndex >= state.playlist.length) {
     state.playing = false;
+    fadeOutBgm(3000);
+    releaseWakeLock();
     render();
     showToast('밤이 끝났습니다. 토론을 시작하세요!');
     return;
@@ -783,6 +1193,7 @@ async function startPlayback() {
   state.playing = true;
   state.playlistIndex = 0;
   startBgm();
+  requestWakeLock();
   render();
 
   // Event-driven chain: ended → playNext (no async gaps that break mobile)
@@ -956,7 +1367,11 @@ function renderSetupHTML() {
   if (ready) { step = 4; stepLabel = '게임 코드가 생성되었습니다'; }
 
   let code = '';
-  if (ready) code = encodeRoomCode(sc.id, ep.id, state.playerCount, state.deck);
+  let codeDisplay = '';
+  if (ready) {
+    code = encodeRoomCode(sc.id, ep.id, state.playerCount, state.deck);
+    codeDisplay = code.match(/.{1,5}/g).join('-');
+  }
 
   return `
     <div class="setup">
@@ -993,6 +1408,25 @@ function renderSetupHTML() {
 
       ${sc && ep !== null ? `
       <div class="setup__section">
+        <div class="setup__section-title">확장팩</div>
+        <div class="expansion-grid">
+          ${EXPANSIONS.map(ex => {
+            const active = state.expansions[ex.id];
+            const locked = ex.required;
+            return `
+              <button class="expansion-btn ${active ? 'expansion-btn--active' : ''} ${locked ? 'expansion-btn--locked' : ''}"
+                onclick="${locked ? '' : `toggleExpansion('${ex.id}')`}"
+                ${locked ? 'disabled' : ''}>
+                <span class="expansion-btn__name">${ex.name}</span>
+                <span class="expansion-btn__desc">${ex.desc}</span>
+              </button>`;
+          }).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      ${sc && ep !== null ? `
+      <div class="setup__section">
         <div class="setup__section-title">인원수</div>
         <div class="pc-grid">
           ${sc.playerCounts.map(n => `
@@ -1006,8 +1440,8 @@ function renderSetupHTML() {
       <div class="setup__footer">
         <div class="room-code-display">
           <div class="room-code-display__label">방 코드</div>
-          <div class="room-code-display__code">${code}</div>
-          <div class="room-code-display__hint">참가자에게 이 코드를 알려주세요</div>
+          <div class="room-code-display__code" onclick="copyCode('${code}')" title="탭하여 복사">${codeDisplay}</div>
+          <div class="room-code-display__hint">탭하여 링크 복사 · 참가자에게 공유하세요</div>
         </div>
         <button class="btn btn--primary btn--full" onclick="enterLobby('${code}')">로비 입장</button>
       </div>
@@ -1027,7 +1461,7 @@ function renderJoinHTML() {
           const label = sc ? `${sc.title} · ${decoded.playerCount}명` : '';
           return `
           <button class="recent-room" onclick="enterLobby('${r.code}')">
-            <span class="recent-room__code">${r.code}</span>
+            <span class="recent-room__code">${r.code.match(/.{1,5}/g).join('-')}</span>
             <span class="recent-room__info">${label}</span>
             <span class="recent-room__time">${formatTimeAgo(r.time)}</span>
           </button>`;
@@ -1039,7 +1473,7 @@ function renderJoinHTML() {
       <button class="back-btn" onclick="goHome()" style="position:absolute;top:20px;left:20px;">← 돌아가기</button>
       <h1 class="join__title">게임 참가</h1>
       <div class="join__input-group">
-        <input class="join__input" id="codeInput" maxlength="10" placeholder="코드 (8자리)" autocomplete="off" autofocus>
+        <input class="join__input" id="codeInput" maxlength="22" placeholder="방 코드 입력" autocomplete="off" autofocus>
         <div class="join__error" id="joinError"></div>
       </div>
       <button class="btn btn--primary btn--full" style="max-width:280px;" onclick="submitJoin()">입장</button>
@@ -1075,10 +1509,20 @@ function renderLobbyHTML() {
           <div class="lobby__scenario-title">${scenario.title} · ${episode.title}</div>
           <div class="lobby__meta">${config.playerCount}명 플레이 · 센터 카드 ${centerCount}장</div>
         </div>
-        <div class="lobby__code" onclick="copyCode('${code}')" title="탭하여 복사">${code}</div>
+        <div class="lobby__code" onclick="copyCode('${code}')" title="탭하여 링크 복사">${code.match(/.{1,5}/g).join('-')}</div>
       </div>
 
       <div class="reroll-bar">
+        <div class="expansion-toggles">
+          ${EXPANSIONS.map(ex => {
+            const active = state.expansions[ex.id];
+            const locked = ex.required;
+            return `<button class="exp-tag ${active ? 'exp-tag--active' : ''} ${locked ? 'exp-tag--locked' : ''}"
+              onclick="${locked ? '' : `toggleExpansion('${ex.id}',true);rerollDeck()`}"
+              ${locked ? 'disabled' : ''}
+              title="${ex.desc}">${ex.name}</button>`;
+          }).join('')}
+        </div>
         <button class="reroll-btn" onclick="rerollDeck()">🎲 역할 다시 뽑기</button>
       </div>
 
@@ -1101,8 +1545,9 @@ function renderLobbyHTML() {
         ${uniqueRoles.map(roleId => {
           const role = ROLES[roleId] || { name: roleId, team: 'village', emoji: '❓', desc: '' };
           const count = roleCounts[roleId];
-          const teamClass = role.team === 'wolf' ? 'role-card--wolf' : 'role-card--village';
-          const teamLabel = role.team === 'wolf' ? '늑대 팀' : '마을 팀';
+          const tm = TEAM_META[role.team] || TEAM_META.village;
+          const teamClass = tm.css;
+          const teamLabel = tm.label;
           const wakeIdx = wakeOrder.indexOf(roleId);
           const orderBadge = wakeIdx !== -1
             ? `<span class="role-card__order">${wakeIdx + 1}</span>`
@@ -1296,7 +1741,10 @@ function submitJoin() {
   const input = document.getElementById('codeInput');
   const errorEl = document.getElementById('joinError');
   if (!input) return;
-  const code = input.value.trim().toUpperCase();
+  const raw = input.value.trim();
+  // Support pasting full URL: extract room= param
+  let code = raw;
+  try { const u = new URL(raw); code = u.searchParams.get('room') || raw; } catch {}
   const decoded = decodeRoomCode(code);
   if (!decoded) {
     if (errorEl) errorEl.textContent = '유효하지 않은 코드입니다';
@@ -1334,7 +1782,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-join if URL has ?room= parameter
   try {
     const params = new URLSearchParams(location.search);
-    const roomParam = (params.get('room') || '').trim().toUpperCase();
+    const roomParam = (params.get('room') || '').trim();
     if (roomParam && decodeRoomCode(roomParam)) {
       enterLobby(roomParam);
       return;
