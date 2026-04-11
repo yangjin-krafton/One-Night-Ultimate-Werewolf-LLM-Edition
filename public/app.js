@@ -1931,20 +1931,20 @@ function renderWikiIndexHTML() {
       <div class="wiki__index">
         ${idx.categories.map(cat => `
           <div class="wiki__category">
-            <div class="wiki__cat-banner" style="background-image:url('${uiImgSrc('expansion_base')}')"
-              <div class="wiki__cat-banner-overlay">
-                <span class="wiki__cat-icon">${cat.icon}</span>
-                <span class="wiki__cat-title">${cat.title}</span>
-              </div>
-            </div>
-            <div class="wiki__page-list">
-              ${cat.pages.map(p => `
-                <button class="wiki__page-item" onclick="openWikiPage('${p.id}')">
-                  <span class="wiki__page-title">${p.title}</span>
-                  <span class="wiki__page-desc">${p.desc}</span>
-                  <span class="wiki__page-arrow">→</span>
-                </button>
-              `).join('')}
+            <div class="wiki__card-grid">
+              ${cat.pages.map(p => {
+                const pageBgMap = { game_overview: 'header_codex', game_setup: 'header_lobby', night_phase: 'night_phase_overlay', day_phase: 'day_phase_overlay', victory: 'vote_phase_overlay', special_rules: 'bg_vote' };
+                const bg = pageBgMap[p.id] || 'night_phase_overlay';
+                return `
+                <button class="wiki__page-card" onclick="openWikiPage('${p.id}')">
+                  <img class="wiki__page-card-img" src="${uiImgSrc(bg)}" alt="" loading="lazy">
+                  <div class="wiki__page-card-fade"></div>
+                  <div class="wiki__page-card-body">
+                    <span class="wiki__page-card-title">${p.title}</span>
+                    <span class="wiki__page-card-desc">${p.desc}</span>
+                  </div>
+                </button>`;
+              }).join('')}
             </div>
           </div>
         `).join('')}
@@ -1990,16 +1990,47 @@ function injectRulesIllustrations(html, pageId) {
   return html;
 }
 
+// 규칙 페이지 제목 매핑
+const RULES_PAGE_TITLES = {
+  game_overview: '게임 소개',
+  game_setup: '게임 준비',
+  night_phase: '밤 단계',
+  day_phase: '낮 토론 & 투표',
+  victory: '승리 조건',
+  special_rules: '특수 규칙',
+};
+
 function renderWikiPageHTML() {
   const pageId = state.wikiPage;
   const content = state.wikiCache[pageId] || '';
   const isError = content.includes('# 연결 오류');
   let html = parseMarkdown(content);
 
-  // 배너 이미지 (h2 제거 + 배너 교체)
-  const bannerSrc = imgPath('rules', `banner_${pageId}`);
-  const bannerHTML = `<div class="wiki-page-banner"><img src="${bannerSrc}" alt="" loading="lazy" onerror="this.parentElement.remove()"><div class="wiki-page-banner__fade"></div></div>`;
-  html = html.replace(/<h2[^>]*>.*?<\/h2>/, ''); // 첫 h2(제목)는 배너로 대체
+  // 첫 h2(페이지 제목) 제거 + "목차" h2와 바로 뒤 ul 제거 — 배너가 대체
+  html = html.replace(/<h2[^>]*>.*?<\/h2>/, ''); // 첫 h2(제목)
+  html = html.replace(/<h2[^>]*>\s*목차\s*<\/h2>\s*<ul>[\s\S]*?<\/ul>/, ''); // 목차 h2 + ul 통째 제거
+
+  // 배너 이미지: ui 이미지 우선, 없으면 rules 배너 폴백
+  const PAGE_BANNER_MAP = {
+    game_overview: 'header_codex',
+    game_setup: 'header_lobby',
+    night_phase: 'night_phase_overlay',
+    day_phase: 'day_phase_overlay',
+    victory: 'vote_phase_overlay',
+    special_rules: 'bg_vote',
+  };
+  const uiBanner = PAGE_BANNER_MAP[pageId];
+  const bannerSrc = uiBanner ? uiImgSrc(uiBanner) : imgPath('rules', `banner_${pageId}`);
+  const pageTitle = RULES_PAGE_TITLES[pageId] || pageId;
+  const bannerHTML = `
+    <div class="wiki-page-banner">
+      <img class="wiki-page-banner__img" src="${bannerSrc}" alt="" loading="lazy" onerror="this.closest('.wiki-page-banner').classList.add('wiki-page-banner--no-img')">
+      <div class="wiki-page-banner__fade"></div>
+      <div class="wiki-page-banner__title">
+        <button class="wiki-page-banner__back" onclick="backToWikiIndex()">← 목록</button>
+        <h1>${pageTitle}</h1>
+      </div>
+    </div>`;
 
   // 삽화 주입
   html = injectRulesIllustrations(html, pageId);
