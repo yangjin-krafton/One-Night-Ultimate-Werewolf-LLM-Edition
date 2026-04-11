@@ -460,6 +460,11 @@ const state = {
   playlist: [],
   manifest: null,
   actionDelay: (() => { try { return parseInt(localStorage.getItem('onw_action_delay')) || 0; } catch { return 0; } })(),
+  // tabs & wiki
+  activeTab: 'ingame',     // ingame | codex | rulebook
+  wikiPage: null,
+  wikiCache: {},
+  wikiIndex: null,
 };
 
 // ===== ROOM CODE =====
@@ -1057,13 +1062,27 @@ function render() {
     app.insertAdjacentHTML('beforeend', renderPlayingOverlayHTML());
     return;
   }
-  switch (state.screen) {
-    case 'home':      app.innerHTML = renderHomeHTML(); break;
-    case 'setup':     app.innerHTML = renderSetupHTML(); break;
-    case 'join':      app.innerHTML = renderJoinHTML(); break;
-    case 'lobby':     app.innerHTML = renderLobbyHTML(); break;
-    case 'changelog': app.innerHTML = renderChangelogHTML(); break;
+
+  let content = '';
+  switch (state.activeTab) {
+    case 'codex':
+      content = renderCodexHTML();
+      break;
+    case 'rulebook':
+      content = renderRulebookHTML();
+      break;
+    default:
+      switch (state.screen) {
+        case 'home':      content = renderHomeHTML(); break;
+        case 'setup':     content = renderSetupHTML(); break;
+        case 'join':      content = renderJoinHTML(); break;
+        case 'lobby':     content = renderLobbyHTML(); break;
+        case 'changelog': content = renderChangelogHTML(); break;
+      }
+      break;
   }
+
+  app.innerHTML = content + renderTabBarHTML();
 }
 
 // -- Home
@@ -1086,6 +1105,11 @@ function renderHomeHTML() {
 
 // -- Changelog
 const CHANGELOG = [
+  { ver: '1.7.0', date: '2026-04-11', items: [
+    '하단 탭 네비게이션 추가 (인게임 / 도감 / 롤북)',
+    '역할 도감 — 전체 27개 역할을 확장팩별로 브라우징',
+    '롤북 — 게임 규칙 및 역할별 Q&A 위키 페이지 (나무위키 기준)',
+  ]},
   { ver: '1.6.0', date: '2026-04-07', items: [
     '밤 행동 간격 설정을 로컬에 저장 (재접속 시 유지)',
     'TTS 재생 중 이전/다음 역할 건너뛰기 버튼 추가',
@@ -1569,6 +1593,278 @@ function copyCode(code) {
   } else {
     showToast(code);
   }
+}
+
+// ===== TAB BAR =====
+function renderTabBarHTML() {
+  const tabs = [
+    { id: 'ingame',   label: '인게임', icon: '🎮' },
+    { id: 'codex',    label: '도감',   icon: '📖' },
+    { id: 'rulebook', label: '롤북',   icon: '📚' },
+  ];
+  return `
+    <nav class="tab-bar">
+      ${tabs.map(t => `
+        <button class="tab-bar__item ${state.activeTab === t.id ? 'tab-bar__item--active' : ''}"
+          onclick="switchTab('${t.id}')">
+          <span class="tab-bar__icon">${t.icon}</span>
+          <span class="tab-bar__label">${t.label}</span>
+        </button>
+      `).join('')}
+    </nav>`;
+}
+
+function switchTab(tabId) {
+  if (state.activeTab === tabId) return;
+  state.activeTab = tabId;
+  if (tabId === 'rulebook' && !state.wikiIndex) {
+    loadWikiIndex();
+    return;
+  }
+  render();
+  const app = document.getElementById('app');
+  if (app) app.scrollTop = 0;
+}
+
+// ===== CODEX (도감) =====
+function renderCodexHTML() {
+  const groups = EXPANSIONS.map(exp => ({
+    ...exp,
+    roles: ROLE_IDS.filter(id => ROLES[id].expansion === exp.id)
+  }));
+
+  return `
+    <div class="codex">
+      <div class="codex__header">
+        <h1 class="codex__title">역할 도감</h1>
+        <p class="codex__subtitle">전체 ${ROLE_IDS.length}개 역할</p>
+      </div>
+      <div class="codex__content">
+        ${groups.map(g => `
+          <div class="codex__group">
+            <div class="codex__group-title">${g.name}</div>
+            <div class="codex__grid">
+              ${g.roles.map(id => {
+                const role = ROLES[id];
+                const tm = TEAM_META[role.team] || TEAM_META.village;
+                const wakeIdx = NIGHT_ORDER.indexOf(id);
+                const orderBadge = wakeIdx !== -1
+                  ? `<span class="role-card__order">${wakeIdx + 1}</span>`
+                  : `<span class="role-card__order role-card__order--none">-</span>`;
+                return `
+                  <div class="role-card ${tm.css} codex__card" onclick="openWikiRole('${id}')">
+                    <div class="role-card__top">
+                      ${orderBadge}
+                      <span class="role-card__emoji">${role.emoji}</span>
+                      <span class="role-card__name">${role.name}</span>
+                    </div>
+                    <div class="role-card__team">${tm.label}</div>
+                    <div class="role-card__desc">${highlightDesc(id, role.desc)}</div>
+                    <div class="codex__link">상세 보기 →</div>
+                  </div>`;
+              }).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function openWikiRole(roleId) {
+  state.activeTab = 'rulebook';
+  state.wikiPage = roleId;
+  if (!state.wikiIndex) {
+    loadWikiIndex().then(() => loadWikiPage(roleId));
+    return;
+  }
+  loadWikiPage(roleId);
+}
+
+// ===== RULEBOOK (롤북) =====
+function renderRulebookHTML() {
+  if (state.wikiPage && state.wikiCache[state.wikiPage]) {
+    return renderWikiPageHTML();
+  }
+  return renderWikiIndexHTML();
+}
+
+function renderWikiIndexHTML() {
+  const idx = state.wikiIndex;
+  if (!idx) {
+    return `
+      <div class="wiki">
+        <div class="wiki__header">
+          <h1 class="wiki__title">롤북</h1>
+        </div>
+        <div class="wiki__loading">불러오는 중...</div>
+      </div>`;
+  }
+
+  return `
+    <div class="wiki">
+      <div class="wiki__header">
+        <h1 class="wiki__title">롤북</h1>
+        <p class="wiki__subtitle">게임 규칙과 역할 가이드</p>
+      </div>
+      <div class="wiki__index">
+        ${idx.categories.map(cat => `
+          <div class="wiki__category">
+            <div class="wiki__category-title">${cat.icon} ${cat.title}</div>
+            <div class="wiki__page-list">
+              ${cat.pages.map(p => `
+                <button class="wiki__page-item" onclick="openWikiPage('${p.id}')">
+                  <span class="wiki__page-title">${p.title}</span>
+                  <span class="wiki__page-desc">${p.desc}</span>
+                  <span class="wiki__page-arrow">→</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+function renderWikiPageHTML() {
+  const content = state.wikiCache[state.wikiPage] || '';
+  const html = parseMarkdown(content);
+
+  return `
+    <div class="wiki">
+      <div class="wiki__header">
+        <button class="back-btn" onclick="backToWikiIndex()">← 목록으로</button>
+      </div>
+      <div class="wiki__page-content">${html}</div>
+    </div>`;
+}
+
+function backToWikiIndex() {
+  state.wikiPage = null;
+  render();
+  const app = document.getElementById('app');
+  if (app) app.scrollTop = 0;
+}
+
+function openWikiPage(pageId) {
+  state.wikiPage = pageId;
+  if (state.wikiCache[pageId]) {
+    render();
+    const app = document.getElementById('app');
+    if (app) app.scrollTop = 0;
+    return;
+  }
+  loadWikiPage(pageId);
+}
+
+async function loadWikiIndex() {
+  try {
+    const resp = await fetch('./assets/wiki/_index.json');
+    if (!resp.ok) throw new Error('index not found');
+    state.wikiIndex = await resp.json();
+  } catch (e) {
+    console.warn('Wiki index load failed:', e);
+    state.wikiIndex = { categories: [] };
+  }
+  render();
+}
+
+async function loadWikiPage(pageId) {
+  try {
+    const resp = await fetch(`./assets/wiki/${pageId}.md`);
+    if (!resp.ok) throw new Error('page not found');
+    state.wikiCache[pageId] = await resp.text();
+  } catch (e) {
+    console.warn('Wiki page load failed:', e);
+    state.wikiCache[pageId] = `# 페이지를 찾을 수 없습니다\n\n요청한 페이지 \`${pageId}\`를 불러올 수 없습니다.`;
+  }
+  render();
+  const app = document.getElementById('app');
+  if (app) app.scrollTop = 0;
+}
+
+// ===== MARKDOWN PARSER =====
+function parseMarkdown(md) {
+  const lines = md.split('\n');
+  let html = '';
+  let inList = false;
+  let inCode = false;
+  let inTable = false;
+  let tableHeader = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Code blocks
+    if (line.trimStart().startsWith('```')) {
+      if (inCode) { html += '</code></pre>'; inCode = false; }
+      else { if (inList) { html += '</ul>'; inList = false; } inCode = true; html += '<pre><code>'; }
+      continue;
+    }
+    if (inCode) { html += _escHtml(line) + '\n'; continue; }
+
+    // Table rows
+    if (line.includes('|') && line.trim().startsWith('|')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      const cells = line.split('|').filter((_, ci, arr) => ci > 0 && ci < arr.length - 1).map(c => c.trim());
+      if (cells.every(c => /^[-:]+$/.test(c))) { tableHeader = false; continue; }
+      if (!inTable) { html += '<table>'; inTable = true; tableHeader = true; }
+      const tag = tableHeader ? 'th' : 'td';
+      html += '<tr>' + cells.map(c => `<${tag}>${_inlineMd(c)}</${tag}>`).join('') + '</tr>';
+      continue;
+    }
+    if (inTable) { html += '</table>'; inTable = false; }
+
+    // Close list if needed
+    if (inList && !line.startsWith('- ') && !line.startsWith('* ') && line.trim() !== '') {
+      html += '</ul>'; inList = false;
+    }
+
+    // Headers
+    if (line.startsWith('### ')) { html += `<h3>${_inlineMd(line.slice(4))}</h3>`; continue; }
+    if (line.startsWith('## '))  { html += `<h2>${_inlineMd(line.slice(3))}</h2>`; continue; }
+    if (line.startsWith('# '))   { html += `<h1>${_inlineMd(line.slice(2))}</h1>`; continue; }
+
+    // Blockquote
+    if (line.startsWith('> ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += `<blockquote>${_inlineMd(line.slice(2))}</blockquote>`;
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^---+$/.test(line.trim())) { html += '<hr>'; continue; }
+
+    // List items
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${_inlineMd(line.slice(2))}</li>`;
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') continue;
+
+    // Paragraph
+    html += `<p>${_inlineMd(line)}</p>`;
+  }
+
+  if (inList)  html += '</ul>';
+  if (inCode)  html += '</code></pre>';
+  if (inTable) html += '</table>';
+
+  return html;
+}
+
+function _inlineMd(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code class="inline">$1</code>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+}
+
+function _escHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ===== INIT =====

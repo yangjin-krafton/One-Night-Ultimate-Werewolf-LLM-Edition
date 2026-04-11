@@ -1,0 +1,67 @@
+{
+  "categories": [
+    {
+      "title": "게임 규칙",
+      "icon": "📜",
+      "pages": [
+        { "id": "game_overview", "title": "게임 소개", "desc": "원나잇 얼티밋 웨어울프란?" },
+        { "id": "game_setup", "title": "게임 준비", "desc": "카드 배분과 앱 설정" },
+        { "id": "night_phase", "title": "밤 단계", "desc": "역할별 행동 순서와 규칙" },
+        { "id": "day_phase", "title": "낮 토론 & 투표", "desc": "토론, 투표, 처형" },
+        { "id": "victory", "title": "승리 조건", "desc": "각 팀의 승리 조건 정리" },
+        { "id": "special_rules", "title": "특수 규칙", "desc": "도플갱어, 엣지 케이스 등" }
+      ]
+    },
+    {
+      "title": "기본판 역할",
+      "icon": "🎭",
+      "pages": [
+        { "id": "doppelganger", "title": "🪞 도플갱어", "desc": "역할 복제" },
+        { "id": "werewolf", "title": "🐺 늑대인간", "desc": "늑대 팀 핵심" },
+        { "id": "minion", "title": "👹 하수인", "desc": "늑대 팀 보조" },
+        { "id": "mason", "title": "🤝 프리메이슨", "desc": "마을 확인" },
+        { "id": "seer", "title": "🔮 예언자", "desc": "카드 확인" },
+        { "id": "robber", "title": "🗡️ 강도", "desc": "카드 교환" },
+        { "id": "troublemaker", "title": "🃏 말썽쟁이", "desc": "카드 뒤바꿈" },
+        { "id": "drunk", "title": "🍺 주정뱅이", "desc": "센터 교환" },
+        { "id": "insomniac", "title": "😵 불면증환자", "desc": "자기 확인" },
+        { "id": "hunter", "title": "🏹 사냥꾼", "desc": "연쇄 처형" },
+        { "id": "tanner", "title": "💀 무두장이", "desc": "독립 세력" },
+        { "id": "villager", "title": "🏠 마을 주민", "desc": "순수 추리" }
+      ]
+    },
+    {
+      "title": "데이브레이크 확장",
+      "icon": "🌅",
+      "pages": [
+        { "id": "alpha_wolf", "title": "🐺 태초의 늑대인간", "desc": "늑대 생성" },
+        { "id": "mystic_wolf", "title": "🔮🐺 신비한 늑대인간", "desc": "정찰 늑대" },
+        { "id": "dream_wolf", "title": "💤🐺 잠자는 늑대인간", "desc": "잠든 늑대" },
+        { "id": "apprentice_seer", "title": "🔮✨ 견습 예언자", "desc": "센터 확인" },
+        { "id": "paranormal_investigator", "title": "🕵️ 심령 수사관", "desc": "연속 확인" },
+        { "id": "witch", "title": "🧙 마녀", "desc": "센터→플레이어 교환" },
+        { "id": "village_idiot", "title": "🤪 동네 얼간이", "desc": "전체 이동" },
+        { "id": "revealer", "title": "👁️ 계시자", "desc": "카드 공개" }
+      ]
+    },
+    {
+      "title": "보너스팩 1",
+      "icon": "⭐",
+      "pages": [
+        { "id": "aura_seer", "title": "✨🔮 영기 예언자", "desc": "행동 감지" },
+        { "id": "prince", "title": "👑 왕자", "desc": "투표 면역" },
+        { "id": "cursed", "title": "🌑 저주받은 자", "desc": "조건부 변환" }
+      ]
+    },
+    {
+      "title": "보너스팩 2",
+      "icon": "💎",
+      "pages": [
+        { "id": "apprentice_tanner", "title": "💀✨ 견습 무두장이", "desc": "무두장이 추종" },
+        { "id": "thing", "title": "👆 어떤것", "desc": "어깨 터치" },
+        { "id": "squire", "title": "🛡️🐺 종자", "desc": "늑대 확인" },
+        { "id": "beholder", "title": "👀 주시자", "desc": "예언자 확인" }
+      ]
+    }
+  ]
+}
