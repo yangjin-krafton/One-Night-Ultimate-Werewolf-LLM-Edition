@@ -1637,7 +1637,7 @@ function renderCodexHTML() {
     <div class="codex">
       <div class="codex__header">
         <h1 class="codex__title">역할 도감</h1>
-        <p class="codex__subtitle">전체 ${ROLE_IDS.length}개 역할</p>
+        <p class="codex__subtitle">전체 ${ROLE_IDS.length}개 역할 · 탭하여 상세 보기</p>
       </div>
       <div class="codex__content">
         ${groups.map(g => `
@@ -1652,7 +1652,7 @@ function renderCodexHTML() {
                   ? `<span class="role-card__order">${wakeIdx + 1}</span>`
                   : `<span class="role-card__order role-card__order--none">-</span>`;
                 return `
-                  <div class="role-card ${tm.css} codex__card" onclick="openWikiRole('${id}')">
+                  <div class="role-card ${tm.css} codex__card" onclick="showRoleSheet('${id}')">
                     <div class="role-card__top">
                       ${orderBadge}
                       <span class="role-card__emoji">${role.emoji}</span>
@@ -1660,7 +1660,6 @@ function renderCodexHTML() {
                     </div>
                     <div class="role-card__team">${tm.label}</div>
                     <div class="role-card__desc">${highlightDesc(id, role.desc)}</div>
-                    <div class="codex__link">상세 보기 →</div>
                   </div>`;
               }).join('')}
             </div>
@@ -1668,6 +1667,94 @@ function renderCodexHTML() {
         `).join('')}
       </div>
     </div>`;
+}
+
+// -- Role bottom sheet (도감에서 탭 시 바텀시트로 상세 표시)
+function showRoleSheet(roleId) {
+  // Remove existing sheet
+  closeRoleSheet();
+
+  const role = ROLES[roleId];
+  const tm = TEAM_META[role.team] || TEAM_META.village;
+  const wakeIdx = NIGHT_ORDER.indexOf(roleId);
+
+  const sheet = document.createElement('div');
+  sheet.className = 'role-sheet';
+  sheet.setAttribute('onclick', 'if(event.target===this)closeRoleSheet()');
+
+  const cached = state.wikiCache[roleId];
+  const bodyHTML = cached
+    ? `<div class="wiki__page-content">${parseMarkdown(cached)}</div>`
+    : `<div class="role-sheet__preview">
+        <div class="role-sheet__role-head">
+          <span class="role-sheet__emoji">${role.emoji}</span>
+          <div>
+            <div class="role-sheet__name">${role.name}</div>
+            <div class="role-sheet__team-label ${tm.css}">${tm.label} · 밤 순서 ${wakeIdx !== -1 ? (wakeIdx + 1) + '번째' : '없음'}</div>
+          </div>
+        </div>
+        <div class="role-sheet__desc">${highlightDesc(roleId, role.desc)}</div>
+        <div class="wiki__loading">상세 내용 불러오는 중...</div>
+      </div>`;
+
+  sheet.innerHTML = `
+    <div class="role-sheet__panel">
+      <div class="role-sheet__handle"></div>
+      <div class="role-sheet__scroll" id="roleSheetScroll">${bodyHTML}</div>
+      <div class="role-sheet__actions">
+        <button class="btn btn--ghost role-sheet__close-btn" onclick="closeRoleSheet()">닫기</button>
+        <button class="btn btn--primary role-sheet__wiki-btn" onclick="closeRoleSheet();openWikiRole('${roleId}')">위키 페이지 보기 →</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add('role-sheet--open'));
+
+  // Load full wiki content if not cached
+  if (!cached) {
+    fetch(`./assets/wiki/${roleId}.md`)
+      .then(r => r.ok ? r.text() : Promise.reject())
+      .then(md => {
+        state.wikiCache[roleId] = md;
+        const scroll = document.getElementById('roleSheetScroll');
+        if (scroll) scroll.innerHTML = `<div class="wiki__page-content">${parseMarkdown(md)}</div>`;
+      })
+      .catch(() => {});
+  }
+
+  // Swipe down to close
+  _attachSheetSwipe(sheet);
+}
+
+function closeRoleSheet() {
+  const sheet = document.querySelector('.role-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('role-sheet--open');
+  sheet.classList.add('role-sheet--closing');
+  setTimeout(() => sheet.remove(), 250);
+}
+
+function _attachSheetSwipe(sheet) {
+  const panel = sheet.querySelector('.role-sheet__panel');
+  let startY = 0, currentY = 0, dragging = false;
+  panel.addEventListener('touchstart', e => {
+    const scroll = document.getElementById('roleSheetScroll');
+    if (scroll && scroll.scrollTop > 5) return; // only swipe down when at top
+    startY = e.touches[0].clientY;
+    dragging = true;
+  }, { passive: true });
+  panel.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    currentY = e.touches[0].clientY - startY;
+    if (currentY > 0) panel.style.transform = `translateY(${currentY}px)`;
+  }, { passive: true });
+  panel.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    if (currentY > 100) { closeRoleSheet(); }
+    else { panel.style.transform = ''; }
+    currentY = 0;
+  });
 }
 
 function openWikiRole(roleId) {
@@ -1730,12 +1817,18 @@ function renderWikiPageHTML() {
   const html = parseMarkdown(content);
 
   return `
-    <div class="wiki">
-      <div class="wiki__header">
-        <button class="back-btn" onclick="backToWikiIndex()">← 목록으로</button>
-      </div>
+    <div class="wiki wiki--page">
       <div class="wiki__page-content">${html}</div>
+      <div class="wiki__bottom-nav">
+        <button class="wiki__nav-btn wiki__nav-btn--back" onclick="backToWikiIndex()">← 목록으로</button>
+        <button class="wiki__nav-btn wiki__nav-btn--top" onclick="scrollAppTop()">↑ 맨 위</button>
+      </div>
     </div>`;
+}
+
+function scrollAppTop() {
+  const app = document.getElementById('app');
+  if (app) app.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function backToWikiIndex() {
@@ -1819,10 +1912,10 @@ function parseMarkdown(md) {
       html += '</ul>'; inList = false;
     }
 
-    // Headers
-    if (line.startsWith('### ')) { html += `<h3>${_inlineMd(line.slice(4))}</h3>`; continue; }
-    if (line.startsWith('## '))  { html += `<h2>${_inlineMd(line.slice(3))}</h2>`; continue; }
-    if (line.startsWith('# '))   { html += `<h1>${_inlineMd(line.slice(2))}</h1>`; continue; }
+    // Headers (with anchor IDs)
+    if (line.startsWith('### ')) { const t = line.slice(4); const id = _slugify(t); html += `<h3 id="${id}">${_inlineMd(t)}</h3>`; continue; }
+    if (line.startsWith('## '))  { const t = line.slice(3); const id = _slugify(t); html += `<h2 id="${id}">${_inlineMd(t)}</h2>`; continue; }
+    if (line.startsWith('# '))   { const t = line.slice(2); const id = _slugify(t); html += `<h1 id="${id}">${_inlineMd(t)}</h1>`; continue; }
 
     // Blockquote
     if (line.startsWith('> ')) {
@@ -1860,7 +1953,21 @@ function _inlineMd(text) {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/`(.+?)`/g, '<code class="inline">$1</code>')
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+    .replace(/\[(.+?)\]\((.+?)\)/g, (_, label, href) => {
+      // Wiki internal link: (xxx.md) or (xxx.md#anchor)
+      if (href.endsWith('.md') || href.includes('.md#')) {
+        const [file, anchor] = href.replace('.md', '').split('#');
+        return `<a href="javascript:void(0)" onclick="openWikiPage('${file}'${anchor ? `);setTimeout(()=>{const e=document.getElementById('${anchor}');if(e)e.scrollIntoView({behavior:'smooth'})},200` : ''})\" class="wiki-link">${label}</a>`;
+      }
+      if (href.startsWith('#')) {
+        return `<a href="javascript:void(0)" onclick="document.getElementById('${href.slice(1)}')?.scrollIntoView({behavior:'smooth'})" class="wiki-link">${label}</a>`;
+      }
+      return `<a href="${href}" target="_blank">${label}</a>`;
+    });
+}
+
+function _slugify(text) {
+  return text.replace(/\*\*(.+?)\*\*/g, '$1').replace(/[^a-zA-Z0-9가-힣ㄱ-ㅎ\s-]/g, '').trim().replace(/\s+/g, '-').toLowerCase();
 }
 
 function _escHtml(text) {

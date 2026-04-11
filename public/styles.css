@@ -15,6 +15,9 @@
   --radius: 14px;
   --radius-sm: 8px;
   --shadow: 0 8px 32px rgba(0,0,0,0.5);
+  /* tab bar layout tokens */
+  --tab-h: 56px;
+  --tab-inset: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px));
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -88,7 +91,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px 80px;
+  padding: 40px 24px calc(var(--tab-inset) + 24px);
   text-align: center;
   gap: 16px;
   min-height: 100dvh;
@@ -169,7 +172,7 @@ body {
 }
 .changelog__list {
   flex: 1;
-  padding: 0 20px 80px;
+  padding: 0 20px calc(var(--tab-inset) + 24px);
   overflow-y: auto;
 }
 .changelog__entry {
@@ -237,7 +240,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px 20px 80px;
+  padding: 20px 20px calc(var(--tab-inset) + 20px);
   min-height: 100dvh;
 }
 .setup__header {
@@ -358,7 +361,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 24px 80px;
+  padding: 40px 24px calc(var(--tab-inset) + 24px);
   min-height: 100dvh;
 }
 .join__title {
@@ -578,7 +581,7 @@ body {
 /* Role card grid */
 .role-grid {
   flex: 1;
-  padding: 12px 16px 160px;
+  padding: 12px 16px calc(var(--tab-inset) + 100px);
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
@@ -893,7 +896,7 @@ body {
 /* ===== LOBBY FOOTER ===== */
 .lobby__footer {
   position: fixed;
-  bottom: 56px;
+  bottom: var(--tab-inset);
   left: 0;
   right: 0;
   padding: 12px 20px;
@@ -928,7 +931,7 @@ body {
   right: 0;
   display: flex;
   align-items: center;
-  height: 56px;
+  height: var(--tab-h);
   background: rgba(10, 10, 20, 0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -965,48 +968,151 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  padding-bottom: 72px;
+  padding-bottom: calc(var(--tab-inset) + 16px);
 }
 .codex__header {
-  padding: 20px 20px 12px;
+  padding: 16px 20px 8px;
 }
 .codex__title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
 }
 .codex__subtitle {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--fg-muted);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .codex__content {
   flex: 1;
-  padding: 0 16px 20px;
+  padding: 0 12px 20px;
 }
 .codex__group {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 .codex__group-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--fg-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding: 0 4px;
 }
 .codex__grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
-.codex__card { cursor: pointer; }
-.codex__card:active { transform: scale(0.97); }
-.codex__link {
-  font-size: 11px;
-  color: var(--accent);
-  margin-top: 4px;
-  opacity: 0.7;
+.codex__card {
+  cursor: pointer;
+  min-height: 100px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.codex__card:active {
+  transform: scale(0.96);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+/* ===== ROLE BOTTOM SHEET ===== */
+.role-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: rgba(0,0,0,0);
+  transition: background 0.25s;
+}
+.role-sheet--open {
+  background: rgba(0,0,0,0.5);
+}
+.role-sheet--open .role-sheet__panel {
+  transform: translateY(0);
+}
+.role-sheet--closing {
+  background: rgba(0,0,0,0);
+}
+.role-sheet--closing .role-sheet__panel {
+  transform: translateY(100%);
+}
+.role-sheet__panel {
+  position: relative;
+  max-height: 82vh;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+.role-sheet__handle {
+  width: 40px;
+  height: 4px;
+  background: rgba(255,255,255,0.25);
+  border-radius: 2px;
+  margin: 10px auto 6px;
+  flex-shrink: 0;
+}
+.role-sheet__scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 0 4px;
+}
+.role-sheet__scroll::-webkit-scrollbar { width: 0; }
+.role-sheet__preview {
+  padding: 0 16px;
+}
+.role-sheet__role-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.role-sheet__emoji {
+  font-size: 36px;
+}
+.role-sheet__name {
+  font-size: 20px;
+  font-weight: 800;
+}
+.role-sheet__team-label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.role-card--wolf .role-sheet__team-label,
+.role-sheet__team-label.role-card--wolf { color: var(--wolf); }
+.role-card--village .role-sheet__team-label,
+.role-sheet__team-label.role-card--village { color: var(--village); }
+.role-card--tanner .role-sheet__team-label,
+.role-sheet__team-label.role-card--tanner { color: var(--tanner); }
+.role-sheet__desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fg);
+  margin-bottom: 16px;
+}
+.role-sheet__actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.role-sheet__close-btn {
+  flex: 1;
+  min-height: 48px;
+  font-size: 15px;
+}
+.role-sheet__wiki-btn {
+  flex: 2;
+  min-height: 48px;
+  font-size: 15px;
 }
 
 /* ===== WIKI / RULEBOOK SCREEN ===== */
@@ -1015,36 +1121,40 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  padding-bottom: 72px;
+  padding-bottom: calc(var(--tab-inset) + 16px);
+}
+.wiki--page {
+  padding-bottom: calc(var(--tab-inset) + 76px); /* bottom nav + tab bar */
 }
 .wiki__header {
-  padding: 20px 20px 12px;
+  padding: 16px 20px 8px;
 }
 .wiki__title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
 }
 .wiki__subtitle {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--fg-muted);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .wiki__loading {
   text-align: center;
   padding: 40px;
   color: var(--fg-muted);
+  font-size: 14px;
 }
 .wiki__index {
   flex: 1;
-  padding: 0 16px;
+  padding: 0 12px;
 }
 .wiki__category {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .wiki__category-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   padding: 0 4px;
 }
 .wiki__page-list {
@@ -1056,19 +1166,23 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 14px 16px;
+  min-height: 52px;
   background: var(--bg-card);
   border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 0.1s;
   text-align: left;
   color: var(--fg);
   font-family: inherit;
   width: 100%;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .wiki__page-item:active {
   background: var(--bg-card-hover);
+  transform: scale(0.98);
 }
 .wiki__page-title {
   font-size: 14px;
@@ -1085,16 +1199,59 @@ body {
   white-space: nowrap;
 }
 .wiki__page-arrow {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--fg-muted);
   opacity: 0.5;
   flex-shrink: 0;
 }
 
+/* Wiki page bottom navigation (thumb-friendly) */
+.wiki__bottom-nav {
+  position: fixed;
+  bottom: var(--tab-inset);
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  background: linear-gradient(transparent, var(--bg) 40%);
+  z-index: 40;
+  pointer-events: none;
+}
+.wiki__nav-btn {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.wiki__nav-btn:active { transform: scale(0.96); }
+.wiki__nav-btn--back {
+  flex: 2;
+  background: var(--bg-card);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--fg);
+}
+.wiki__nav-btn--top {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--fg-muted);
+}
+
 /* Wiki page content */
 .wiki__page-content {
-  padding: 0 20px 40px;
-  line-height: 1.7;
+  padding: 4px 20px 40px;
+  line-height: 1.75;
 }
 .wiki__page-content h1 {
   font-size: 22px;
@@ -1192,6 +1349,15 @@ body {
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 13px;
+}
+.wiki__page-content a.wiki-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(240,192,64,0.4);
+  transition: border-color 0.15s;
+}
+.wiki__page-content a.wiki-link:active {
+  border-color: var(--accent);
 }
 
 /* ===== SCROLLBAR ===== */
