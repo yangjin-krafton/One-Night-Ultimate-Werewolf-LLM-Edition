@@ -1813,12 +1813,16 @@ function renderWikiIndexHTML() {
 }
 
 function renderWikiPageHTML() {
-  const content = state.wikiCache[state.wikiPage] || '';
+  const pageId = state.wikiPage;
+  const content = state.wikiCache[pageId] || '';
+  const isError = content.includes('# 연결 오류');
   const html = parseMarkdown(content);
 
   return `
     <div class="wiki wiki--page">
-      <div class="wiki__page-content">${html}</div>
+      <div class="wiki__page-content">${html}
+        ${isError ? `<button class="btn btn--primary btn--full" style="margin-top:16px" onclick="delete state.wikiCache['${pageId}'];loadWikiPage('${pageId}')">다시 시도</button>` : ''}
+      </div>
       <div class="wiki__bottom-nav">
         <button class="wiki__nav-btn wiki__nav-btn--back" onclick="backToWikiIndex()">← 목록으로</button>
         <button class="wiki__nav-btn wiki__nav-btn--top" onclick="scrollAppTop()">↑ 맨 위</button>
@@ -1849,26 +1853,28 @@ function openWikiPage(pageId) {
   loadWikiPage(pageId);
 }
 
-async function loadWikiIndex() {
+async function loadWikiIndex(_retry) {
   try {
     const resp = await fetch('./assets/wiki/_index.json');
     if (!resp.ok) throw new Error('index not found');
     state.wikiIndex = await resp.json();
   } catch (e) {
+    if (!_retry) { setTimeout(() => loadWikiIndex(true), 1500); return; }
     console.warn('Wiki index load failed:', e);
     state.wikiIndex = { categories: [] };
   }
   render();
 }
 
-async function loadWikiPage(pageId) {
+async function loadWikiPage(pageId, _retry) {
   try {
     const resp = await fetch(`./assets/wiki/${pageId}.md`);
     if (!resp.ok) throw new Error('page not found');
     state.wikiCache[pageId] = await resp.text();
   } catch (e) {
+    if (!_retry) { setTimeout(() => loadWikiPage(pageId, true), 1500); return; }
     console.warn('Wiki page load failed:', e);
-    state.wikiCache[pageId] = `# 페이지를 찾을 수 없습니다\n\n요청한 페이지 \`${pageId}\`를 불러올 수 없습니다.`;
+    state.wikiCache[pageId] = `# 연결 오류\n\n페이지를 불러올 수 없습니다. 네트워크 상태를 확인해주세요.\n\n다시 시도하려면 아래 버튼을 눌러주세요.`;
   }
   render();
   const app = document.getElementById('app');
