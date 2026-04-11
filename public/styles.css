@@ -856,39 +856,29 @@ body {
   flex: 1;
 }
 .lobby__exp-chip {
-  padding: 5px 12px;
-  border: 1px solid rgba(255,255,255,0.1);
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
-  background-color: rgba(255,255,255,0.04);
-  background-size: cover;
-  background-position: center;
-  color: var(--fg);
+  background: transparent;
+  color: var(--fg-muted);
   font-size: 11px;
-  font-weight: 600;
   cursor: pointer;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-  overflow: hidden;
 }
 .lobby__exp-chip--on {
   border-color: var(--accent);
   color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  background: var(--accent-dim);
 }
 .lobby__exp-chip--locked { opacity: 0.4; cursor: default; }
 .lobby__reroll-btn {
   padding: 6px 12px;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius-sm);
-  background-color: rgba(255,255,255,0.04);
-  background-size: cover;
-  background-position: center;
-  color: var(--fg);
+  background: rgba(255,255,255,0.04);
+  color: var(--fg-muted);
   font-size: 12px;
-  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
-  overflow: hidden;
 }
 .lobby__reroll-btn:active { transform: scale(0.96); }
 .lobby__deck-label {
