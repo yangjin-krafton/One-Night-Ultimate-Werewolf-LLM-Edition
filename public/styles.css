@@ -88,6 +88,106 @@ body {
   gap: 4px;
 }
 
+/* ===== IMAGE-ENHANCED STYLES ===== */
+/* 홈 화면 배경 이미지 */
+.home[style*="background-image"] {
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+.home[style*="background-image"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    rgba(10,10,20,0.55) 0%,
+    rgba(10,10,20,0.75) 40%,
+    rgba(10,10,20,0.92) 100%
+  );
+  z-index: 0;
+}
+.home[style*="background-image"] > * { position: relative; z-index: 1; }
+
+/* 역할 아이콘 — 이모지 자리에 들어가는 원형 이미지 */
+.role-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  vertical-align: middle;
+}
+.role-icon--lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  border-width: 2px;
+}
+.role-icon--xl {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  border-width: 2px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+/* 이모지 폴백과 아이콘이 같은 크기 차지하도록 */
+.role-card__top .role-card__emoji {
+  font-size: 24px;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+
+/* 시나리오 선택 카드 배경 이미지 */
+.card-option--has-bg {
+  background-color: transparent !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  padding: 0 !important;
+  position: relative;
+  min-height: 100px;
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.12);
+}
+.card-option--has-bg.selected {
+  border-color: var(--accent);
+}
+.card-option--has-bg .card-option__overlay {
+  padding: 20px 16px;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: linear-gradient(180deg, rgba(10,10,20,0.3) 0%, rgba(10,10,20,0.85) 100%);
+}
+.card-option--has-bg.selected .card-option__overlay {
+  background: linear-gradient(180deg, rgba(240,192,64,0.1) 0%, rgba(10,10,20,0.7) 100%);
+}
+/* 에피소드 카드는 타이틀만 있으므로 더 컴팩트하게 */
+.card-option--has-bg .card-option__overlay:only-child:not(:has(.card-option__desc)) {
+  min-height: 80px;
+}
+
+/* 스타일 선택 칩 */
+.home__style-switcher {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+  margin-top: 8px; opacity: 0.7;
+}
+.style-chip {
+  padding: 5px 12px; border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px; background: rgba(255,255,255,0.06);
+  color: var(--fg-muted); font-size: 11px; cursor: pointer;
+  transition: all 0.15s;
+}
+.style-chip--active {
+  border-color: var(--accent); color: var(--accent);
+  background: var(--accent-dim);
+}
+.style-chip:hover { border-color: rgba(255,255,255,0.3); }
+
 /* ===== HOME SCREEN ===== */
 .home {
   flex: 1;
@@ -300,12 +400,592 @@ body {
   color: var(--fg-muted);
 }
 
-/* Player count selector */
-.pc-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+/* ===== FULLSCREEN WIZARD ===== */
+.wiz {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
 }
+.wiz__bg {
+  position: fixed;
+  inset: -60px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg);
+  transition: background-image 0.5s ease;
+  z-index: 0;
+  will-change: transform;
+}
+.wiz__bg-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10,10,20,0.2) 0%,
+    rgba(10,10,20,0.35) 30%,
+    rgba(10,10,20,0.65) 65%,
+    rgba(10,10,20,0.8) 100%
+  );
+  z-index: 1;
+}
+/* ── 배너 모드: 상단 이미지 + 하단 fade → 콘텐츠 ── */
+.wiz--banner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.wiz--banner .wiz__bg,
+.wiz--banner .wiz__bg-overlay { display: none; }
+
+.wiz-banner {
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.wiz-banner__img {
+  width: 100%;
+  display: block;
+  aspect-ratio: 1328 / 768;
+  object-fit: cover;
+}
+.wiz-banner--compact .wiz-banner__img {
+  aspect-ratio: 1328 / 500;
+}
+.wiz-banner__fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(10,10,20,0) 0%,
+    rgba(10,10,20,0.15) 40%,
+    rgba(10,10,20,0.7) 75%,
+    var(--bg) 100%
+  );
+  pointer-events: none;
+}
+.wiz-banner__text {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0 20px 16px;
+  z-index: 1;
+}
+.wiz-banner__text .wiz__hero-title {
+  font-size: 20px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+}
+.wiz-banner__text .wiz__hero-synopsis {
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(232,224,240,0.75);
+  margin-top: 6px;
+  max-width: 400px;
+}
+
+.wiz__content {
+  position: relative;
+  z-index: 2;
+  padding: 16px 20px 32px;
+  flex: 1;
+}
+
+.wiz__back {
+  position: fixed;
+  top: 12px; left: 12px;
+  z-index: 10;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--fg);
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.wiz__hero {
+  position: relative; z-index: 2;
+  padding: 80px 24px 20px;
+  margin-top: auto;
+}
+.wiz__hero--compact { padding-top: 60px; }
+.wiz__hero-genre {
+  font-size: 11px; font-weight: 700;
+  color: var(--accent); text-transform: uppercase;
+  letter-spacing: 1.5px; margin-bottom: 6px;
+}
+.wiz__hero-title {
+  font-size: 24px; font-weight: 800;
+  line-height: 1.25; margin-bottom: 10px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+}
+.wiz__hero-synopsis {
+  font-size: 13px; line-height: 1.7;
+  color: rgba(232,224,240,0.8); max-width: 440px;
+}
+.wiz__hero-ep {
+  font-size: 13px; color: var(--fg-muted);
+}
+.wiz__panel {
+  position: relative; z-index: 2;
+  padding: 24px 20px 32px;
+  margin-top: auto;
+  background: rgba(10,10,20,0.35);
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px 24px 0 0;
+}
+.wiz__panel--scenarios {
+  padding-top: 72px;
+  min-height: 100%;
+  display: flex; flex-direction: column;
+  justify-content: flex-end;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-radius: 0;
+}
+.wiz__step-tag {
+  font-size: 10px; font-weight: 700;
+  color: var(--accent); letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+.wiz__step-title {
+  font-size: 16px; font-weight: 700;
+  margin-bottom: 16px;
+}
+/* Step 1: 시나리오 리스트 */
+.wiz__scenario-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.wiz-sc {
+  display: flex; align-items: center; gap: 12px;
+  padding: 6px;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.04);
+  cursor: pointer; transition: all 0.2s;
+  text-align: left; color: var(--fg);
+}
+.wiz-sc:active { transform: scale(0.98); }
+.wiz-sc--active {
+  border-color: var(--accent);
+  background: rgba(240,192,64,0.08);
+}
+.wiz-sc__thumb {
+  width: 100px; height: 58px;
+  border-radius: 8px; object-fit: cover; flex-shrink: 0;
+}
+.wiz-sc__info { min-width: 0; flex: 1; }
+.wiz-sc__genre {
+  font-size: 10px; font-weight: 600;
+  color: var(--accent); text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.wiz-sc__title {
+  font-size: 14px; font-weight: 700;
+  line-height: 1.3; margin: 2px 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wiz-sc__meta { font-size: 11px; color: var(--fg-muted); }
+/* Step 2: 에피소드 카드 */
+.wiz__ep-list {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.wiz-ep {
+  position: relative; border-radius: var(--radius);
+  overflow: hidden;
+  border: 1.5px solid rgba(255,255,255,0.08);
+  cursor: pointer; transition: all 0.2s;
+  padding: 0; color: var(--fg);
+}
+.wiz-ep:active { transform: scale(0.98); }
+.wiz-ep__img {
+  width: 100%; aspect-ratio: 1328 / 400;
+  object-fit: cover; display: block;
+}
+.wiz-ep__overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: flex-end;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, transparent 30%, rgba(10,10,20,0.85) 100%);
+}
+.wiz-ep__num {
+  font-size: 11px; font-weight: 700;
+  color: var(--accent); margin-right: 8px;
+}
+.wiz-ep__title {
+  font-size: 14px; font-weight: 700;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+}
+/* Step 3: 설정 */
+.wiz__setting-group { margin-bottom: 18px; }
+.wiz__setting-label {
+  font-size: 12px; font-weight: 600;
+  color: var(--fg-muted); margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.wiz__exp-row {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+}
+.wiz-exp {
+  position: relative;
+  padding: 12px 10px; min-height: 52px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  background-size: cover; background-position: center;
+  background-color: var(--bg-card);
+  overflow: hidden; cursor: pointer;
+  color: var(--fg); text-align: left;
+  display: flex; align-items: flex-end;
+  transition: all 0.15s;
+}
+.wiz-exp::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(10,10,20,0.2) 0%, rgba(10,10,20,0.75) 100%);
+}
+.wiz-exp--active { border-color: var(--accent); }
+.wiz-exp--active::before {
+  background: linear-gradient(180deg, rgba(240,192,64,0.05) 0%, rgba(10,10,20,0.6) 100%);
+}
+.wiz-exp--locked { opacity: 0.5; cursor: default; }
+.wiz-exp__name {
+  position: relative; z-index: 1;
+  font-size: 12px; font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+}
+.wiz__pc-row {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.wiz-pc {
+  width: 44px; height: 44px;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  color: var(--fg-muted);
+  font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.wiz-pc:active { transform: scale(0.9); }
+.wiz-pc--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+/* Step 4: 준비 완료 */
+.wiz__ready {
+  margin-top: 12px; padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.wiz__code {
+  text-align: center; padding: 16px;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius);
+  margin-bottom: 12px; cursor: pointer;
+}
+.wiz__code-label {
+  display: block; font-size: 11px;
+  color: var(--fg-muted); margin-bottom: 6px;
+}
+.wiz__code-value {
+  font-size: 20px; font-weight: 700;
+  letter-spacing: 2px; color: var(--accent);
+  font-family: 'Courier New', monospace;
+}
+.wiz__go { margin-top: 8px; }
+
+/* ===== LOBBY (wiz 스타일) ===== */
+.wiz--lobby .wiz__panel--lobby {
+  padding-top: 20px;
+}
+.lobby__code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.lobby__code-pill:active { transform: scale(0.96); }
+.lobby__code-icon { font-size: 13px; }
+.lobby__code-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+.lobby__play-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.lobby__play-big {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px;
+  background: rgba(160,100,240,0.2);
+  border: 1.5px solid rgba(160,100,240,0.4);
+  border-radius: var(--radius);
+  color: #c8a0f0;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.lobby__play-big:active { transform: scale(0.97); background: rgba(160,100,240,0.3); }
+.lobby__delay {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.lobby__delay-label {
+  font-size: 10px;
+  color: var(--fg-muted);
+  margin-right: 4px;
+}
+.lobby__delay-btn {
+  padding: 4px 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.lobby__delay-btn--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.lobby__reroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.lobby__exp-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.lobby__exp-chip {
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.lobby__exp-chip--on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.lobby__exp-chip--locked { opacity: 0.4; cursor: default; }
+.lobby__reroll-btn {
+  padding: 6px 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.04);
+  color: var(--fg-muted);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lobby__reroll-btn:active { transform: scale(0.96); }
+.lobby__deck-label {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* ===== PLAYING OVERLAY (wiz 스타일) ===== */
+.playing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+}
+.playing-overlay .wiz__bg,
+.playing-overlay .wiz__bg-overlay {
+  position: absolute;
+}
+.play__hero {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 24px 10px;
+}
+.role-icon--xxl {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.15);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+  margin-bottom: 14px;
+}
+.play__moon-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fffbe6 0%, #f0c040 50%, #c08020 100%);
+  box-shadow: 0 0 40px rgba(240,192,64,0.3);
+  margin-bottom: 14px;
+}
+.play__role-name {
+  font-size: 26px;
+  font-weight: 800;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+  margin-bottom: 4px;
+}
+.play__role-phase {
+  font-size: 15px;
+  color: var(--accent);
+  font-weight: 600;
+  min-height: 22px;
+}
+.play__role-label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+  min-height: 18px;
+}
+
+.play__panel {
+  position: relative;
+  z-index: 2;
+  padding: 20px 24px 32px;
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  background: rgba(10,10,20,0.35);
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px 24px 0 0;
+}
+.play__progress { margin-bottom: 16px; }
+.play__progress-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.play__progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+.play__progress-count {
+  font-size: 11px;
+  color: var(--fg-muted);
+  text-align: center;
+}
+.play__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.play__ctrl-btn {
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  color: var(--fg-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.play__ctrl-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.08); }
+.play__ctrl-main {
+  width: 64px;
+  height: 64px;
+  border: 2px solid rgba(160,100,240,0.4);
+  border-radius: 50%;
+  background: rgba(160,100,240,0.15);
+  color: #c8a0f0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.play__ctrl-main:active { transform: scale(0.9); background: rgba(160,100,240,0.3); }
+.play__bgm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.play__bgm-label {
+  font-size: 11px;
+  color: var(--fg-muted);
+  flex-shrink: 0;
+}
+.play__bgm-slider {
+  flex: 1;
+  height: 3px;
+  -webkit-appearance: none;
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+  outline: none;
+}
+.play__bgm-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--fg);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.play__bgm-val {
+  font-size: 11px;
+  color: var(--fg-muted);
+  min-width: 32px;
+  text-align: right;
+}
+.play__exit-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.play__exit-btn:active { color: var(--wolf); border-color: rgba(224,64,64,0.3); }
+
+/* legacy (card-option 다른 곳에서 사용) */
 .pc-btn {
   background: var(--bg-card);
   border: 1.5px solid rgba(255,255,255,0.08);
@@ -583,6 +1263,87 @@ body {
 .delay-btn:active { transform: scale(0.95); }
 
 /* Role card grid */
+/* ===== ROLE TILE (통일 아이콘 그리드) ===== */
+.role-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 4px 0;
+}
+.role-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px 10px;
+  border: 1.5px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--fg);
+  text-align: center;
+}
+.role-tile:active { transform: scale(0.94); }
+/* 팀 색상 테두리 */
+.role-tile.role-card--wolf {
+  border-color: rgba(224,64,64,0.25);
+  background: rgba(224,64,64,0.06);
+}
+.role-tile.role-card--village {
+  border-color: rgba(64,144,224,0.2);
+  background: rgba(64,144,224,0.05);
+}
+.role-tile.role-card--tanner {
+  border-color: rgba(200,128,48,0.25);
+  background: rgba(200,128,48,0.06);
+}
+.role-tile__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+}
+.role-tile__name {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.role-tile__order {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  color: var(--fg-muted);
+}
+.role-tile__count {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+/* legacy role-grid (미사용 시 삭제 가능) */
 .role-grid {
   flex: 1;
   padding: 12px 16px 100px;
@@ -596,17 +1357,20 @@ body {
   background: var(--bg-card);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: var(--radius);
-  padding: 14px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+  border-left: 3px solid rgba(255,255,255,0.08);
 }
 .role-card--wolf {
   border-color: rgba(224,64,64,0.2);
+  border-left-color: var(--wolf);
   background: var(--wolf-bg);
 }
 .role-card--village {
   border-color: rgba(64,144,224,0.15);
+  border-left-color: var(--village);
   background: var(--village-bg);
 }
 .role-card__top {
@@ -655,7 +1419,7 @@ body {
 }
 .role-card--wolf .role-card__team { color: var(--wolf); }
 .role-card--village .role-card__team { color: var(--village); }
-.role-card--tanner { border-color: rgba(200,128,48,0.2); background: var(--tanner-bg); }
+.role-card--tanner { border-color: rgba(200,128,48,0.2); border-left-color: var(--tanner); background: var(--tanner-bg); }
 .role-card--tanner .role-card__team { color: var(--tanner); }
 .role-card__desc {
   font-size: 12px;
@@ -672,23 +1436,45 @@ body {
 .expansion-btn {
   display: flex;
   flex-direction: column;
+  justify-content: flex-end;
   gap: 2px;
-  padding: 10px 12px;
+  padding: 14px 12px;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius-sm);
-  background: var(--bg-card);
+  background-color: var(--bg-card);
+  background-size: cover;
+  background-position: center;
   color: var(--fg-muted);
   cursor: pointer;
   text-align: left;
   transition: all 0.15s;
+  min-height: 72px;
+  position: relative;
+  overflow: hidden;
+}
+/* 배경 이미지 위 텍스트 가독성 보장 */
+.expansion-btn[style*="background-image"] .expansion-btn__name,
+.expansion-btn[style*="background-image"] .expansion-btn__desc {
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  position: relative;
+  z-index: 1;
+}
+.expansion-btn[style*="background-image"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10,10,20,0.2) 0%, rgba(10,10,20,0.75) 100%);
+  z-index: 0;
 }
 .expansion-btn:hover:not(:disabled) {
-  background: var(--bg-card-hover);
+  border-color: rgba(255,255,255,0.2);
 }
 .expansion-btn--active {
   border-color: var(--accent);
-  background: var(--accent-dim);
   color: var(--fg);
+}
+.expansion-btn--active::before {
+  background: linear-gradient(180deg, rgba(240,192,64,0.1) 0%, rgba(10,10,20,0.6) 100%);
 }
 .expansion-btn--locked {
   opacity: 0.6;
@@ -697,10 +1483,14 @@ body {
 .expansion-btn__name {
   font-size: 13px;
   font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 .expansion-btn__desc {
   font-size: 11px;
   opacity: 0.7;
+  position: relative;
+  z-index: 1;
 }
 
 /* ===== EXPANSION TOGGLES (lobby reroll bar) ===== */
@@ -937,9 +1727,9 @@ body {
   display: flex;
   align-items: center;
   height: var(--tab-h);
-  background: rgba(10, 10, 20, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(10, 10, 20, 0.35);
+  backdrop-filter: blur(32px) saturate(1.3);
+  -webkit-backdrop-filter: blur(32px) saturate(1.3);
   border-top: 1px solid rgba(255,255,255,0.08);
   z-index: 50;
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -963,9 +1753,21 @@ body {
   user-select: none;
 }
 .tab-bar__item:active { opacity: 0.7; }
-.tab-bar__item--active { color: var(--accent); }
-.tab-bar__icon { font-size: 20px; line-height: 1; }
-.tab-bar__label { font-size: 11px; font-weight: 600; }
+.tab-bar__item--active {
+  color: var(--accent);
+}
+.tab-bar__item--active::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 25%; right: 25%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 2px 2px;
+}
+.tab-bar__item { position: relative; }
+.tab-bar__icon { line-height: 1; display: flex; align-items: center; justify-content: center; }
+.tab-bar__icon svg { display: block; }
+.tab-bar__label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
 
 /* ===== CODEX SCREEN ===== */
 .codex {
@@ -992,16 +1794,28 @@ body {
   padding: 0 12px 20px;
 }
 .codex__group {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+}
+.codex__group-banner {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-card);
+  margin-bottom: 10px;
+}
+.codex__group-banner-overlay {
+  padding: 16px;
+  background: linear-gradient(90deg, rgba(10,10,20,0.85) 0%, rgba(10,10,20,0.4) 100%);
 }
 .codex__group-title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.codex__group-desc {
+  font-size: 11px;
   color: var(--fg-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-  padding: 0 4px;
 }
 .codex__grid {
   display: grid;
@@ -1068,8 +1882,97 @@ body {
   padding: 0 4px;
 }
 .role-sheet__scroll::-webkit-scrollbar { width: 0; }
+/* 위키 내 역할 인라인 아이콘 */
+.wiki-role-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: -3px;
+  margin-right: 2px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+/* 바텀시트 역할 히어로 배너 */
+.wiki-role-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 20px 16px;
+  margin-bottom: 4px;
+}
+.wiki-role-hero__img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid rgba(255,255,255,0.12);
+  box-shadow: 0 6px 32px rgba(0,0,0,0.5);
+  margin-bottom: 12px;
+}
+.wiki-role-hero__name {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.wiki-role-hero__team {
+  font-size: 13px;
+  font-weight: 600;
+}
+.wiki-role-hero__team.role-card--wolf { color: var(--wolf); }
+.wiki-role-hero__team.role-card--village { color: var(--village); }
+.wiki-role-hero__team.role-card--tanner { color: var(--tanner); }
+
+/* 위키 내 삽화 */
+.wiki-illust {
+  margin: 16px -4px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.wiki-illust img {
+  width: 100%;
+  display: block;
+  border-radius: var(--radius);
+}
+/* 위키 페이지 배너 */
+.wiki-page-banner {
+  position: relative;
+  margin: -16px -12px 0;
+  overflow: hidden;
+}
+.wiki-page-banner img {
+  width: 100%;
+  display: block;
+  aspect-ratio: 1328 / 768;
+  object-fit: cover;
+}
+.wiki-page-banner__fade {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 60%;
+  background: linear-gradient(180deg, transparent 0%, var(--bg) 100%);
+  pointer-events: none;
+}
+
 .role-sheet__preview {
   padding: 0 16px;
+}
+.role-sheet__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 16px;
+  padding-top: 8px;
+}
+.role-icon--hero {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.15);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  margin-bottom: 12px;
 }
 .role-sheet__role-head {
   display: flex;
@@ -1081,7 +1984,7 @@ body {
   font-size: 36px;
 }
 .role-sheet__name {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 800;
 }
 .role-sheet__team-label {
@@ -1154,8 +2057,25 @@ body {
   padding: 0 12px;
 }
 .wiki__category {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
+.wiki__cat-banner {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-card);
+  margin-bottom: 8px;
+}
+.wiki__cat-banner-overlay {
+  padding: 14px 16px;
+  background: linear-gradient(90deg, rgba(10,10,20,0.85) 0%, rgba(10,10,20,0.35) 100%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wiki__cat-icon { font-size: 18px; }
+.wiki__cat-title { font-size: 15px; font-weight: 700; }
 .wiki__category-title {
   font-size: 14px;
   font-weight: 700;

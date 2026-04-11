@@ -3,6 +3,62 @@
    서버 없이 동작하는 정적 나레이션 + 역할 레퍼런스 앱
    ============================================================ */
 
+// ===== IMAGE CONFIG =====
+const IMG_STYLE = 'taisho_roman';
+
+function imgPath(category, itemId) {
+  return `assets/images_web/${IMG_STYLE}/${category}/${itemId}.webp`;
+}
+function roleIconSrc(roleId) { return imgPath('roles', roleId); }
+function scenarioBgSrc(scenarioId) { return imgPath('scenarios', scenarioId); }
+function episodeBgSrc(scenarioId, epId) { return imgPath('episodes', `${scenarioId}_${epId}`); }
+function uiImgSrc(uiId) { return imgPath('ui', uiId); }
+
+// 역할 아이콘 <img> 태그. onerror시 이모지로 폴백.
+// 이미지 로드 실패 시 이모지 폴백 (글로벌 핸들러)
+document.addEventListener('error', function(e) {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement)) return;
+  if (!img.classList.contains('role-icon') && !img.classList.contains('role-tile__icon')) return;
+  const roleId = img.dataset.role;
+  const emoji = roleId && ROLES[roleId] ? ROLES[roleId].emoji : '';
+  if (emoji) {
+    const span = document.createElement('span');
+    span.className = 'role-card__emoji';
+    span.textContent = emoji;
+    img.replaceWith(span);
+  } else {
+    img.style.display = 'none';
+  }
+}, true);
+
+function roleIcon(roleId) {
+  return `<img class="role-icon" data-role="${roleId}" src="${roleIconSrc(roleId)}" alt="" loading="lazy">`;
+}
+function roleIconLg(roleId, cls) {
+  return `<img class="${cls || 'role-icon role-icon--lg'}" data-role="${roleId}" src="${roleIconSrc(roleId)}" alt="" loading="lazy">`;
+}
+
+// ===== PARALLAX SCROLL (Apple-style) =====
+// #app 스크롤에 따라 .wiz__bg가 약간 천천히 따라 이동
+(function initParallax() {
+  let raf = 0;
+  const SPEED = 0.3; // 배경이 스크롤의 30% 속도로 따라감
+  function onScroll() {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const app = document.getElementById('app');
+      const bg = document.querySelector('.wiz__bg');
+      if (!app || !bg) return;
+      const y = app.scrollTop * SPEED;
+      bg.style.transform = `translate3d(0, ${-y}px, 0)`;
+    });
+  }
+  // #app이 스크롤 컨테이너
+  document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+})();
+
 // ===== ROLE DATA =====
 // Teams: village, wolf, tanner
 const TEAM_META = {
@@ -386,6 +442,34 @@ function generateRandomDeck(playerCount, scenarioId) {
 // ===== SCENARIO DATA (loaded from _index.json) =====
 let SCENARIOS = [];
 
+// 시나리오별 줄거리/분위기 요약 (UI 표시용)
+const SCENARIO_SYNOPSIS = {
+  beginner_dark_fantasy: {
+    genre: '다크 판타지',
+    synopsis: '은빛 봉인이 깨진 밤, 마을 광장에 모인 이들 중 누군가는 달빛 아래 본성을 드러낸다. 첫 밤을 안내하는 초보자용 시나리오.',
+  },
+  dark_citadel: {
+    genre: '다크 판타지',
+    synopsis: '까마귀골 변두리 마을. 새벽 순찰이 우물가에서 서기 라일의 시체를 발견했다. 목이 꺾인 채, 손톱 밑에 검은 흙이 끼어 있었다. 누가 마지막으로 라일을 봤는가.',
+  },
+  floodgate_nameplates: {
+    genre: '식민지 괴담',
+    synopsis: '폭우가 쏟아지는 밤, 수문 관리소의 이름패가 하나씩 물에 떠내려간다. 이름이 지워지기 전에, 배신자를 가려내야 한다.',
+  },
+  rust_orbit: {
+    genre: 'SF 호러',
+    synopsis: '녹슨 궤도 정거장에서 동면 포드가 일제히 열린다. 깨어난 승무원들 사이에 이질적인 존재가 섞여 있다. 산소가 다 떨어지기 전에 진실을 밝혀야 한다.',
+  },
+  salgol_ward: {
+    genre: '병원 호러',
+    synopsis: '살골 폐쇄병동, 야간 근무 중 환자 명부가 바뀌어 있다. 대체된 환자는 누구인가. 복도 끝 비상등만이 유일한 빛이다.',
+  },
+  school_broadcast_prayer: {
+    genre: '학교 호러',
+    synopsis: '자정의 교내 방송실. 마이크에서 기도문이 흘러나오고, 책상에는 주술 문양이 새겨져 있다. 방송이 끝나기 전에, 문 앞의 원수를 찾아라.',
+  },
+};
+
 async function loadScenarioIndex() {
   try {
     const resp = await fetch('./assets/scenarios/_index.json');
@@ -394,7 +478,7 @@ async function loadScenarioIndex() {
     SCENARIOS = index.map(entry => ({
       id: entry.id,
       title: entry.title,
-      subtitle: entry.subtitle + ` · ${entry.playerCounts[0]}~${entry.playerCounts[entry.playerCounts.length - 1]}인`,
+      subtitle: entry.subtitle,
       playerCounts: entry.playerCounts,
       episodes: entry.episodes.map(ep => ({ id: ep.id, title: ep.title, variants: {} })),
     }));
@@ -1050,7 +1134,7 @@ function render() {
 // -- Home
 function renderHomeHTML() {
   return `
-    <div class="home">
+    <div class="home" style="background-image:url('${scenarioBgSrc('beginner_dark_fantasy')}')">
       <div class="home__moon"></div>
       <h1 class="home__title">한밤의<br>늑대인간</h1>
       <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
@@ -1134,17 +1218,17 @@ function goChangelog() {
   render();
 }
 
-// -- Setup
+// -- Setup (풀스크린 위저드)
 function renderSetupHTML() {
   const sc = state.scenarioIdx !== null ? SCENARIOS[state.scenarioIdx] : null;
   const ep = sc && state.episodeIdx !== null ? sc.episodes[state.episodeIdx] : null;
   const ready = sc && ep && state.playerCount;
 
-  let step = 1;
-  let stepLabel = '시나리오를 선택하세요';
-  if (sc && state.episodeIdx === null) { step = 2; stepLabel = '에피소드를 선택하세요'; }
-  if (sc && ep && !state.playerCount) { step = 3; stepLabel = '인원수를 선택하세요'; }
-  if (ready) { step = 4; stepLabel = '게임 코드가 생성되었습니다'; }
+  // 현재 단계
+  let step = 1; // 시나리오
+  if (sc && state.episodeIdx === null) step = 2; // 에피소드
+  if (sc && ep && !state.playerCount) step = 3; // 설정
+  if (ready) step = 4; // 준비 완료
 
   let code = '';
   let codeDisplay = '';
@@ -1153,79 +1237,128 @@ function renderSetupHTML() {
     codeDisplay = code.match(/.{1,5}/g).join('-');
   }
 
-  return `
-    <div class="setup">
-      <div class="setup__header">
-        <button class="back-btn" onclick="goHome()">← 돌아가기</button>
-        <h1 class="setup__title">게임 만들기</h1>
-        <div class="setup__step-label">STEP ${step}: ${stepLabel}</div>
-      </div>
+  const info = sc ? (SCENARIO_SYNOPSIS[sc.id] || {}) : {};
 
-      <div class="setup__section">
-        <div class="setup__section-title">시나리오</div>
-        <div class="card-list">
-          ${SCENARIOS.map((s, i) => `
-            <div class="card-option ${state.scenarioIdx === i ? 'selected' : ''}" onclick="selectScenario(${i})">
-              <div class="card-option__title">${s.title}</div>
-              <div class="card-option__desc">${s.subtitle} · ${s.playerCounts[0]}~${s.playerCounts[s.playerCounts.length-1]}인</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
+  // 배경 이미지 결정: 에피소드 > 시나리오 > 기본
+  let bgImage = '';
+  if (ep) bgImage = episodeBgSrc(sc.id, ep.id);
+  else if (sc) bgImage = scenarioBgSrc(sc.id);
 
-      ${sc ? `
-      <div class="setup__section">
-        <div class="setup__section-title">에피소드</div>
-        <div class="card-list">
-          ${sc.episodes.map((e, i) => `
-            <div class="card-option ${state.episodeIdx === i ? 'selected' : ''}" onclick="selectEpisode(${i})">
-              <div class="card-option__title">${e.title}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      ` : ''}
-
-      ${sc && ep !== null ? `
-      <div class="setup__section">
-        <div class="setup__section-title">확장팩</div>
-        <div class="expansion-grid">
-          ${EXPANSIONS.map(ex => {
-            const active = state.expansions[ex.id];
-            const locked = ex.required;
+  // ── STEP 1: 시나리오 선택 ──
+  if (step === 1) {
+    return `
+    <div class="wiz">
+      <div class="wiz__bg" style="background-image:url('${scenarioBgSrc(SCENARIOS[0]?.id || '')}')"></div>
+      <div class="wiz__bg-overlay"></div>
+      <button class="wiz__back" onclick="goHome()">← 나가기</button>
+      <div class="wiz__panel wiz__panel--scenarios">
+        <div class="wiz__step-tag">STEP 1</div>
+        <h2 class="wiz__step-title">시나리오를 선택하세요</h2>
+        <div class="wiz__scenario-list">
+          ${SCENARIOS.map((s, i) => {
+            const si = SCENARIO_SYNOPSIS[s.id] || {};
             return `
-              <button class="expansion-btn ${active ? 'expansion-btn--active' : ''} ${locked ? 'expansion-btn--locked' : ''}"
-                onclick="${locked ? '' : `toggleExpansion('${ex.id}')`}"
-                ${locked ? 'disabled' : ''}>
-                <span class="expansion-btn__name">${ex.name}</span>
-                <span class="expansion-btn__desc">${ex.desc}</span>
-              </button>`;
+            <button class="wiz-sc ${state.scenarioIdx === i ? 'wiz-sc--active' : ''}"
+              onclick="selectScenario(${i})"
+              onmouseenter="document.querySelector('.wiz__bg').style.backgroundImage='url(${scenarioBgSrc(s.id)})'">
+              <img class="wiz-sc__thumb" src="${scenarioBgSrc(s.id)}" alt="" loading="lazy">
+              <div class="wiz-sc__info">
+                <span class="wiz-sc__genre">${si.genre || ''}</span>
+                <div class="wiz-sc__title">${s.title}</div>
+                <div class="wiz-sc__meta">${s.playerCounts[0]}~${s.playerCounts[s.playerCounts.length-1]}인</div>
+              </div>
+            </button>`;
           }).join('')}
         </div>
       </div>
-      ` : ''}
+    </div>`;
+  }
 
-      ${sc && ep !== null ? `
-      <div class="setup__section">
-        <div class="setup__section-title">인원수</div>
-        <div class="pc-grid">
-          ${sc.playerCounts.map(n => `
-            <button class="pc-btn ${state.playerCount === n ? 'selected' : ''}" onclick="selectPlayerCount(${n})">${n}명</button>
+  // ── STEP 2: 에피소드 선택 ──
+  if (step === 2) {
+    return `
+    <div class="wiz wiz--banner">
+      <button class="wiz__back" onclick="state.scenarioIdx=null;state.episodeIdx=null;state.playerCount=0;render()">← 시나리오</button>
+      <div class="wiz-banner">
+        <img class="wiz-banner__img" src="${scenarioBgSrc(sc.id)}" alt="" loading="lazy">
+        <div class="wiz-banner__fade"></div>
+        <div class="wiz-banner__text">
+          <div class="wiz__hero-genre">${info.genre || ''}</div>
+          <h1 class="wiz__hero-title">${sc.title}</h1>
+          <p class="wiz__hero-synopsis">${info.synopsis || ''}</p>
+        </div>
+      </div>
+      <div class="wiz__content">
+        <div class="wiz__step-tag">STEP 2</div>
+        <h2 class="wiz__step-title">에피소드</h2>
+        <div class="wiz__ep-list">
+          ${sc.episodes.map((e, i) => `
+            <button class="wiz-ep" onclick="selectEpisode(${i})">
+              <img class="wiz-ep__img" src="${episodeBgSrc(sc.id, e.id)}" alt="" loading="lazy">
+              <div class="wiz-ep__overlay">
+                <span class="wiz-ep__num">EP${i+1}</span>
+                <span class="wiz-ep__title">${e.title.replace(/^EP\d+:\s*/, '')}</span>
+              </div>
+            </button>
           `).join('')}
         </div>
       </div>
-      ` : ''}
+    </div>`;
+  }
 
-      ${ready ? `
-      <div class="setup__footer">
-        <div class="room-code-display">
-          <div class="room-code-display__label">방 코드</div>
-          <div class="room-code-display__code" onclick="copyCode('${code}')" title="탭하여 복사">${codeDisplay}</div>
-          <div class="room-code-display__hint">탭하여 링크 복사 · 참가자에게 공유하세요</div>
+  // ── STEP 3~4: 설정 + 시작 ──
+  return `
+    <div class="wiz wiz--banner">
+      <button class="wiz__back" onclick="state.episodeIdx=null;state.playerCount=0;render()">← 에피소드</button>
+      <div class="wiz-banner wiz-banner--compact">
+        <img class="wiz-banner__img" src="${bgImage}" alt="" loading="lazy">
+        <div class="wiz-banner__fade"></div>
+        <div class="wiz-banner__text">
+          <div class="wiz__hero-genre">${info.genre || ''}</div>
+          <h1 class="wiz__hero-title">${sc.title}</h1>
+          <div class="wiz__hero-ep">${ep.title}</div>
         </div>
-        <button class="btn btn--primary btn--full" onclick="enterLobby('${code}')">로비 입장</button>
       </div>
-      ` : ''}
+      <div class="wiz__content">
+        <div class="wiz__step-tag">STEP 3</div>
+        <h2 class="wiz__step-title">게임 설정</h2>
+
+        <div class="wiz__setting-group">
+          <div class="wiz__setting-label">확장팩</div>
+          <div class="wiz__exp-row">
+            ${EXPANSIONS.map(ex => {
+              const active = state.expansions[ex.id];
+              const locked = ex.required;
+              const bgId = { base: 'expansion_base', daybreak: 'expansion_daybreak', daybreak_bonus1: 'expansion_bonus1', bonus2: 'expansion_bonus2' }[ex.id] || '';
+              return `
+              <button class="wiz-exp ${active ? 'wiz-exp--active' : ''} ${locked ? 'wiz-exp--locked' : ''}"
+                onclick="${locked ? '' : `toggleExpansion('${ex.id}')`}" ${locked ? 'disabled' : ''}
+                style="background-image:url('${uiImgSrc(bgId)}')">
+                <span class="wiz-exp__name">${ex.name}</span>
+              </button>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <div class="wiz__setting-group">
+          <div class="wiz__setting-label">인원수</div>
+          <div class="wiz__pc-row">
+            ${sc.playerCounts.map(n => `
+              <button class="wiz-pc ${state.playerCount === n ? 'wiz-pc--active' : ''}" onclick="selectPlayerCount(${n})">${n}</button>
+            `).join('')}
+          </div>
+        </div>
+
+        ${ready ? `
+        <div class="wiz__ready">
+          <div class="wiz__code" onclick="copyCode('${code}')" title="탭하여 복사">
+            <span class="wiz__code-label">방 코드</span>
+            <span class="wiz__code-value">${codeDisplay}</span>
+          </div>
+          <button class="btn btn--primary btn--full wiz__go" onclick="enterLobby('${code}')">로비 입장</button>
+        </div>
+        ` : ''}
+      </div>
     </div>`;
 }
 
@@ -1270,85 +1403,80 @@ function renderLobbyHTML() {
   const code = state.roomCode || encodeRoomCode(config.scenarioId, config.episodeId, config.playerCount, variant.deck);
   const roleCounts = countRoles(variant.deck);
   const centerCount = variant.deck.length - config.playerCount;
+  const info = SCENARIO_SYNOPSIS[config.scenarioId] || {};
 
-  // Sort: by night wake order, then non-waking roles at end
   const wakeOrder = variant.wakeOrder || [];
   const uniqueRoles = Object.keys(roleCounts);
   uniqueRoles.sort((a, b) => {
     const ia = wakeOrder.indexOf(a);
     const ib = wakeOrder.indexOf(b);
-    const oa = ia === -1 ? 9999 : ia;
-    const ob = ib === -1 ? 9999 : ib;
-    return oa - ob;
+    return (ia === -1 ? 9999 : ia) - (ib === -1 ? 9999 : ib);
   });
 
   return `
-    <div class="lobby">
-      <div class="lobby__header">
-        <div class="lobby__info">
-          <div class="lobby__scenario-title">${scenario.title} · ${episode.title}</div>
-          <div class="lobby__meta">${config.playerCount}명 플레이 · 센터 카드 ${centerCount}장</div>
-        </div>
-        <div class="lobby__code" onclick="copyCode('${code}')" title="탭하여 링크 복사">${code.match(/.{1,5}/g).join('-')}</div>
-      </div>
+    <div class="wiz wiz--lobby wiz--banner">
+      <button class="wiz__back" onclick="goHome()">← 나가기</button>
 
-      <div class="reroll-bar">
-        <div class="expansion-toggles">
-          ${EXPANSIONS.map(ex => {
-            const active = state.expansions[ex.id];
-            const locked = ex.required;
-            return `<button class="exp-tag ${active ? 'exp-tag--active' : ''} ${locked ? 'exp-tag--locked' : ''}"
-              onclick="${locked ? '' : `toggleExpansion('${ex.id}',true);rerollDeck()`}"
-              ${locked ? 'disabled' : ''}
-              title="${ex.desc}">${ex.name}</button>`;
-          }).join('')}
-        </div>
-        <button class="reroll-btn" onclick="rerollDeck()">🎲 역할 다시 뽑기</button>
-      </div>
-
-      <div class="play-bar">
-        <button class="play-btn" onclick="startPlayback()">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          밤 행동 음성 재생
-        </button>
-        <div class="delay-options">
-          <span class="delay-options__label">행동 간격</span>
-          <div class="delay-options__btns">
-            ${[0,3,5,10,15,20].map(s => `<button class="delay-btn ${state.actionDelay === s ? 'selected' : ''}" onclick="setActionDelay(${s})">${s === 0 ? '없음' : s + '초'}</button>`).join('')}
+      <div class="wiz-banner">
+        <img class="wiz-banner__img" src="${episodeBgSrc(config.scenarioId, config.episodeId)}" alt="" loading="lazy">
+        <div class="wiz-banner__fade"></div>
+        <div class="wiz-banner__text">
+          <div class="wiz__hero-genre">${info.genre || ''}</div>
+          <h1 class="wiz__hero-title">${scenario.title}</h1>
+          <div class="wiz__hero-ep">${episode.title} · ${config.playerCount}명</div>
+          <div class="lobby__code-pill" onclick="copyCode('${code}')" title="탭하여 복사">
+            <span class="lobby__code-icon">🔗</span>
+            <span class="lobby__code-text">${code.match(/.{1,5}/g).join('-')}</span>
           </div>
         </div>
       </div>
 
-      <div class="center-info">카드 ${variant.deck.length}장 (플레이어 ${config.playerCount} + 센터 ${centerCount})</div>
+      <div class="wiz__content">
+        <!-- 재생 컨트롤 -->
+        <div class="lobby__play-section">
+          <button class="lobby__play-big" onclick="startPlayback()">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            밤 행동 시작
+          </button>
+          <div class="lobby__delay">
+            <span class="lobby__delay-label">간격</span>
+            ${[0,3,5,10,15,20].map(s => `<button class="lobby__delay-btn ${state.actionDelay === s ? 'lobby__delay-btn--active' : ''}" onclick="setActionDelay(${s})">${s === 0 ? '없음' : s + '초'}</button>`).join('')}
+          </div>
+        </div>
 
-      <div class="role-grid">
-        ${uniqueRoles.map(roleId => {
-          const role = ROLES[roleId] || { name: roleId, team: 'village', emoji: '❓', desc: '' };
-          const count = roleCounts[roleId];
-          const tm = TEAM_META[role.team] || TEAM_META.village;
-          const teamClass = tm.css;
-          const teamLabel = tm.label;
-          const wakeIdx = wakeOrder.indexOf(roleId);
-          const orderBadge = wakeIdx !== -1
-            ? `<span class="role-card__order">${wakeIdx + 1}</span>`
-            : `<span class="role-card__order role-card__order--none">-</span>`;
-          return `
-            <div class="role-card ${teamClass}">
-              <div class="role-card__top">
-                ${orderBadge}
-                <span class="role-card__emoji">${role.emoji}</span>
-                <span class="role-card__name">${role.name}</span>
-                ${count > 1 ? `<span class="role-card__count">×${count}</span>` : ''}
-              </div>
-              <div class="role-card__team">${teamLabel}</div>
-              <div class="role-card__desc">${highlightDesc(roleId, role.desc)}</div>
-            </div>`;
-        }).join('')}
-      </div>
+        <!-- 확장팩 + 다시뽑기 -->
+        <div class="lobby__reroll">
+          <div class="lobby__exp-tags">
+            ${EXPANSIONS.map(ex => {
+              const active = state.expansions[ex.id];
+              const locked = ex.required;
+              return `<button class="lobby__exp-chip ${active ? 'lobby__exp-chip--on' : ''} ${locked ? 'lobby__exp-chip--locked' : ''}"
+                onclick="${locked ? '' : `toggleExpansion('${ex.id}',true);rerollDeck()`}"
+                ${locked ? 'disabled' : ''}>${ex.name}</button>`;
+            }).join('')}
+          </div>
+          <button class="lobby__reroll-btn" onclick="rerollDeck()">🎲 다시 뽑기</button>
+        </div>
 
-      <div class="lobby__footer">
-        <button class="btn btn--ghost" style="flex:1" onclick="goHome()">나가기</button>
-        <button class="btn btn--primary" style="flex:2" onclick="startPlayback()">▶ 음성 재생</button>
+        <!-- 덱 정보 -->
+        <div class="lobby__deck-label">덱 ${variant.deck.length}장 · 플레이어 ${config.playerCount} + 센터 ${centerCount}</div>
+
+        <!-- 역할 카드 그리드 -->
+        <div class="role-icon-grid">
+          ${uniqueRoles.map(roleId => {
+            const role = ROLES[roleId] || { name: roleId, team: 'village', emoji: '❓', desc: '' };
+            const count = roleCounts[roleId];
+            const tm = TEAM_META[role.team] || TEAM_META.village;
+            const wakeIdx = wakeOrder.indexOf(roleId);
+            return `
+              <button class="role-tile ${tm.css}" onclick="showRoleSheet('${roleId}')">
+                ${wakeIdx !== -1 ? `<span class="role-tile__order">${wakeIdx + 1}</span>` : ''}
+                ${count > 1 ? `<span class="role-tile__count">×${count}</span>` : ''}
+                <img class="role-tile__icon" data-role="${roleId}" src="${roleIconSrc(roleId)}" alt="" loading="lazy">
+                <span class="role-tile__name">${role.name}</span>
+              </button>`;
+          }).join('')}
+        </div>
       </div>
     </div>`;
 }
@@ -1359,41 +1487,52 @@ function renderPlayingOverlayHTML() {
   const total = state.playlist.length;
   const current = state.playlistIndex + 1;
   const pct = Math.round((current / total) * 100);
+  const config = resolveCurrentConfig();
+  // 배경: 역할이 있으면 night overlay, 없으면 에피소드 배경
+  const bgSrc = uiImgSrc('night_phase_overlay');
 
   return `
     <div class="playing-overlay">
-      <div class="playing__moon"></div>
-      <div class="playing__role">${clip.label || ''}</div>
-      <div class="playing__text">${clip.roleId ? (ROLES[clip.roleId]?.name || clip.roleId) : (clip.phase === 'opening' ? '오프닝' : '아웃트로')}</div>
-      <div class="playing__sub">${clip.phase === 'during' ? '눈을 뜨세요' : clip.phase === 'after' ? '눈을 감으세요' : ''}</div>
-      <div class="playing__progress">
-        <div class="progress-bar"><div class="progress-bar__fill" style="width:${pct}%"></div></div>
+      <div class="wiz__bg" style="background-image:url('${bgSrc}')"></div>
+      <div class="wiz__bg-overlay" style="background:linear-gradient(180deg,rgba(10,10,20,0.5) 0%,rgba(10,10,20,0.85) 50%,rgba(10,10,20,0.98) 100%)"></div>
+
+      <div class="play__hero">
+        ${clip.roleId ? roleIconLg(clip.roleId, 'role-icon role-icon--xxl') : '<div class="play__moon-icon"></div>'}
+        <div class="play__role-name">${clip.roleId ? (ROLES[clip.roleId]?.name || clip.roleId) : (clip.phase === 'opening' ? '오프닝' : '아웃트로')}</div>
+        <div class="play__role-phase">${clip.phase === 'during' ? '눈을 뜨세요' : clip.phase === 'after' ? '눈을 감으세요' : ''}</div>
+        <div class="play__role-label">${clip.label || ''}</div>
       </div>
-      <div class="playing__count">${current} / ${total}</div>
-      <div class="playing__controls">
-        <button class="playing__skip" onclick="skipToPrev()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
-          이전
-        </button>
-        <button class="playing__pause" onclick="togglePause()">
-          ${state.paused
-            ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
-            : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>'}
-          ${state.paused ? '재개' : '일시정지'}
-        </button>
-        <button class="playing__skip" onclick="skipToNext()">
-          다음
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 18l8.5-6L4 6z" /></svg>
-        </button>
+
+      <div class="play__panel">
+        <div class="play__progress">
+          <div class="play__progress-bar"><div class="play__progress-fill" style="width:${pct}%"></div></div>
+          <div class="play__progress-count">${current} / ${total}</div>
+        </div>
+
+        <div class="play__controls">
+          <button class="play__ctrl-btn" onclick="skipToPrev()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          </button>
+          <button class="play__ctrl-main" onclick="togglePause()">
+            ${state.paused
+              ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+              : '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>'}
+          </button>
+          <button class="play__ctrl-btn" onclick="skipToNext()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 6h2v12h-2zM4 18l8.5-6L4 6z"/></svg>
+          </button>
+        </div>
+
+        <div class="play__bgm-row">
+          <span class="play__bgm-label">BGM</span>
+          <input type="range" min="0" max="100" value="${Math.round(bgmEl.volume * 100)}"
+            class="play__bgm-slider"
+            oninput="setBgmVolume(this.value/100); this.nextElementSibling.textContent=this.value+'%'" />
+          <span class="play__bgm-val">${Math.round(bgmEl.volume * 100)}%</span>
+        </div>
+
+        <button class="play__exit-btn" onclick="stopPlayback()">나가기</button>
       </div>
-      <div class="playing__bgm">
-        <span class="playing__bgm-label">🎵 BGM</span>
-        <input type="range" min="0" max="100" value="${Math.round(bgmEl.volume * 100)}"
-          class="playing__bgm-slider"
-          oninput="setBgmVolume(this.value/100); this.nextElementSibling.textContent=this.value+'%'" />
-        <span class="playing__bgm-val">${Math.round(bgmEl.volume * 100)}%</span>
-      </div>
-      <button class="playing__exit" onclick="stopPlayback()">나가기</button>
     </div>`;
 }
 
@@ -1405,23 +1544,37 @@ function renderPlayingOverlay() {
     const current = state.playlistIndex + 1;
     const pct = Math.round((current / total) * 100);
 
-    const roleEl = existing.querySelector('.playing__role');
-    const textEl = existing.querySelector('.playing__text');
-    const subEl = existing.querySelector('.playing__sub');
-    const fillEl = existing.querySelector('.progress-bar__fill');
-    const countEl = existing.querySelector('.playing__count');
+    const nameEl = existing.querySelector('.play__role-name');
+    const phaseEl = existing.querySelector('.play__role-phase');
+    const labelEl = existing.querySelector('.play__role-label');
+    const fillEl = existing.querySelector('.play__progress-fill');
+    const countEl = existing.querySelector('.play__progress-count');
 
-    if (roleEl) roleEl.textContent = clip.label || '';
-    if (textEl) textEl.textContent = clip.roleId ? (ROLES[clip.roleId]?.name || clip.roleId) : (clip.phase === 'opening' ? '오프닝' : '아웃트로');
-    if (subEl) subEl.textContent = clip.phase === 'during' ? '눈을 뜨세요' : clip.phase === 'after' ? '눈을 감으세요' : '';
+    if (nameEl) nameEl.textContent = clip.roleId ? (ROLES[clip.roleId]?.name || clip.roleId) : (clip.phase === 'opening' ? '오프닝' : '아웃트로');
+    if (phaseEl) phaseEl.textContent = clip.phase === 'during' ? '눈을 뜨세요' : clip.phase === 'after' ? '눈을 감으세요' : '';
+    if (labelEl) labelEl.textContent = clip.label || '';
     if (fillEl) fillEl.style.width = `${pct}%`;
     if (countEl) countEl.textContent = `${current} / ${total}`;
 
-    const pauseBtn = existing.querySelector('.playing__pause');
+    // 역할 아이콘 교체
+    const heroEl = existing.querySelector('.play__hero');
+    if (heroEl) {
+      const oldIcon = heroEl.querySelector('.role-icon--xxl, .play__moon-icon');
+      if (oldIcon && clip.roleId) {
+        const newImg = document.createElement('img');
+        newImg.className = 'role-icon role-icon--xxl';
+        newImg.dataset.role = clip.roleId;
+        newImg.src = roleIconSrc(clip.roleId);
+        newImg.loading = 'lazy';
+        oldIcon.replaceWith(newImg);
+      }
+    }
+
+    const pauseBtn = existing.querySelector('.play__ctrl-main');
     if (pauseBtn) {
       pauseBtn.innerHTML = state.paused
-        ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg> 재개'
-        : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg> 일시정지';
+        ? '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+        : '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>';
     }
   }
 }
@@ -1560,9 +1713,9 @@ function copyCode(code) {
 // ===== TAB BAR =====
 function renderTabBarHTML() {
   const tabs = [
-    { id: 'ingame',   label: '인게임', icon: '🎮' },
-    { id: 'codex',    label: '도감',   icon: '📖' },
-    { id: 'rulebook', label: '롤북',   icon: '📚' },
+    { id: 'ingame',   label: '인게임', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M21 6H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1zM7 14a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm5 1a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm0-4a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm4 2a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm0-4a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>' },
+    { id: 'codex',    label: '도감',   icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>' },
+    { id: 'rulebook', label: '롤북',   icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>' },
   ];
   return `
     <nav class="tab-bar">
@@ -1595,6 +1748,7 @@ function renderCodexHTML() {
     roles: ROLE_IDS.filter(id => ROLES[id].expansion === exp.id)
   }));
 
+  const expBgMap = { base: 'expansion_base', daybreak: 'expansion_daybreak', daybreak_bonus1: 'expansion_bonus1', bonus2: 'expansion_bonus2' };
   return `
     <div class="codex">
       <div class="codex__header">
@@ -1604,25 +1758,23 @@ function renderCodexHTML() {
       <div class="codex__content">
         ${groups.map(g => `
           <div class="codex__group">
-            <div class="codex__group-title">${g.name}</div>
-            <div class="codex__grid">
+            <div class="codex__group-banner" style="background-image:url('${uiImgSrc(expBgMap[g.id] || '')}')">
+              <div class="codex__group-banner-overlay">
+                <div class="codex__group-title">${g.name}</div>
+                <div class="codex__group-desc">${g.desc} · ${g.roles.length}개 역할</div>
+              </div>
+            </div>
+            <div class="role-icon-grid">
               ${g.roles.map(id => {
                 const role = ROLES[id];
                 const tm = TEAM_META[role.team] || TEAM_META.village;
                 const wakeIdx = NIGHT_ORDER.indexOf(id);
-                const orderBadge = wakeIdx !== -1
-                  ? `<span class="role-card__order">${wakeIdx + 1}</span>`
-                  : `<span class="role-card__order role-card__order--none">-</span>`;
                 return `
-                  <div class="role-card ${tm.css} codex__card" onclick="showRoleSheet('${id}')">
-                    <div class="role-card__top">
-                      ${orderBadge}
-                      <span class="role-card__emoji">${role.emoji}</span>
-                      <span class="role-card__name">${role.name}</span>
-                    </div>
-                    <div class="role-card__team">${tm.label}</div>
-                    <div class="role-card__desc">${highlightDesc(id, role.desc)}</div>
-                  </div>`;
+                  <button class="role-tile ${tm.css}" onclick="showRoleSheet('${id}')">
+                    ${wakeIdx !== -1 ? `<span class="role-tile__order">${wakeIdx + 1}</span>` : ''}
+                    <img class="role-tile__icon" data-role="${id}" src="${roleIconSrc(id)}" alt="" loading="lazy">
+                    <span class="role-tile__name">${role.name}</span>
+                  </button>`;
               }).join('')}
             </div>
           </div>
@@ -1645,15 +1797,20 @@ function showRoleSheet(roleId) {
   sheet.setAttribute('onclick', 'if(event.target===this)closeRoleSheet()');
 
   const cached = state.wikiCache[roleId];
+  const heroHTML = `<div class="wiki-role-hero">
+    <img class="wiki-role-hero__img" src="${roleIconSrc(roleId)}" alt="" loading="lazy" onerror="this.style.display='none'">
+    <div class="wiki-role-hero__info">
+      <div class="wiki-role-hero__name">${role.name}</div>
+      <div class="wiki-role-hero__team ${tm.css}">${tm.label} · 밤 순서 ${wakeIdx !== -1 ? (wakeIdx + 1) + '번째' : '없음'}</div>
+    </div>
+  </div>`;
   const bodyHTML = cached
-    ? `<div class="wiki__page-content">${parseMarkdown(cached)}</div>`
+    ? `${heroHTML}<div class="wiki__page-content">${injectRoleIllustrations(parseMarkdown(cached).replace(/<h1[^>]*>.*?<\/h1>/, ''), roleId)}</div>`
     : `<div class="role-sheet__preview">
-        <div class="role-sheet__role-head">
-          <span class="role-sheet__emoji">${role.emoji}</span>
-          <div>
-            <div class="role-sheet__name">${role.name}</div>
-            <div class="role-sheet__team-label ${tm.css}">${tm.label} · 밤 순서 ${wakeIdx !== -1 ? (wakeIdx + 1) + '번째' : '없음'}</div>
-          </div>
+        <div class="role-sheet__hero">
+          ${roleIconLg(roleId, 'role-icon role-icon--hero')}
+          <div class="role-sheet__name">${role.name}</div>
+          <div class="role-sheet__team-label ${tm.css}">${tm.label} · 밤 순서 ${wakeIdx !== -1 ? (wakeIdx + 1) + '번째' : '없음'}</div>
         </div>
         <div class="role-sheet__desc">${highlightDesc(roleId, role.desc)}</div>
         <div class="wiki__loading">상세 내용 불러오는 중...</div>
@@ -1679,7 +1836,7 @@ function showRoleSheet(roleId) {
       .then(md => {
         state.wikiCache[roleId] = md;
         const scroll = document.getElementById('roleSheetScroll');
-        if (scroll) scroll.innerHTML = `<div class="wiki__page-content">${parseMarkdown(md)}</div>`;
+        if (scroll) scroll.innerHTML = `${heroHTML}<div class="wiki__page-content">${injectRoleIllustrations(parseMarkdown(md).replace(/<h1[^>]*>.*?<\/h1>/, ''), roleId)}</div>`;
       })
       .catch(() => {});
   }
@@ -1749,6 +1906,7 @@ function renderWikiIndexHTML() {
       </div>`;
   }
 
+  const wikiBgMap = { '📜': 'expansion_base', '🎭': 'expansion_base', '🌅': 'expansion_daybreak', '⭐': 'expansion_bonus1', '💎': 'expansion_bonus2' };
   return `
     <div class="wiki">
       <div class="wiki__header">
@@ -1758,7 +1916,12 @@ function renderWikiIndexHTML() {
       <div class="wiki__index">
         ${idx.categories.map(cat => `
           <div class="wiki__category">
-            <div class="wiki__category-title">${cat.icon} ${cat.title}</div>
+            <div class="wiki__cat-banner" style="background-image:url('${uiImgSrc(wikiBgMap[cat.icon] || 'expansion_base')}')">
+              <div class="wiki__cat-banner-overlay">
+                <span class="wiki__cat-icon">${cat.icon}</span>
+                <span class="wiki__cat-title">${cat.title}</span>
+              </div>
+            </div>
             <div class="wiki__page-list">
               ${cat.pages.map(p => `
                 <button class="wiki__page-item" onclick="openWikiPage('${p.id}')">
@@ -1774,14 +1937,61 @@ function renderWikiIndexHTML() {
     </div>`;
 }
 
+// 규칙 페이지용 삽화 맵
+const RULES_ILLUST_MAP = {
+  game_overview: ['overview_factions', 'overview_appeal'],
+  game_setup: ['setup_cards', 'setup_app'],
+  night_phase: ['night_wake', 'night_action'],
+  day_phase: ['day_debate', 'day_vote'],
+  victory: ['victory_village', 'victory_wolf'],
+  special_rules: ['special_doppelganger', 'special_no_wolf'],
+};
+
+function injectRulesIllustrations(html, pageId) {
+  const illustrations = RULES_ILLUST_MAP[pageId] || [];
+  if (!illustrations.length) return html;
+
+  const closePPositions = [];
+  const pClosePattern = /<\/p>/g;
+  let match;
+  while ((match = pClosePattern.exec(html)) !== null) {
+    closePPositions.push(match.index + match[0].length);
+  }
+  const totalP = closePPositions.length;
+  const count = Math.min(illustrations.length, totalP - 1);
+  if (count <= 0) return html;
+
+  const step = Math.max(1, Math.floor((totalP - 1) / (count + 1)));
+  const insertPositions = [];
+  for (let i = 0; i < count; i++) {
+    insertPositions.push(closePPositions[Math.min(step * (i + 1), totalP - 1)]);
+  }
+
+  for (let i = insertPositions.length - 1; i >= 0; i--) {
+    const pos = insertPositions[i];
+    const imgTag = `<div class="wiki-illust"><img src="${imgPath('rules', illustrations[i])}" alt="" loading="lazy" onerror="this.parentElement.remove()"></div>`;
+    html = html.slice(0, pos) + imgTag + html.slice(pos);
+  }
+  return html;
+}
+
 function renderWikiPageHTML() {
   const pageId = state.wikiPage;
   const content = state.wikiCache[pageId] || '';
   const isError = content.includes('# 연결 오류');
-  const html = parseMarkdown(content);
+  let html = parseMarkdown(content);
+
+  // 배너 이미지 (h2 제거 + 배너 교체)
+  const bannerSrc = imgPath('rules', `banner_${pageId}`);
+  const bannerHTML = `<div class="wiki-page-banner"><img src="${bannerSrc}" alt="" loading="lazy" onerror="this.parentElement.remove()"><div class="wiki-page-banner__fade"></div></div>`;
+  html = html.replace(/<h2[^>]*>.*?<\/h2>/, ''); // 첫 h2(제목)는 배너로 대체
+
+  // 삽화 주입
+  html = injectRulesIllustrations(html, pageId);
 
   return `
     <div class="wiki wiki--page">
+      ${bannerHTML}
       <div class="wiki__page-content">${html}
         ${isError ? `<button class="btn btn--primary btn--full" style="margin-top:16px" onclick="delete state.wikiCache['${pageId}'];loadWikiPage('${pageId}')">다시 시도</button>` : ''}
       </div>
@@ -1916,6 +2126,75 @@ function parseMarkdown(md) {
   return html;
 }
 
+// 역할 MD에 삽화를 자동 삽입. h2 섹션 앞에 해당 역할의 삽화를 배치.
+function injectRoleIllustrations(html, roleId) {
+  if (!roleId || !ROLES[roleId]) return html;
+  // 삽화 ID 매핑: role_illustrations에서 해당 역할의 이미지들
+  const ILLUST_MAP = {
+    werewolf: ['werewolf_hunt', 'werewolf_lone', 'werewolf_accused'],
+    seer: ['seer_vision', 'seer_choice', 'seer_testimony'],
+    robber: ['robber_swap', 'robber_identity', 'robber_bluff'],
+    minion: ['minion_devotion', 'minion_sacrifice', 'minion_deception'],
+    mason: ['mason_bond', 'mason_alibi', 'mason_suspicion'],
+    troublemaker: ['troublemaker_chaos', 'troublemaker_confusion', 'troublemaker_reveal'],
+    tanner: ['tanner_despair', 'tanner_provocation', 'tanner_victory'],
+    drunk: ['drunk_stumble', 'drunk_morning', 'drunk_accusation'],
+    hunter: ['hunter_revenge', 'hunter_dilemma', 'hunter_bluff'],
+    insomniac: ['insomniac_watch', 'insomniac_changed', 'insomniac_testimony'],
+    doppelganger: ['doppelganger_mirror', 'doppelganger_act', 'doppelganger_crisis'],
+    witch: ['witch_potion', 'witch_swap', 'witch_innocent'],
+    alpha_wolf: ['alpha_wolf_convert', 'alpha_wolf_throne', 'alpha_wolf_strategy'],
+    mystic_wolf: ['mystic_wolf_peek', 'mystic_wolf_info', 'mystic_wolf_alibi'],
+    dream_wolf: ['dream_wolf_sleep', 'dream_wolf_vulnerability', 'dream_wolf_waking'],
+    apprentice_seer: ['apprentice_seer_study', 'apprentice_seer_growth', 'apprentice_seer_testimony'],
+    paranormal_investigator: ['paranormal_investigator_search', 'paranormal_investigator_convert', 'paranormal_investigator_stop'],
+    village_idiot: ['village_idiot_shift', 'village_idiot_chaos', 'village_idiot_strategy'],
+    revealer: ['revealer_expose', 'revealer_cover', 'revealer_impact'],
+    aura_seer: ['aura_seer_sense', 'aura_seer_map', 'aura_seer_deduction'],
+    prince: ['prince_immunity', 'prince_burden', 'prince_suspicion'],
+    cursed: ['cursed_transformation', 'cursed_unaware', 'cursed_reveal'],
+    apprentice_tanner: ['apprentice_tanner_shadow', 'apprentice_tanner_loyalty', 'apprentice_tanner_alone'],
+    thing: ['thing_touch', 'thing_signal', 'thing_mystery'],
+    squire: ['squire_loyalty', 'squire_shield', 'squire_intelligence'],
+    beholder: ['beholder_watch', 'beholder_protect', 'beholder_confirm'],
+    villager: [],
+  };
+  const illustrations = ILLUST_MAP[roleId] || [];
+  if (!illustrations.length) return html;
+
+  // </p> 닫는 태그 위치를 모두 수집
+  const closePPositions = [];
+  const pClosePattern = /<\/p>/g;
+  let match;
+  while ((match = pClosePattern.exec(html)) !== null) {
+    closePPositions.push(match.index + match[0].length);
+  }
+  if (!closePPositions.length) return html;
+
+  // 삽화를 문단 사이에 균등 배치
+  // 전체 문단 수에서 균등 간격으로 삽입 위치 결정
+  const totalP = closePPositions.length;
+  const count = Math.min(illustrations.length, totalP - 1); // 마지막 문단 뒤는 제외
+  if (count <= 0) return html;
+
+  // 삽입 위치: 첫 문단은 건너뛰고, 이후 균등 분배
+  const step = Math.max(1, Math.floor((totalP - 1) / (count + 1)));
+  const insertPositions = [];
+  for (let i = 0; i < count; i++) {
+    const pIdx = Math.min(step * (i + 1), totalP - 1);
+    insertPositions.push(closePPositions[pIdx]);
+  }
+
+  // 뒤에서부터 삽입 (offset 계산 불필요)
+  for (let i = insertPositions.length - 1; i >= 0; i--) {
+    const pos = insertPositions[i];
+    const imgTag = `<div class="wiki-illust"><img src="${imgPath('illustrations', illustrations[i])}" alt="" loading="lazy" onerror="this.parentElement.remove()"></div>`;
+    html = html.slice(0, pos) + imgTag + html.slice(pos);
+  }
+
+  return html;
+}
+
 function _inlineMd(text) {
   return text
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -1925,7 +2204,9 @@ function _inlineMd(text) {
       // Wiki internal link: (xxx.md) or (xxx.md#anchor)
       if (href.endsWith('.md') || href.includes('.md#')) {
         const [file, anchor] = href.replace('.md', '').split('#');
-        return `<a href="javascript:void(0)" onclick="openWikiPage('${file}'${anchor ? `);setTimeout(()=>{const e=document.getElementById('${anchor}');if(e)e.scrollIntoView({behavior:'smooth'})},200` : ''})\" class="wiki-link">${label}</a>`;
+        // 역할 MD이면 인라인 아이콘 추가
+        const inlineIcon = ROLES[file] ? `<img class="wiki-role-icon" src="${roleIconSrc(file)}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+        return `${inlineIcon}<a href="javascript:void(0)" onclick="openWikiPage('${file}'${anchor ? `);setTimeout(()=>{const e=document.getElementById('${anchor}');if(e)e.scrollIntoView({behavior:'smooth'})},200` : ''})\" class="wiki-link">${label}</a>`;
       }
       if (href.startsWith('#')) {
         return `<a href="javascript:void(0)" onclick="document.getElementById('${href.slice(1)}')?.scrollIntoView({behavior:'smooth'})" class="wiki-link">${label}</a>`;
