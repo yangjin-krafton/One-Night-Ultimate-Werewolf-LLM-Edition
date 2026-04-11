@@ -10,7 +10,7 @@
 
 ## 1. TTS 대사 수정
 
-`scenarios_tts/<시나리오>.tts.json` 파일을 편집합니다.
+`public/assets/scenarios_tts/<시나리오>.tts.json` 파일을 편집합니다.
 
 현재 시나리오: `beginner_dark_fantasy`, `dark_citadel`
 
@@ -21,6 +21,8 @@
 - 문장 끝에 **마침표(`.`) 필수** → 문장 분할 + pause 삽입 기준
 - 한 문장이 3줄 이상이면 마침표로 분리 (긴 문장에서 음색 변화 방지)
 - **openingClips / nightOutroClips**: 배열로 여러 문장을 작성해도 TTS 생성 시 **자동으로 하나의 음성 파일로 합쳐서** 생성됩니다 (클립 분리 없음)
+- `쉿`, `크르릉`, `후후`, `히히`, `하아`, `어흠` 같은 숨소리·의성어·추임새는 넣지 않습니다
+- 캐릭터 말버릇은 효과음 대신 어휘와 어미로 표현합니다. 예: `조용히`, `끝까지`, `분명히 기억하세요`, `판을 더 비틀어라`
 
 ### pause 규칙 (자동 삽입)
 
@@ -79,7 +81,7 @@ python scripts/build_tts.py --skip-clean dark_citadel   # 특정 시나리오만
 에피소드별 전체 나레이션을 하나의 M4A로 합친 파일입니다.
 
 - 에피소드/player variant 폴더를 **동적으로 탐색** (ep1, ep2, ep3, pall 등)
-- role 순서는 `scenarios/<시나리오>.json`의 `roleWakeOrder` 기준
+- role 순서는 `public/assets/scenarios/<시나리오>.json`의 `roleWakeOrder` 기준
 - 출력 위치: `public/assets/voices/<시나리오>/preview/`
 - Preview만 재생성: `python scripts/build_tts.py --skip-generate`
 
@@ -112,7 +114,7 @@ $env:PYTHONUTF8 = "1"
 Remove-Item -Recurse -Force public\assets\voices\dark_citadel -ErrorAction SilentlyContinue
 
 # 2) TTS 생성
-python scripts/generate_scenario_audio.py --scenario scenarios_tts/dark_citadel.tts.json --tts qwen3 --characters-dir characters --no-concat-episodes --qwen3-use-xvec
+python scripts/generate_scenario_audio.py --scenario public/assets/scenarios_tts/dark_citadel.tts.json --tts qwen3 --characters-dir characters --no-concat-episodes --qwen3-use-xvec
 
 # 3) WAV → M4A
 Get-ChildItem -Recurse public\assets\voices\dark_citadel -Filter "voice.wav" | ForEach-Object {

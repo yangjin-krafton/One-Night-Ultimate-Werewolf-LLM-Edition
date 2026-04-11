@@ -1,21 +1,22 @@
 {
   "schemaVersion": 2,
-  "scenarioId": "beginner_dark_fantasy",
-  "scenarioMode": "beginner",
-  "title": "한밤의 늑대인간: 첫 밤 안내",
+  "scenarioId": "dark_citadel",
+  "scenarioMode": "advanced",
+  "title": "흑염의 성채: 저주받은 토벌대의 밤",
   "tags": [
-    "beginner",
-    "classic_theme",
-    "rules_first",
-    "all_roles",
-    "runtime_pool"
+    "advanced",
+    "dark_fantasy",
+    "base",
+    "daybreak",
+    "werewolf",
+    "all_roles"
   ],
   "episodeProfiles": {
     "ep1": "tutorial_long",
     "ep2": "standard_mid",
     "ep3": "expert_fast"
   },
-  "ttsSource": "scenarios_tts/beginner_dark_fantasy.tts.json",
+  "ttsSource": "assets/scenarios_tts/dark_citadel.tts.json",
   "rolePool": [
     "doppelganger",
     "werewolf", "werewolf",

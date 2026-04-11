@@ -289,7 +289,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--scenario",
-        default=str(ROOT / "scenarios_tts" / "ghost_survey_club.tts.json"),
+        default=str(ROOT / "public" / "assets" / "scenarios_tts" / "beginner_dark_fantasy.tts.json"),
         help="Scenario JSON path.",
     )
     parser.add_argument(

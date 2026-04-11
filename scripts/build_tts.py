@@ -112,9 +112,14 @@ def step_update_manifest(voices_dir: Path):
     print(f"[manifest] updated {len(m['clips'])} clips")
 
 
+ASSETS_DIR = ROOT / "public" / "assets"
+SCENARIOS_DIR = ASSETS_DIR / "scenarios"
+SCENARIOS_TTS_DIR = ASSETS_DIR / "scenarios_tts"
+
+
 def _load_wake_order(scenario_id: str) -> list[str]:
     """시나리오 JSON에서 roleWakeOrder를 읽어 반환. 없으면 DEFAULT_WAKE_ORDER."""
-    scenario_json = ROOT / "scenarios" / f"{scenario_id}.json"
+    scenario_json = SCENARIOS_DIR / f"{scenario_id}.json"
     if scenario_json.exists():
         try:
             data = json.loads(scenario_json.read_text("utf-8"))
@@ -222,9 +227,8 @@ def step_preview(scenario_id: str, voices_dir: Path):
 
 
 def _find_all_scenario_tts() -> list[Path]:
-    """scenarios_tts/ 아래 모든 *.tts.json 파일을 찾는다."""
-    d = ROOT / "scenarios_tts"
-    return sorted(d.glob("*.tts.json")) if d.exists() else []
+    """public/assets/scenarios_tts/ 아래 모든 *.tts.json 파일을 찾는다."""
+    return sorted(SCENARIOS_TTS_DIR.glob("*.tts.json")) if SCENARIOS_TTS_DIR.exists() else []
 
 
 def main():
@@ -249,7 +253,7 @@ def main():
 
     # Resolve which scenarios to build
     if args.scenario:
-        tts_path = ROOT / "scenarios_tts" / f"{args.scenario}.tts.json"
+        tts_path = SCENARIOS_TTS_DIR / f"{args.scenario}.tts.json"
         if not tts_path.exists():
             print(f"[error] 시나리오를 찾을 수 없습니다: {tts_path}")
             print(f"  사용 가능: {', '.join(choices)}")
@@ -258,7 +262,7 @@ def main():
     else:
         targets = all_tts
         if not targets:
-            print("[error] scenarios_tts/ 에 *.tts.json 파일이 없습니다.")
+            print(f"[error] {SCENARIOS_TTS_DIR} 에 *.tts.json 파일이 없습니다.")
             sys.exit(1)
 
     for tts_path in targets:

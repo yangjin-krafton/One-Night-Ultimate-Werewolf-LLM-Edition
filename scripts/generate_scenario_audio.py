@@ -58,13 +58,17 @@ def _load_concat_module() -> Any:
     return module
 
 
+ASSETS_DIR = ROOT / "public" / "assets"
+SCENARIOS_DIR = ASSETS_DIR / "scenarios"
+
+
 def _auto_wake_order_scenario_path(*, tts_scenario_path: Path) -> Path | None:
     """
-    Try to locate a runtime scenario JSON (under scenarios/) that contains roleWakeOrder.
+    Try to locate a runtime scenario JSON that contains roleWakeOrder.
 
     Convention:
-      scenarios_tts/<id>.tts.json  ->  scenarios/<id>.json
-      OR scenarios/<scenarioId>.json if scenarioId exists in the TTS JSON.
+      public/assets/scenarios_tts/<id>.tts.json  ->  public/assets/scenarios/<id>.json
+      OR public/assets/scenarios/<scenarioId>.json if scenarioId exists in the TTS JSON.
     """
     tts_scenario_path = Path(tts_scenario_path)
 
@@ -72,7 +76,7 @@ def _auto_wake_order_scenario_path(*, tts_scenario_path: Path) -> Path | None:
     name = tts_scenario_path.name
     if name.endswith(".tts.json"):
         stem = name[: -len(".tts.json")]
-        candidate = ROOT / "scenarios" / f"{stem}.json"
+        candidate = SCENARIOS_DIR / f"{stem}.json"
         if candidate.exists():
             return candidate
 
@@ -81,7 +85,7 @@ def _auto_wake_order_scenario_path(*, tts_scenario_path: Path) -> Path | None:
         raw = json.loads(tts_scenario_path.read_text(encoding="utf-8"))
         scenario_id = str(raw.get("scenarioId") or "").strip()
         if scenario_id:
-            candidate = ROOT / "scenarios" / f"{scenario_id}.json"
+            candidate = SCENARIOS_DIR / f"{scenario_id}.json"
             if candidate.exists():
                 return candidate
     except Exception:
@@ -342,7 +346,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--scenario",
-        default=str(ROOT / "scenarios_tts" / "ghost_survey_club.tts.json"),
+        default=str(ASSETS_DIR / "scenarios_tts" / "beginner_dark_fantasy.tts.json"),
         help="Scenario JSON path.",
     )
     parser.add_argument(
