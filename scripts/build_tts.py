@@ -20,14 +20,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CHARACTERS_DIR = ROOT / "characters"
 
-# Night wake order for preview concat
-WAKE_ORDER = [
-    "sentinel", "werewolf", "alpha_wolf", "mystic_wolf", "dream_wolf",
-    "minion", "mason",
+# Fallback night wake order for preview concat (used when scenario JSON has no roleWakeOrder)
+DEFAULT_WAKE_ORDER = [
+    "doppelganger", "werewolf", "alpha_wolf", "mystic_wolf", "dream_wolf",
+    "minion", "squire", "mason", "thing",
     "seer", "apprentice_seer", "paranormal_investigator",
     "robber", "witch", "troublemaker",
-    "village_idiot", "drunk", "curator",
-    "insomniac", "revealer", "bodyguard",
+    "village_idiot", "drunk", "aura_seer", "beholder",
+    "revealer", "insomniac",
 ]
 
 
@@ -112,6 +112,34 @@ def step_update_manifest(voices_dir: Path):
     print(f"[manifest] updated {len(m['clips'])} clips")
 
 
+def _load_wake_order(scenario_id: str) -> list[str]:
+    """시나리오 JSON에서 roleWakeOrder를 읽어 반환. 없으면 DEFAULT_WAKE_ORDER."""
+    scenario_json = ROOT / "scenarios" / f"{scenario_id}.json"
+    if scenario_json.exists():
+        try:
+            data = json.loads(scenario_json.read_text("utf-8"))
+            order = data.get("roleWakeOrder")
+            if isinstance(order, list) and order:
+                return [str(r) for r in order]
+        except Exception:
+            pass
+    return list(DEFAULT_WAKE_ORDER)
+
+
+def _collect_numbered_clips(base_dir: Path) -> list[Path]:
+    """base_dir 아래 001/, 002/, ... 순서대로 voice.m4a 를 수집."""
+    if not base_dir.exists():
+        return []
+    clips: list[Path] = []
+    for num_dir in sorted(base_dir.iterdir()):
+        if not num_dir.is_dir():
+            continue
+        f = num_dir / "voice.m4a"
+        if f.exists():
+            clips.append(f)
+    return clips
+
+
 def step_preview(scenario_id: str, voices_dir: Path):
     """5) 에피소드별 미리듣기 통합본 생성"""
     ffmpeg = shutil.which("ffmpeg")
@@ -122,46 +150,75 @@ def step_preview(scenario_id: str, voices_dir: Path):
     preview_dir = voices_dir / "preview"
     preview_dir.mkdir(parents=True, exist_ok=True)
 
-    for ep in ["ep1", "ep2"]:
-        files: list[Path] = []
-        # Opening
-        f = voices_dir / ep / "p10" / "opening" / "001" / "voice.m4a"
-        if f.exists():
-            files.append(f)
-        # Role clips in wake order
-        for role in WAKE_ORDER:
-            for part in ["during", "after"]:
-                f = voices_dir / ep / "p10" / "role" / role / part / "001" / "voice.m4a"
-                if f.exists():
-                    files.append(f)
-        # Outro
-        f = voices_dir / ep / "p10" / "outro" / "001" / "voice.m4a"
-        if f.exists():
-            files.append(f)
+    wake_order = _load_wake_order(scenario_id)
 
-        if not files:
-            print(f"[preview] {ep}: no files found")
+    # 에피소드 폴더 동적 탐색
+    ep_dirs = sorted(
+        d for d in voices_dir.iterdir()
+        if d.is_dir() and d.name.startswith("ep")
+    )
+    if not ep_dirs:
+        print("[preview] no episode directories found")
+        return
+
+    for ep_dir in ep_dirs:
+        ep = ep_dir.name
+        # player variant 폴더 동적 탐색 (pall, p10, etc.)
+        variant_dirs = sorted(
+            d for d in ep_dir.iterdir()
+            if d.is_dir() and d.name.startswith("p")
+        )
+        if not variant_dirs:
+            print(f"[preview] {ep}: no variant directories found")
             continue
 
-        list_file = preview_dir / f"_{ep}_list.txt"
-        list_file.write_text(
-            "\n".join(f"file '{p}'" for p in files),
-            encoding="utf-8",
-        )
+        for variant_dir in variant_dirs:
+            variant = variant_dir.name
+            files: list[Path] = []
 
-        out = preview_dir / f"{scenario_id}_{ep}_preview.m4a"
-        result = subprocess.run(
-            [ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(list_file),
-             "-c:a", "aac", "-b:a", "64k", "-ar", "32000", "-ac", "1", str(out)],
-            capture_output=True,
-        )
-        list_file.unlink(missing_ok=True)
+            # Opening — 모든 번호 클립 수집
+            files.extend(_collect_numbered_clips(variant_dir / "opening"))
 
-        if result.returncode == 0:
-            size_kb = out.stat().st_size // 1024
-            print(f"[preview] {ep} -> {out.name} ({size_kb}KB)")
-        else:
-            print(f"[preview] {ep} FAILED")
+            # Role clips in wake order
+            role_base = variant_dir / "role"
+            for role in wake_order:
+                for part in ["before", "during", "after"]:
+                    files.extend(_collect_numbered_clips(role_base / role / part))
+            # wake_order에 없지만 디렉토리에 존재하는 role도 포함
+            if role_base.exists():
+                existing_roles = {d.name for d in role_base.iterdir() if d.is_dir()}
+                extra_roles = sorted(existing_roles - set(wake_order))
+                for role in extra_roles:
+                    for part in ["before", "during", "after"]:
+                        files.extend(_collect_numbered_clips(role_base / role / part))
+
+            # Outro — 모든 번호 클립 수집
+            files.extend(_collect_numbered_clips(variant_dir / "outro"))
+
+            if not files:
+                print(f"[preview] {ep}/{variant}: no files found")
+                continue
+
+            list_file = preview_dir / f"_{ep}_{variant}_list.txt"
+            list_file.write_text(
+                "\n".join(f"file '{p}'" for p in files),
+                encoding="utf-8",
+            )
+
+            out = preview_dir / f"{scenario_id}_{ep}_{variant}_preview.m4a"
+            result = subprocess.run(
+                [ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(list_file),
+                 "-c:a", "aac", "-b:a", "64k", "-ar", "32000", "-ac", "1", str(out)],
+                capture_output=True,
+            )
+            list_file.unlink(missing_ok=True)
+
+            if result.returncode == 0:
+                size_kb = out.stat().st_size // 1024
+                print(f"[preview] {ep}/{variant} -> {out.name} ({size_kb}KB)")
+            else:
+                stderr = result.stderr.decode("utf-8", errors="replace")[:200] if result.stderr else ""
+                print(f"[preview] {ep}/{variant} FAILED: {stderr}")
 
 
 def _find_all_scenario_tts() -> list[Path]:
@@ -211,7 +268,7 @@ def main():
         print(f"  TTS Build: {scenario_id}  ({tts_path.name})")
         print("=" * 60)
 
-        if not args.skip_clean and not args.skip_generate:
+        if not args.skip_clean and not args.skip_generate and not args.dry_run:
             step_clean(voices_dir)
 
         if not args.skip_generate:

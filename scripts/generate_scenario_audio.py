@@ -115,8 +115,13 @@ def _iter_clips_from_variant(narration: dict[str, Any]) -> Iterable[tuple[str, s
             return out
         return []
 
-    for idx, clip in enumerate(_coerce_clip_list(narration.get("openingClips"), default_speaker_id="Narrator"), start=1):
-        yield (f"opening/{idx:03d}", str(clip.get("speakerId") or "Narrator"), str(clip.get("text") or ""))
+    # Opening — 같은 speakerId 끼리 텍스트를 합쳐서 하나의 클립으로 생성
+    opening_clips = _coerce_clip_list(narration.get("openingClips"), default_speaker_id="Narrator")
+    if opening_clips:
+        merged_text = " ".join(str(c.get("text") or "") for c in opening_clips).strip()
+        merged_speaker = str(opening_clips[0].get("speakerId") or "Narrator")
+        if merged_text:
+            yield (f"opening/001", merged_speaker, merged_text)
 
     role_clips = narration.get("roleClips") or {}
     for role_key in sorted(role_clips.keys()):
@@ -142,8 +147,13 @@ def _iter_clips_from_variant(narration: dict[str, Any]) -> Iterable[tuple[str, s
                 str(clip.get("text") or ""),
             )
 
-    for idx, clip in enumerate(_coerce_clip_list(narration.get("nightOutroClips"), default_speaker_id="Narrator"), start=1):
-        yield (f"outro/{idx:03d}", str(clip.get("speakerId") or "Narrator"), str(clip.get("text") or ""))
+    # Outro — 같은 speakerId 끼리 텍스트를 합쳐서 하나의 클립으로 생성
+    outro_clips = _coerce_clip_list(narration.get("nightOutroClips"), default_speaker_id="Narrator")
+    if outro_clips:
+        merged_text = " ".join(str(c.get("text") or "") for c in outro_clips).strip()
+        merged_speaker = str(outro_clips[0].get("speakerId") or "Narrator")
+        if merged_text:
+            yield (f"outro/001", merged_speaker, merged_text)
 
 
 def build_jobs(
@@ -538,8 +548,12 @@ def main() -> int:
         if backend == "auto":
             backend = "gpt-sovits" if character_cfg else "windows"
 
-        # Skip if output already exists (resume support)
-        if job.out_wav_path.exists() and job.out_wav_path.stat().st_size > 0:
+        # Skip if output already exists (resume support) — check both .wav and .m4a
+        existing_path = job.out_wav_path
+        m4a_path = job.out_wav_path.with_suffix(".m4a")
+        if not (existing_path.exists() and existing_path.stat().st_size > 0):
+            existing_path = m4a_path
+        if existing_path.exists() and existing_path.stat().st_size > 0:
             print(f"[{i}/{len(jobs)}] SKIP (exists) {job.clip_id}")
             manifest.append({
                 "clipId": job.clip_id, "speakerId": job.speaker_id, "backend": backend,
