@@ -279,23 +279,29 @@ function generateRandomDeck(playerCount, scenarioId) {
   const maxWolf = playerCount <= 4 ? 2 : playerCount <= 6 ? 3 : playerCount <= 8 ? 3 : 4;
 
   // Build pools dynamically based on active expansions
+  // 3~4인: minion/squire 제외 (소인원에서 늑대 보조가 너무 강함)
   const wolfUnits = [
     ['werewolf'],
     ['werewolf'],
     ['alpha_wolf'],
     ['mystic_wolf'],
     ['dream_wolf'],
-    ['minion'],
-    ['squire'],
+    ...(playerCount >= 5 ? [['minion']] : []),
+    ...(playerCount >= 5 ? [['squire']] : []),
   ].filter(u => u.every(allowed));
 
-  const villageUnits = [
+  // 핵심 마을 역할 (반드시 우선 투입)
+  const coreVillageUnits = [
     ['seer'],
     ['robber'],
     ['troublemaker'],
+  ].filter(u => u.every(allowed));
+
+  // 일반 마을 역할
+  const villageUnits = [
     ['drunk'],
     ['insomniac'],
-    ['mason', 'mason'],
+    ...(playerCount >= 5 ? [['mason', 'mason']] : []), // 5인 이상만 mason 쌍 허용
     ['hunter'],
     ['doppelganger'],
     // 데이브레이크
@@ -313,11 +319,11 @@ function generateRandomDeck(playerCount, scenarioId) {
     ['beholder'],
   ].filter(u => u.every(allowed));
 
-  // Tanner / independent pool
+  // Tanner / independent pool — apprentice_tanner는 tanner와 함께만 투입
   const specialUnits = [
     ['tanner'],
-    ['apprentice_tanner'],
   ].filter(u => u.every(allowed));
+  const hasTannerExpansion = allowed('apprentice_tanner');
 
   // === Budget calculation ===
   const wolfBudget = maxWolf;
@@ -325,11 +331,17 @@ function generateRandomDeck(playerCount, scenarioId) {
   const deck = [];
   let wolfCount = 0;
 
-  // Guarantee at least 1 werewolf and 1 seer
+  // 1) Guarantee at least 1 werewolf
   deck.push('werewolf'); wolfCount++;
-  deck.push('seer');
 
-  // Fill wolf cards
+  // 2) Guarantee core village roles (seer + 1~2 action roles for info balance)
+  // seer는 반드시, robber/troublemaker는 인원에 따라
+  for (const unit of coreVillageUnits) {
+    if (deck.length + unit.length > need) continue;
+    deck.push(...unit);
+  }
+
+  // 3) Fill wolf cards
   for (const unit of shuffle([...wolfUnits])) {
     if (deck.length + unit.length > need) continue;
     const uw = unit.filter(r => ROLES[r]?.team === 'wolf').length;
@@ -345,24 +357,27 @@ function generateRandomDeck(playerCount, scenarioId) {
     deck.push(...unit); wolfCount += uw;
   }
 
-  // Maybe add tanner (30% chance)
-  if (deck.length < need && specialUnits.length > 0 && Math.random() < 0.3) {
-    for (const unit of shuffle([...specialUnits])) {
-      if (deck.length + unit.length > need) continue;
-      deck.push(...unit);
-      break;
+  // 4) Maybe add tanner (30% chance, 5인 이상)
+  if (playerCount >= 5 && deck.length < need && specialUnits.length > 0 && Math.random() < 0.3) {
+    deck.push('tanner');
+    // apprentice_tanner는 tanner가 들어갔을 때만 50% 확률로 추가
+    if (hasTannerExpansion && deck.length < need && Math.random() < 0.5) {
+      deck.push('apprentice_tanner');
     }
   }
 
-  // Fill village cards (skip seer, already added)
+  // 5) Fill remaining with village cards (skip already-added core roles)
+  const added = new Set(deck);
   for (const unit of shuffle([...villageUnits])) {
     if (deck.length >= need) break;
-    if (unit.length === 1 && unit[0] === 'seer') continue;
+    // 이미 추가된 단일 역할은 건너뛰기
+    if (unit.length === 1 && added.has(unit[0])) continue;
     if (deck.length + unit.length > need) continue;
     deck.push(...unit);
+    unit.forEach(r => added.add(r));
   }
 
-  // Pad with villager if needed
+  // 6) Pad with villager if needed
   while (deck.length < need) deck.push('villager');
 
   return deck;
