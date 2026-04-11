@@ -64,13 +64,6 @@
       { term: "하수인", color: "#fb7185" },
       { term: "미니언", color: "#fb7185" },
 
-      { term: "vampire", color: "#fb7185" },
-      { term: "뱀파이어", color: "#fb7185" },
-      { term: "count", color: "#fb7185" },
-      { term: "백작", color: "#fb7185" },
-      { term: "renfield", color: "#fb7185" },
-      { term: "렌필드", color: "#fb7185" },
-
       { term: "예언자", color: "#22d3ee" },
       { term: "seer", color: "#22d3ee" },
       { term: "apprentice_seer", color: "#67e8f9" },
@@ -115,19 +108,8 @@
       { term: "village_idiot", color: "#fbbf24" },
       { term: "마을 바보", color: "#fbbf24" },
 
-      { term: "marksman", color: "#93c5fd" },
-      { term: "명사수", color: "#93c5fd" },
-      { term: "pickpocket", color: "#f59e0b" },
-      { term: "소매치기", color: "#f59e0b" },
-      { term: "gremlin", color: "#fbbf24" },
-      { term: "그렘린", color: "#fbbf24" },
-      { term: "assassin", color: "#c4b5fd" },
-      { term: "암살자", color: "#c4b5fd" },
-
       { term: "doppelganger", color: "#c4b5fd" },
       { term: "도플갱어", color: "#c4b5fd" },
-      { term: "copycat", color: "#22d3ee" },
-      { term: "카피캣", color: "#22d3ee" },
       { term: "thing", color: "#2dd4bf" },
       { term: "더 씽", color: "#2dd4bf" },
 

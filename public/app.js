@@ -4,13 +4,11 @@
    ============================================================ */
 
 // ===== ROLE DATA =====
-// Teams: village, wolf, tanner, vampire, alien
+// Teams: village, wolf, tanner
 const TEAM_META = {
   village: { label: '마을 팀',     css: 'role-card--village' },
   wolf:    { label: '늑대 팀',     css: 'role-card--wolf' },
   tanner:  { label: '독립 (무두장이)', css: 'role-card--tanner' },
-  vampire: { label: '뱀파이어 팀', css: 'role-card--vampire' },
-  alien:   { label: '에일리언 팀', css: 'role-card--alien' },
 };
 
 const ROLES = {
@@ -52,38 +50,6 @@ const ROLES = {
   squire:                  { name: '종자',           team: 'wolf',    emoji: '🛡️🐺', desc: '늑대인간이 누구인지 확인할 수 있는 늑대 팀 보조 역할입니다. 하수인과 비슷하지만 별도로 행동합니다.', expansion: 'bonus2' },
   beholder:                { name: '주시자',         team: 'village', emoji: '👀', desc: '예언자가 누구인지 확인합니다. 예언자의 정체를 아는 마을 보조 역할입니다.', expansion: 'bonus2' },
 
-  // ── 뱀파이어 확장 ──
-  copycat:                 { name: '카피캣',         team: 'village', emoji: '🐱', desc: '황혼에 센터 카드 1장을 보고 그 역할이 됩니다. 밤 행동이 있는 역할이면 해당 순서에 다시 행동합니다.', expansion: 'vampire' },
-  vampire:                 { name: '뱀파이어',       team: 'vampire', emoji: '🧛', desc: '다른 뱀파이어를 확인하고, 뱀파이어가 아닌 사람 1명에게 뱀파이어 표식을 줘서 뱀파이어 팀으로 만듭니다.', expansion: 'vampire' },
-  count:                   { name: '백작',           team: 'vampire', emoji: '🧛‍♂️', desc: '공포의 표식을 줘서 대상의 밤 행동을 막을 수 있습니다.', expansion: 'vampire' },
-  renfield:                { name: '랜필드',         team: 'vampire', emoji: '🦇', desc: '뱀파이어 팀 보조 역할입니다. 뱀파이어가 표식을 준 대상을 확인할 수 있습니다.', expansion: 'vampire' },
-  diseased:                { name: '감염자',         team: 'village', emoji: '🤒', desc: '옆 사람에게 질병의 표식을 줍니다. 질병 표식은 투표 패배 조건에 영향을 줍니다.', expansion: 'vampire' },
-  cupid:                   { name: '큐피트',         team: 'village', emoji: '💘', desc: '두 사람에게 사랑의 표식을 줍니다. 한 명이 죽으면 다른 한 명도 함께 죽습니다.', expansion: 'vampire' },
-  instigator:              { name: '선동가',         team: 'village', emoji: '📢', desc: '배신의 표식을 줍니다. 표식을 받은 사람의 승리 조건이 뒤바뀝니다.', expansion: 'vampire' },
-  priest:                  { name: '성직자',         team: 'village', emoji: '⛪', desc: '결백의 표식으로 다른 나쁜 표식을 정화합니다.', expansion: 'vampire' },
-  assassin:                { name: '암살자',         team: 'village', emoji: '🗡️💀', desc: '암살 표식을 줍니다. 표식을 받은 사람이 죽으면 암살자가 승리하는 독립 승리 조건입니다.', expansion: 'vampire' },
-  apprentice_assassin:     { name: '견습 암살자',    team: 'village', emoji: '🗡️✨', desc: '암살자와 함께 행동합니다. 암살자가 없으면 일반 마을 주민처럼 행동합니다.', expansion: 'vampire' },
-  marksman:                { name: '저격수',         team: 'village', emoji: '🎯', desc: '카드와 표식을 각각 확인할 수 있습니다. 황혼과 밤에 각각 행동합니다.', expansion: 'vampire' },
-  pickpocket:              { name: '소매치기',       team: 'village', emoji: '🤏', desc: '다른 플레이어와 표식을 바꾸고, 가져온 표식을 확인합니다.', expansion: 'vampire' },
-  gremlin:                 { name: '그렘린',         team: 'village', emoji: '👺', desc: '다른 플레이어의 카드 또는 표식을 뒤섞을 수 있습니다.', expansion: 'vampire' },
-  vampire_lord:            { name: '뱀파이어 군주',  team: 'vampire', emoji: '🧛👑', desc: '뱀파이어입니다. 뱀파이어가 최다 득표자인 특정 투표 상황에서 죽지 않습니다.', expansion: 'vampire' },
-
-  // ── 에일리언 확장 ──
-  oracle:                  { name: '오라클',         team: 'village', emoji: '🌀', desc: '앱의 질문에 답하고, 결과를 앱이 처리합니다. 답에 따라 다른 정보를 얻습니다.', expansion: 'alien' },
-  alien:                   { name: '에일리언',       team: 'alien',   emoji: '👽', desc: '다른 에일리언을 확인하고 앱 지시를 수행합니다. 에일리언 팀으로 행동합니다.', expansion: 'alien' },
-  synthetic_alien:         { name: '인조 외계인',    team: 'village', emoji: '🤖👽', desc: '에일리언처럼 눈을 뜨지만 에일리언 팀이 아닙니다. 별도의 승리 조건을 가집니다.', expansion: 'alien' },
-  cow:                     { name: '소',             team: 'village', emoji: '🐄', desc: '양옆에 에일리언이 있는지 신호로 확인합니다. 에일리언 탐지 보조 역할입니다.', expansion: 'alien' },
-  groob:                   { name: '그루브',         team: 'alien',   emoji: '👾', desc: '제르브와 함께 있을 때 특수 승리 조건을 가집니다.', expansion: 'alien' },
-  zerb:                    { name: '제르브',         team: 'alien',   emoji: '👾✨', desc: '그루브와 함께 있을 때 특수 승리 조건을 가집니다.', expansion: 'alien' },
-  leader:                  { name: '리더',           team: 'alien',   emoji: '👽👑', desc: '에일리언들을 확인하고, 일부 특수 승리 조건을 가집니다.', expansion: 'alien' },
-  psychic:                 { name: '초능력자',       team: 'village', emoji: '🧠', desc: '앱 지시에 따라 카드를 확인합니다.', expansion: 'alien' },
-  rascal:                  { name: '악동',           team: 'village', emoji: '😈', desc: '앱 지시에 따라 카드를 이동시킵니다.', expansion: 'alien' },
-  exposure:                { name: '폭로자',         team: 'village', emoji: '📸', desc: '앱 지시에 따라 카드를 공개합니다.', expansion: 'alien' },
-  blob:                    { name: '방울',           team: 'village', emoji: '🫧', desc: '자신과 양옆 플레이어 전체가 살아남아야 승리하는 특수 역할입니다.', expansion: 'alien' },
-  mortician:               { name: '장의사',         team: 'village', emoji: '⚰️', desc: '앱 지시에 따라 죽음과 관련된 정보를 확인합니다.', expansion: 'alien' },
-  body_snatcher:           { name: '바디 스내쳐',    team: 'village', emoji: '🫥', desc: '다른 플레이어 1명과 카드를 바꾸고, 새로 받은 카드를 확인합니다.', expansion: 'alien' },
-  nostradamus:             { name: '노스트라다무스', team: 'village', emoji: '📜', desc: '앱 지시에 따라 예측이나 선언을 남기는 예언형 역할입니다.', expansion: 'alien' },
-  empath:                  { name: '엠패스',         team: 'village', emoji: '💗', desc: '앱 지시에 따라 주변 반응이나 감정 단서를 감지합니다.', expansion: 'alien' },
 };
 
 // ===== ROLE DESC HIGHLIGHTS =====
@@ -213,116 +179,6 @@ const DESC_HIGHLIGHTS = {
   beholder: [
     { t: '예언자가 누구인지 확인', c: '#22d3ee' },
   ],
-  // 뱀파이어 확장
-  copycat: [
-    { t: '센터 카드 1장을 보고 그 역할이 됩니다', c: '#a78bfa' },
-  ],
-  vampire: [
-    { t: '다른 뱀파이어를 확인', c: '#9040c0' },
-    { t: '뱀파이어 표식', c: '#fb7185' },
-    { t: '뱀파이어 팀으로 만듭니다', c: '#fbbf24' },
-  ],
-  count: [
-    { t: '공포의 표식', c: '#fb7185' },
-    { t: '밤 행동을 막을 수 있습니다', c: '#fbbf24' },
-  ],
-  renfield: [
-    { t: '뱀파이어 팀 보조', c: '#9040c0' },
-    { t: '표식을 준 대상을 확인', c: '#22d3ee' },
-  ],
-  diseased: [
-    { t: '질병의 표식', c: '#fb7185' },
-    { t: '투표 패배 조건에 영향', c: '#fbbf24' },
-  ],
-  cupid: [
-    { t: '사랑의 표식', c: '#fb7185' },
-    { t: '함께 죽습니다', c: '#fbbf24' },
-  ],
-  instigator: [
-    { t: '배신의 표식', c: '#fb7185' },
-    { t: '승리 조건이 뒤바뀝니다', c: '#fbbf24' },
-  ],
-  priest: [
-    { t: '결백의 표식', c: '#34d399' },
-    { t: '정화합니다', c: '#22d3ee' },
-  ],
-  assassin: [
-    { t: '암살 표식', c: '#fb7185' },
-    { t: '독립 승리 조건', c: '#c88030' },
-  ],
-  apprentice_assassin: [
-    { t: '암살자와 함께 행동', c: '#fb7185' },
-  ],
-  marksman: [
-    { t: '카드와 표식을 각각 확인', c: '#22d3ee' },
-  ],
-  pickpocket: [
-    { t: '표식을 바꾸고', c: '#fbbf24' },
-    { t: '가져온 표식을 확인', c: '#22d3ee' },
-  ],
-  gremlin: [
-    { t: '카드 또는 표식을 뒤섞을 수 있습니다', c: '#fbbf24' },
-  ],
-  vampire_lord: [
-    { t: '죽지 않습니다', c: '#34d399' },
-  ],
-  // 에일리언 확장
-  oracle: [
-    { t: '앱의 질문에 답하고', c: '#22d3ee' },
-  ],
-  alien: [
-    { t: '다른 에일리언을 확인', c: '#40c060' },
-    { t: '앱 지시를 수행', c: '#fbbf24' },
-  ],
-  synthetic_alien: [
-    { t: '에일리언 팀이 아닙니다', c: '#94a3b8' },
-    { t: '별도의 승리 조건', c: '#c88030' },
-  ],
-  cow: [
-    { t: '에일리언이 있는지', c: '#40c060' },
-    { t: '신호로 확인', c: '#22d3ee' },
-  ],
-  groob: [
-    { t: '제르브와 함께', c: '#40c060' },
-    { t: '특수 승리 조건', c: '#fbbf24' },
-  ],
-  zerb: [
-    { t: '그루브와 함께', c: '#40c060' },
-    { t: '특수 승리 조건', c: '#fbbf24' },
-  ],
-  leader: [
-    { t: '에일리언들을 확인', c: '#40c060' },
-    { t: '특수 승리 조건', c: '#fbbf24' },
-  ],
-  psychic: [
-    { t: '앱 지시에 따라 카드를 확인', c: '#22d3ee' },
-  ],
-  rascal: [
-    { t: '앱 지시에 따라 카드를 이동', c: '#fbbf24' },
-  ],
-  exposure: [
-    { t: '앱 지시에 따라 카드를 공개', c: '#fb7185' },
-  ],
-  blob: [
-    { t: '양옆 플레이어 전체가 살아남아야', c: '#22d3ee' },
-    { t: '특수 역할', c: '#fbbf24' },
-  ],
-  mortician: [
-    { t: '죽음과 관련된 정보를 확인', c: '#fbbf24' },
-    { t: '앱 지시', c: '#22d3ee' },
-  ],
-  body_snatcher: [
-    { t: '카드를 바꾸고', c: '#fbbf24' },
-    { t: '새로 받은 카드를 확인', c: '#22d3ee' },
-  ],
-  nostradamus: [
-    { t: '예측이나 선언', c: '#c4b5fd' },
-    { t: '앱 지시', c: '#22d3ee' },
-  ],
-  empath: [
-    { t: '감정 단서를 감지', c: '#fda4af' },
-    { t: '앱 지시', c: '#22d3ee' },
-  ],
 };
 
 function highlightDesc(roleId, desc) {
@@ -343,8 +199,6 @@ const EXPANSIONS = [
   { id: 'daybreak',        name: '데이브레이크',     desc: '늑대 변종, 경비병, 마녀 등' },
   { id: 'daybreak_bonus1', name: '보너스팩 1',       desc: '영기 예언자, 왕자, 저주받은 자' },
   { id: 'bonus2',          name: '보너스팩 2',       desc: '종자, 주시자, 견습 무두장이 등' },
-  { id: 'vampire',         name: '뱀파이어',         desc: '황혼 단계, 표식 시스템' },
-  { id: 'alien',           name: '에일리언',         desc: '앱 연동, 에일리언 팀' },
 ];
 
 function loadExpansions() {
@@ -353,7 +207,7 @@ function loadExpansions() {
     if (saved && typeof saved === 'object') return saved;
   } catch {}
   // Default: base + daybreak
-  return { base: true, daybreak: true, daybreak_bonus1: false, bonus2: false, vampire: false, alien: false };
+  return { base: true, daybreak: true, daybreak_bonus1: false, bonus2: false };
 }
 
 function saveExpansions(exps) {
@@ -385,21 +239,6 @@ const ROLE_IDS = [
   'aura_seer','prince','cursed',
   // 보너스팩2 (4)
   'apprentice_tanner','thing','squire','beholder',
-  // 뱀파이어 확장 (14)
-  'copycat','vampire','count','renfield','diseased','cupid',
-  'instigator','priest','assassin','apprentice_assassin',
-  'marksman','pickpocket','gremlin','vampire_lord',
-  // 에일리언 확장 (15)
-  'oracle','alien','synthetic_alien','cow','groob','zerb',
-  'leader','psychic','rascal','exposure','blob',
-  'mortician','body_snatcher','nostradamus','empath',
-];
-
-// 황혼 단계 (뱀파이어 확장)
-const DUSK_ORDER = [
-  'copycat','vampire','count','renfield',
-  'diseased','cupid','instigator','priest',
-  'assassin','apprentice_assassin','marksman','pickpocket',
 ];
 
 // 밤 단계
@@ -408,28 +247,23 @@ const NIGHT_ORDER = [
   'werewolf','alpha_wolf','mystic_wolf','dream_wolf',
   'minion','mason',
   'seer','apprentice_seer','paranormal_investigator',
-  'psychic',
-  'robber','witch','body_snatcher','troublemaker',
+  'robber','witch','troublemaker',
   'village_idiot','drunk',
-  'aura_seer','thing','beholder','squire','empath',
-  'gremlin','marksman',
-  // 에일리언
-  'oracle','alien','synthetic_alien','cow',
-  'groob','zerb','leader','rascal','exposure','nostradamus','blob','mortician',
+  'aura_seer','thing','beholder','squire',
   // 마지막
-  'insomniac','curator','revealer','bodyguard','renfield',
+  'insomniac','curator','revealer','bodyguard',
 ];
 
 function encodeDeck(deck) {
-  // Each role can appear 0-3 times → 2 bits each. 59 roles × 2 = 118 bits → base62(~21 chars)
+  // Each role can appear 0-3 times → 2 bits each. 30 roles × 2 = 60 bits → base62(~11 chars)
   const counts = ROLE_IDS.map(r => deck.filter(d => d === r).length);
   let val = 0n;
   for (let i = 0; i < counts.length; i++) val = val * 4n + BigInt(counts[i]);
   let code = '';
   let v = val;
-  if (v === 0n) return '0'.padStart(21, '0');
+  if (v === 0n) return '0'.padStart(11, '0');
   while (v > 0n) { code = _B62[Number(v % 62n)] + code; v = v / 62n; }
-  return code.padStart(21, '0');
+  return code.padStart(11, '0');
 }
 
 function decodeDeck(code) {
@@ -445,15 +279,9 @@ function decodeDeck(code) {
   return deck;
 }
 
-function deriveDuskOrder(deck) {
-  const present = new Set(deck);
-  return DUSK_ORDER.filter(r => present.has(r));
-}
-
 function deriveWakeOrder(deck) {
   const present = new Set(deck);
-  const merged = [...DUSK_ORDER, ...NIGHT_ORDER];
-  return merged.filter((r, idx) => present.has(r) && merged.indexOf(r) === idx);
+  return NIGHT_ORDER.filter(r => present.has(r));
 }
 
 function generateRandomDeck(playerCount, scenarioId) {
@@ -501,47 +329,6 @@ function generateRandomDeck(playerCount, scenarioId) {
     // 보너스팩2
     ['thing'],
     ['beholder'],
-    // 뱀파이어 마을 역할
-    ['copycat'],
-    ['diseased'],
-    ['cupid'],
-    ['instigator'],
-    ['priest'],
-    ['assassin'],
-    ['apprentice_assassin'],
-    ['marksman'],
-    ['pickpocket'],
-    ['gremlin'],
-    // 에일리언 마을 역할
-    ['oracle'],
-    ['synthetic_alien'],
-    ['cow'],
-    ['psychic'],
-    ['rascal'],
-    ['exposure'],
-    ['blob'],
-    ['mortician'],
-    ['body_snatcher'],
-    ['nostradamus'],
-    ['empath'],
-  ].filter(u => u.every(allowed));
-
-  // Vampire pool
-  const vampireUnits = [
-    ['vampire'],
-    ['vampire'],
-    ['count'],
-    ['renfield'],
-    ['vampire_lord'],
-  ].filter(u => u.every(allowed));
-
-  // Alien pool
-  const alienUnits = [
-    ['alien'],
-    ['alien'],
-    ['groob'],
-    ['zerb'],
-    ['leader'],
   ].filter(u => u.every(allowed));
 
   // Tanner / independent pool
@@ -551,19 +338,10 @@ function generateRandomDeck(playerCount, scenarioId) {
   ].filter(u => u.every(allowed));
 
   // === Budget calculation ===
-  // Multi-team balancing: enemies = wolf + vampire + alien budget total
-  const hasVampire = exps.vampire && vampireUnits.length > 0;
-  const hasAlien = exps.alien && alienUnits.length > 0;
-  // Total enemy budget (wolf + others) stays proportional
-  const maxVampire = hasVampire ? (playerCount <= 6 ? 1 : playerCount <= 8 ? 2 : 2) : 0;
-  const maxAlien = hasAlien ? (playerCount <= 6 ? 1 : playerCount <= 8 ? 2 : 2) : 0;
-  // Reduce wolf budget when other enemy teams present
-  const wolfBudget = Math.max(1, maxWolf - (hasVampire ? 1 : 0) - (hasAlien ? 1 : 0));
+  const wolfBudget = maxWolf;
 
   const deck = [];
   let wolfCount = 0;
-  let vampCount = 0;
-  let alienCount = 0;
 
   // Guarantee at least 1 werewolf and 1 seer
   deck.push('werewolf'); wolfCount++;
@@ -583,24 +361,6 @@ function generateRandomDeck(playerCount, scenarioId) {
       continue;
     }
     deck.push(...unit); wolfCount += uw;
-  }
-
-  // Fill vampire cards
-  if (maxVampire > 0) {
-    for (const unit of shuffle([...vampireUnits])) {
-      if (deck.length + unit.length > need) continue;
-      if (vampCount + unit.length > maxVampire) continue;
-      deck.push(...unit); vampCount += unit.length;
-    }
-  }
-
-  // Fill alien cards
-  if (maxAlien > 0) {
-    for (const unit of shuffle([...alienUnits])) {
-      if (deck.length + unit.length > need) continue;
-      if (alienCount + unit.length > maxAlien) continue;
-      deck.push(...unit); alienCount += unit.length;
-    }
   }
 
   // Maybe add tanner (30% chance)
@@ -706,10 +466,10 @@ const state = {
 };
 
 // ===== ROOM CODE =====
-// v3: scenario(4 bits) + episode(2 bits) + deck(59 roles × 2 bits = 118 bits) = 124 bits → base62(21 chars)
+// v3: scenario(4 bits) + episode(2 bits) + deck(30 roles × 2 bits = 60 bits) = 66 bits → base62(~12 chars)
 // Player count derived from deck.length - 3.
 const _B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-const _DECK_BITS = BigInt(ROLE_IDS.length * 2); // 110
+const _DECK_BITS = BigInt(ROLE_IDS.length * 2); // 60
 
 function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
   const sIdx = BigInt(Math.max(0, SCENARIOS.findIndex(s => s.id === scenarioId)));
@@ -721,14 +481,14 @@ function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
   const val = (sIdx << (_DECK_BITS + 2n)) | (epBits << _DECK_BITS) | deckVal;
   let code = '';
   let v = val;
-  if (v === 0n) return '0'.padStart(21, '0');
+  if (v === 0n) return '0'.padStart(11, '0');
   while (v > 0n) { code = _B62[Number(v % 62n)] + code; v = v / 62n; }
-  return code.padStart(21, '0');
+  return code.padStart(11, '0');
 }
 
 function decodeRoomCode(code) {
   code = code.trim();
-  if (code.length < 6 || code.length > 22) return null;
+  if (code.length < 6 || code.length > 12) return null;
   let val = 0n;
   for (const ch of code) {
     const idx = _B62.indexOf(ch);
