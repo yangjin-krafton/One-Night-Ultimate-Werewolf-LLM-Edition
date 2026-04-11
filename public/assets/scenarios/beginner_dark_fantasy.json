@@ -15,6 +15,12 @@
     "ep2": "standard_mid",
     "ep3": "expert_fast"
   },
+  "subtitle": "초보자형 · 원작 테마 · 전체 역할 풀",
+  "episodeTitles": {
+    "ep1": "EP1: 첫 밤 안내",
+    "ep2": "EP2: 표준 진행",
+    "ep3": "EP3: 빠른 진행"
+  },
   "ttsSource": "assets/scenarios_tts/beginner_dark_fantasy.tts.json",
   "rolePool": [
     "doppelganger",

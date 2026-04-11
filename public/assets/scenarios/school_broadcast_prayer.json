@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 2,
+  "scenarioId": "school_broadcast_prayer",
+  "scenarioMode": "advanced",
+  "title": "교내 방송실: 마지막 기도와 문 앞의 원수",
+  "tags": [
+    "advanced",
+    "school_horror",
+    "occult",
+    "base",
+    "daybreak",
+    "werewolf",
+    "all_roles"
+  ],
+  "episodeProfiles": {
+    "ep1": "tutorial_long",
+    "ep2": "standard_mid",
+    "ep3": "expert_fast"
+  },
+  "ttsSource": "assets/scenarios_tts/school_broadcast_prayer.tts.json",
+  "rolePool": [
+    "doppelganger",
+    "werewolf", "werewolf",
+    "alpha_wolf",
+    "mystic_wolf",
+    "dream_wolf",
+    "minion",
+    "mason", "mason",
+    "seer",
+    "apprentice_seer",
+    "paranormal_investigator",
+    "robber",
+    "witch",
+    "troublemaker",
+    "village_idiot",
+    "drunk",
+    "insomniac",
+    "aura_seer",
+    "revealer",
+    "villager", "villager", "villager",
+    "hunter",
+    "tanner",
+    "prince",
+    "cursed",
+    "apprentice_tanner",
+    "thing",
+    "squire",
+    "beholder"
+  ],
+  "roleWakeOrder": [
+    "doppelganger",
+    "werewolf",
+    "alpha_wolf",
+    "mystic_wolf",
+    "dream_wolf",
+    "minion",
+    "squire",
+    "mason",
+    "thing",
+    "seer",
+    "apprentice_seer",
+    "paranormal_investigator",
+    "robber",
+    "witch",
+    "troublemaker",
+    "village_idiot",
+    "drunk",
+    "aura_seer",
+    "beholder",
+    "revealer",
+    "insomniac"
+  ],
+  "narration": {
+    "playbackPolicy": {
+      "narratorAllowedPhases": ["episode_start"],
+      "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+    },
+    "openingClipCount": 1,
+    "nightOutroClipCount": 1,
+    "roleClipCount": 1
+  }
+}

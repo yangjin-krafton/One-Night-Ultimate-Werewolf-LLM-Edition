@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 2,
+  "scenarioId": "floodgate_nameplates",
+  "scenarioMode": "advanced",
+  "title": "제방 수문: 젖은 이름패의 밤",
+  "tags": [
+    "advanced",
+    "colonial_horror",
+    "folk_occult",
+    "base",
+    "daybreak",
+    "werewolf",
+    "all_roles"
+  ],
+  "episodeProfiles": {
+    "ep1": "tutorial_long",
+    "ep2": "standard_mid",
+    "ep3": "expert_fast"
+  },
+  "subtitle": "숙련자형 · 식민지 괴담 · 전체 역할 풀",
+  "episodeTitles": {
+    "ep1": "EP1: 젖은 이름패",
+    "ep2": "EP2: 물속의 이름",
+    "ep3": "EP3: 수문을 지킨 배신자"
+  },
+  "ttsSource": "assets/scenarios_tts/floodgate_nameplates.tts.json",
+  "rolePool": [
+    "doppelganger",
+    "werewolf", "werewolf",
+    "alpha_wolf",
+    "mystic_wolf",
+    "dream_wolf",
+    "minion",
+    "mason", "mason",
+    "seer",
+    "apprentice_seer",
+    "paranormal_investigator",
+    "robber",
+    "witch",
+    "troublemaker",
+    "village_idiot",
+    "drunk",
+    "insomniac",
+    "aura_seer",
+    "revealer",
+    "villager", "villager", "villager",
+    "hunter",
+    "tanner",
+    "prince",
+    "cursed",
+    "apprentice_tanner",
+    "thing",
+    "squire",
+    "beholder"
+  ],
+  "roleWakeOrder": [
+    "doppelganger",
+    "werewolf",
+    "alpha_wolf",
+    "mystic_wolf",
+    "dream_wolf",
+    "minion",
+    "squire",
+    "mason",
+    "thing",
+    "seer",
+    "apprentice_seer",
+    "paranormal_investigator",
+    "robber",
+    "witch",
+    "troublemaker",
+    "village_idiot",
+    "drunk",
+    "aura_seer",
+    "beholder",
+    "revealer",
+    "insomniac"
+  ],
+  "narration": {
+    "playbackPolicy": {
+      "narratorAllowedPhases": ["episode_start"],
+      "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+    },
+    "openingClipCount": 1,
+    "nightOutroClipCount": 1,
+    "roleClipCount": 1
+  }
+}

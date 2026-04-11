@@ -1,0 +1,176 @@
+[
+  {
+    "id": "beginner_dark_fantasy",
+    "title": "한밤의 늑대인간: 첫 밤 안내",
+    "subtitle": "초보자형 · 원작 테마 · 전체 역할 풀",
+    "playerCounts": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "episodes": [
+      {
+        "id": "ep1",
+        "title": "EP1: 첫 밤 안내"
+      },
+      {
+        "id": "ep2",
+        "title": "EP2: 표준 진행"
+      },
+      {
+        "id": "ep3",
+        "title": "EP3: 빠른 진행"
+      }
+    ]
+  },
+  {
+    "id": "dark_citadel",
+    "title": "흑염의 성채: 저주받은 토벌대의 밤",
+    "subtitle": "숙련자형 · 다크 판타지 · 전체 역할 풀",
+    "playerCounts": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "episodes": [
+      {
+        "id": "ep1",
+        "title": "EP1: 성채의 첫 번째 밤"
+      },
+      {
+        "id": "ep2",
+        "title": "EP2: 저주가 깊어지는 밤"
+      },
+      {
+        "id": "ep3",
+        "title": "EP3: 심연의 속삭임"
+      }
+    ]
+  },
+  {
+    "id": "floodgate_nameplates",
+    "title": "제방 수문: 젖은 이름패의 밤",
+    "subtitle": "숙련자형 · 식민지 괴담 · 전체 역할 풀",
+    "playerCounts": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "episodes": [
+      {
+        "id": "ep1",
+        "title": "EP1: 젖은 이름패"
+      },
+      {
+        "id": "ep2",
+        "title": "EP2: 물속의 이름"
+      },
+      {
+        "id": "ep3",
+        "title": "EP3: 수문을 지킨 배신자"
+      }
+    ]
+  },
+  {
+    "id": "rust_orbit",
+    "title": "녹슨 궤도 정거장: 동면창의 타인들",
+    "subtitle": "숙련자형 · SF 호러 · 전체 역할 풀",
+    "playerCounts": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "episodes": [
+      {
+        "id": "ep1",
+        "title": "EP1: 안내 진행"
+      },
+      {
+        "id": "ep2",
+        "title": "EP2: 표준 진행"
+      },
+      {
+        "id": "ep3",
+        "title": "EP3: 빠른 진행"
+      }
+    ]
+  },
+  {
+    "id": "salgol_ward",
+    "title": "살골 폐쇄병동: 대체 환자의 밤",
+    "subtitle": "숙련자형 · 병원 호러 · 전체 역할 풀",
+    "playerCounts": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "episodes": [
+      {
+        "id": "ep1",
+        "title": "EP1: 안내 진행"
+      },
+      {
+        "id": "ep2",
+        "title": "EP2: 표준 진행"
+      },
+      {
+        "id": "ep3",
+        "title": "EP3: 빠른 진행"
+      }
+    ]
+  },
+  {
+    "id": "school_broadcast_prayer",
+    "title": "교내 방송실: 마지막 기도와 문 앞의 원수",
+    "subtitle": "숙련자형 · 학교 호러 · 전체 역할 풀",
+    "playerCounts": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "episodes": [
+      {
+        "id": "ep1",
+        "title": "EP1: 안내 진행"
+      },
+      {
+        "id": "ep2",
+        "title": "EP2: 표준 진행"
+      },
+      {
+        "id": "ep3",
+        "title": "EP3: 빠른 진행"
+      }
+    ]
+  }
+]

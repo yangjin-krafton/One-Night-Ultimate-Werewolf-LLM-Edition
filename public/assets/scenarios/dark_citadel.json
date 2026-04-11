@@ -16,6 +16,12 @@
     "ep2": "standard_mid",
     "ep3": "expert_fast"
   },
+  "subtitle": "숙련자형 · 다크 판타지 · 전체 역할 풀",
+  "episodeTitles": {
+    "ep1": "EP1: 성채의 첫 번째 밤",
+    "ep2": "EP2: 저주가 깊어지는 밤",
+    "ep3": "EP3: 심연의 속삭임"
+  },
   "ttsSource": "assets/scenarios_tts/dark_citadel.tts.json",
   "rolePool": [
     "doppelganger",

@@ -383,64 +383,26 @@ function generateRandomDeck(playerCount, scenarioId) {
   return deck;
 }
 
-// ===== SCENARIO DATA (embedded) =====
-const BEGINNER_DARK_FANTASY_EPISODES = [
-  { id: 'ep1', title: 'EP1: 첫 밤 안내',
-    variants: {
-      '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
-      '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-      '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-      '6':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk'] },
-      '7':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '8':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '9':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '10': { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-    }
-  },
-  { id: 'ep2', title: 'EP2: 표준 진행',
-    variants: {
-      '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
-      '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-      '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-      '6':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk'] },
-      '7':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '8':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '9':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '10': { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-    }
-  },
-  { id: 'ep3', title: 'EP3: 빠른 진행',
-    variants: {
-      '3':  { deck: ['werewolf','seer','robber','troublemaker','villager','villager'], wakeOrder: ['werewolf','seer','robber','troublemaker'] },
-      '4':  { deck: ['werewolf','werewolf','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','seer','robber','troublemaker','drunk','insomniac'] },
-      '5':  { deck: ['werewolf','werewolf','minion','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','seer','robber','troublemaker','drunk','insomniac'] },
-      '6':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk'] },
-      '7':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '8':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '9':  { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-      '10': { deck: ['werewolf','werewolf','minion','mason','mason','seer','robber','troublemaker','drunk','insomniac','villager','villager','villager'], wakeOrder: ['werewolf','minion','mason','seer','robber','troublemaker','drunk','insomniac'] },
-    }
-  }
-];
+// ===== SCENARIO DATA (loaded from _index.json) =====
+let SCENARIOS = [];
 
-const DARK_CITADEL_EPISODES = [
-  { id: 'ep1', title: 'EP1: 성채의 첫 번째 밤', variants: {} },
-  { id: 'ep2', title: 'EP2: 저주가 깊어지는 밤', variants: {} },
-  { id: 'ep3', title: 'EP3: 심연의 속삭임', variants: {} },
-];
-
-const SCENARIOS = [
-  {
-    id: 'beginner_dark_fantasy', title: '한밤의 늑대인간: 첫 밤 안내', subtitle: '초보자형 · 원작 테마 · 전체 역할 풀 · 3~10인',
-    playerCounts: [3,4,5,6,7,8,9,10],
-    episodes: BEGINNER_DARK_FANTASY_EPISODES
-  },
-  {
-    id: 'dark_citadel', title: '흑염의 성채', subtitle: '숙련자형 · 다크 판타지 · 전체 역할 풀 · 3~10인',
-    playerCounts: [3,4,5,6,7,8,9,10],
-    episodes: DARK_CITADEL_EPISODES
+async function loadScenarioIndex() {
+  try {
+    const resp = await fetch('./assets/scenarios/_index.json');
+    if (!resp.ok) throw new Error(`scenario index not found: ${resp.status}`);
+    const index = await resp.json();
+    SCENARIOS = index.map(entry => ({
+      id: entry.id,
+      title: entry.title,
+      subtitle: entry.subtitle + ` · ${entry.playerCounts[0]}~${entry.playerCounts[entry.playerCounts.length - 1]}인`,
+      playerCounts: entry.playerCounts,
+      episodes: entry.episodes.map(ep => ({ id: ep.id, title: ep.title, variants: {} })),
+    }));
+  } catch (e) {
+    console.error('[loadScenarioIndex]', e);
+    SCENARIOS = [];
   }
-];
+}
 
 // ===== STATE =====
 const state = {
@@ -1981,7 +1943,10 @@ function _escHtml(text) {
 }
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // Load scenario index before anything else
+  await loadScenarioIndex();
+
   // Auto-join if URL has ?room= parameter
   try {
     const params = new URLSearchParams(location.search);

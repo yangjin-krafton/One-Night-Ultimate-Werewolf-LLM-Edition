@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 2,
+  "scenarioId": "salgol_ward",
+  "scenarioMode": "advanced",
+  "title": "살골 폐쇄병동: 대체 환자의 밤",
+  "tags": [
+    "advanced",
+    "hospital_horror",
+    "base",
+    "daybreak",
+    "werewolf",
+    "all_roles"
+  ],
+  "episodeProfiles": {
+    "ep1": "tutorial_long",
+    "ep2": "standard_mid",
+    "ep3": "expert_fast"
+  },
+  "ttsSource": "assets/scenarios_tts/salgol_ward.tts.json",
+  "rolePool": [
+    "doppelganger",
+    "werewolf", "werewolf",
+    "alpha_wolf",
+    "mystic_wolf",
+    "dream_wolf",
+    "minion",
+    "mason", "mason",
+    "seer",
+    "apprentice_seer",
+    "paranormal_investigator",
+    "robber",
+    "witch",
+    "troublemaker",
+    "village_idiot",
+    "drunk",
+    "insomniac",
+    "aura_seer",
+    "revealer",
+    "villager", "villager", "villager",
+    "hunter",
+    "tanner",
+    "prince",
+    "cursed",
+    "apprentice_tanner",
+    "thing",
+    "squire",
+    "beholder"
+  ],
+  "roleWakeOrder": [
+    "doppelganger",
+    "werewolf",
+    "alpha_wolf",
+    "mystic_wolf",
+    "dream_wolf",
+    "minion",
+    "squire",
+    "mason",
+    "thing",
+    "seer",
+    "apprentice_seer",
+    "paranormal_investigator",
+    "robber",
+    "witch",
+    "troublemaker",
+    "village_idiot",
+    "drunk",
+    "aura_seer",
+    "beholder",
+    "revealer",
+    "insomniac"
+  ],
+  "narration": {
+    "playbackPolicy": {
+      "narratorAllowedPhases": ["episode_start"],
+      "silentPhases": ["debate", "vote", "vote_result", "reveal"]
+    },
+    "openingClipCount": 1,
+    "nightOutroClipCount": 1,
+    "roleClipCount": 1
+  }
+}
