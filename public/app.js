@@ -1458,13 +1458,12 @@ function renderLobbyHTML() {
             ${EXPANSIONS.map(ex => {
               const active = state.expansions[ex.id];
               const locked = ex.required;
-              const expBg = { base: 'expansion_base', daybreak: 'expansion_daybreak', daybreak_bonus1: 'expansion_bonus1', bonus2: 'expansion_bonus2' }[ex.id] || '';
               return `<button class="lobby__exp-chip ${active ? 'lobby__exp-chip--on' : ''} ${locked ? 'lobby__exp-chip--locked' : ''}"
                 onclick="${locked ? '' : `toggleExpansion('${ex.id}',true);rerollDeck()`}"
-                ${locked ? 'disabled' : ''} style="background-image:url('${uiImgSrc(expBg)}')">${ex.name}</button>`;
+                ${locked ? 'disabled' : ''}>${ex.name}</button>`;
             }).join('')}
           </div>
-          <button class="lobby__reroll-btn" onclick="rerollDeck()" style="background-image:url('${uiImgSrc('btn_reroll')}')">🎲 다시 뽑기</button>
+          <button class="lobby__reroll-btn" onclick="rerollDeck()">🎲 다시 뽑기</button>
         </div>
 
         <!-- 덱 정보 -->
@@ -2106,10 +2105,15 @@ function parseMarkdown(md) {
       html += '</ul>'; inList = false;
     }
 
-    // Headers (with anchor IDs)
-    if (line.startsWith('### ')) { const t = line.slice(4); const id = _slugify(t); html += `<h3 id="${id}">${_inlineMd(t)}</h3>`; continue; }
-    if (line.startsWith('## '))  { const t = line.slice(3); const id = _slugify(t); html += `<h2 id="${id}">${_inlineMd(t)}</h2>`; continue; }
-    if (line.startsWith('# '))   { const t = line.slice(2); const id = _slugify(t); html += `<h1 id="${id}">${_inlineMd(t)}</h1>`; continue; }
+    // Headers (with anchor IDs) — h6~h1 순서로 매칭 (긴 것 먼저)
+    const hMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (hMatch) {
+      const level = hMatch[1].length;
+      const t = hMatch[2];
+      const id = _slugify(t);
+      html += `<h${level} id="${id}">${_inlineMd(t)}</h${level}>`;
+      continue;
+    }
 
     // Blockquote
     if (line.startsWith('> ')) {

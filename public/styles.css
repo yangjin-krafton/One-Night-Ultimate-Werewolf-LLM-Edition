@@ -2285,6 +2285,24 @@ body {
   margin: 16px 0 8px;
   color: var(--accent);
 }
+.wiki__page-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 14px 0 6px;
+  color: var(--fg);
+}
+.wiki__page-content h5 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 4px;
+  color: var(--fg-muted);
+}
+.wiki__page-content h6 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 10px 0 4px;
+  color: var(--fg-muted);
+}
 .wiki__page-content p {
   margin: 8px 0;
   font-size: 14px;
