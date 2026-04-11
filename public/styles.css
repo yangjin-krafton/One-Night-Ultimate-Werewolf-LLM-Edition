@@ -19,6 +19,8 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* 글로벌 이미지 리셋 — 모든 img가 부모를 넘지 않도록 */
+img { max-width: 100%; height: auto; display: block; }
 html, body { height: 100%; overflow: hidden; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -89,34 +91,90 @@ body {
 }
 
 /* ===== IMAGE-ENHANCED STYLES ===== */
-/* 홈 화면 배경 이미지 */
-.home[style*="background-image"] {
-  background-size: cover;
-  background-position: center;
+/* 홈 화면 배너 배경 */
+.home {
   position: relative;
 }
-.home[style*="background-image"]::before {
-  content: '';
+.home__bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.home__bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+.home__bg-fade {
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    rgba(10,10,20,0.55) 0%,
-    rgba(10,10,20,0.75) 40%,
-    rgba(10,10,20,0.92) 100%
+    180deg,
+    rgba(10,10,20,0.2) 0%,
+    rgba(10,10,20,0.5) 40%,
+    rgba(10,10,20,0.9) 75%,
+    var(--bg) 100%
   );
-  z-index: 0;
 }
-.home[style*="background-image"] > * { position: relative; z-index: 1; }
+.home__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 12px;
+}
+.home__logo {
+  width: min(260px, 65vw);
+  max-width: 260px;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+}
+/* 로고 이미지가 있으면 텍스트 타이틀 숨김 */
+.home__logo + .home__title { display: none; }
+
+/* 도감/롤북 헤더 배너 */
+.codex__banner {
+  position: relative;
+  overflow: hidden;
+  margin: -16px -12px 12px;
+}
+.codex__banner-img {
+  width: 100%;
+  display: block;
+  aspect-ratio: 2048 / 512;
+  object-fit: cover;
+}
+.codex__banner-fade {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 70%;
+  background: linear-gradient(180deg, transparent 0%, var(--bg) 100%);
+  pointer-events: none;
+}
+.codex__banner-text {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 0 20px 12px;
+  z-index: 1;
+}
 
 /* 역할 아이콘 — 이모지 자리에 들어가는 원형 이미지 */
 .role-icon {
   width: 28px;
   height: 28px;
+  max-width: 28px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
   border: 1.5px solid rgba(255,255,255,0.15);
   vertical-align: middle;
+  display: inline-block;
 }
 .role-icon--lg {
   width: 48px;
@@ -731,21 +789,34 @@ body {
   margin-bottom: 16px;
 }
 .lobby__play-big {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 24px;
-  background: rgba(160,100,240,0.2);
+  position: relative;
+  overflow: hidden;
+  padding: 0;
   border: 1.5px solid rgba(160,100,240,0.4);
   border-radius: var(--radius);
-  color: #c8a0f0;
-  font-size: 15px;
-  font-weight: 700;
   cursor: pointer;
   transition: all 0.15s;
   flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(160,100,240,0.2);
+  min-height: 56px;
 }
-.lobby__play-big:active { transform: scale(0.97); background: rgba(160,100,240,0.3); }
+.lobby__play-big-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  background: rgba(10,10,20,0.4);
+  text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+  width: 100%;
+  height: 100%;
+}
+.lobby__play-big:active { transform: scale(0.97); }
 .lobby__delay {
   display: flex;
   align-items: center;
@@ -785,29 +856,39 @@ body {
   flex: 1;
 }
 .lobby__exp-chip {
-  padding: 4px 10px;
-  border: 1px solid rgba(255,255,255,0.08);
+  padding: 5px 12px;
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 12px;
-  background: transparent;
-  color: var(--fg-muted);
+  background-color: rgba(255,255,255,0.04);
+  background-size: cover;
+  background-position: center;
+  color: var(--fg);
   font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+  overflow: hidden;
 }
 .lobby__exp-chip--on {
   border-color: var(--accent);
   color: var(--accent);
-  background: var(--accent-dim);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 .lobby__exp-chip--locked { opacity: 0.4; cursor: default; }
 .lobby__reroll-btn {
   padding: 6px 12px;
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius-sm);
-  background: rgba(255,255,255,0.04);
-  color: var(--fg-muted);
+  background-color: rgba(255,255,255,0.04);
+  background-size: cover;
+  background-position: center;
+  color: var(--fg);
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  overflow: hidden;
 }
 .lobby__reroll-btn:active { transform: scale(0.96); }
 .lobby__deck-label {
@@ -1302,10 +1383,13 @@ body {
 .role-tile__icon {
   width: 48px;
   height: 48px;
+  max-width: 48px;
   border-radius: 50%;
   object-fit: cover;
   border: 1.5px solid rgba(255,255,255,0.1);
   background: rgba(255,255,255,0.04);
+  display: block;
+  margin: 0 auto;
 }
 .role-tile__name {
   font-size: 11px;
@@ -1779,6 +1863,7 @@ body {
 }
 .codex__header {
   padding: 16px 20px 8px;
+  display: none; /* 배너로 대체 */
 }
 .codex__title {
   font-size: 20px;
@@ -1886,11 +1971,13 @@ body {
 .wiki-role-icon {
   width: 18px;
   height: 18px;
+  max-width: 18px;
   border-radius: 50%;
   object-fit: cover;
   vertical-align: -3px;
   margin-right: 2px;
   border: 1px solid rgba(255,255,255,0.1);
+  display: inline-block;
 }
 /* 바텀시트 역할 히어로 배너 */
 .wiki-role-hero {
@@ -1904,11 +1991,12 @@ body {
 .wiki-role-hero__img {
   width: 120px;
   height: 120px;
+  max-width: 120px;
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid rgba(255,255,255,0.12);
   box-shadow: 0 6px 32px rgba(0,0,0,0.5);
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
 }
 .wiki-role-hero__name {
   font-size: 24px;

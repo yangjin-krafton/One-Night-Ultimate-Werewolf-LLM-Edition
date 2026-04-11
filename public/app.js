@@ -1134,17 +1134,23 @@ function render() {
 // -- Home
 function renderHomeHTML() {
   return `
-    <div class="home" style="background-image:url('${scenarioBgSrc('beginner_dark_fantasy')}')">
-      <div class="home__moon"></div>
-      <h1 class="home__title">한밤의<br>늑대인간</h1>
-      <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
-      <button class="home__changelog-btn" onclick="goChangelog()">
-        <span class="home__changelog-ver">v${window.APP_VERSION || '1.6.0'}</span>
-        <span class="home__changelog-label">업데이트 로그 →</span>
-      </button>
-      <div class="home__actions">
-        <button class="btn btn--primary btn--full" onclick="goSetup()">게임 만들기</button>
-        <button class="btn btn--ghost btn--full" onclick="goJoin()">게임 참가</button>
+    <div class="home">
+      <div class="home__bg">
+        <img class="home__bg-img" src="${uiImgSrc('night_phase_overlay')}" alt="" loading="lazy">
+        <div class="home__bg-fade"></div>
+      </div>
+      <div class="home__content">
+        <img class="home__logo" src="${uiImgSrc('logo_title')}" alt="한밤의 늑대인간" loading="lazy" onerror="this.style.display='none'">
+        <h1 class="home__title">한밤의<br>늑대인간</h1>
+        <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
+        <button class="home__changelog-btn" onclick="goChangelog()">
+          <span class="home__changelog-ver">v${window.APP_VERSION || '1.6.0'}</span>
+          <span class="home__changelog-label">업데이트 로그 →</span>
+        </button>
+        <div class="home__actions">
+          <button class="btn btn--primary btn--full" onclick="goSetup()">게임 만들기</button>
+          <button class="btn btn--ghost btn--full" onclick="goJoin()">게임 참가</button>
+        </div>
       </div>
     </div>`;
 }
@@ -1434,9 +1440,11 @@ function renderLobbyHTML() {
       <div class="wiz__content">
         <!-- 재생 컨트롤 -->
         <div class="lobby__play-section">
-          <button class="lobby__play-big" onclick="startPlayback()">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            밤 행동 시작
+          <button class="lobby__play-big" onclick="startPlayback()" style="background-image:url('${uiImgSrc('btn_play')}')">
+            <span class="lobby__play-big-inner">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              밤 행동 시작
+            </span>
           </button>
           <div class="lobby__delay">
             <span class="lobby__delay-label">간격</span>
@@ -1450,12 +1458,13 @@ function renderLobbyHTML() {
             ${EXPANSIONS.map(ex => {
               const active = state.expansions[ex.id];
               const locked = ex.required;
+              const expBg = { base: 'expansion_base', daybreak: 'expansion_daybreak', daybreak_bonus1: 'expansion_bonus1', bonus2: 'expansion_bonus2' }[ex.id] || '';
               return `<button class="lobby__exp-chip ${active ? 'lobby__exp-chip--on' : ''} ${locked ? 'lobby__exp-chip--locked' : ''}"
                 onclick="${locked ? '' : `toggleExpansion('${ex.id}',true);rerollDeck()`}"
-                ${locked ? 'disabled' : ''}>${ex.name}</button>`;
+                ${locked ? 'disabled' : ''} style="background-image:url('${uiImgSrc(expBg)}')">${ex.name}</button>`;
             }).join('')}
           </div>
-          <button class="lobby__reroll-btn" onclick="rerollDeck()">🎲 다시 뽑기</button>
+          <button class="lobby__reroll-btn" onclick="rerollDeck()" style="background-image:url('${uiImgSrc('btn_reroll')}')">🎲 다시 뽑기</button>
         </div>
 
         <!-- 덱 정보 -->
@@ -1751,9 +1760,13 @@ function renderCodexHTML() {
   const expBgMap = { base: 'expansion_base', daybreak: 'expansion_daybreak', daybreak_bonus1: 'expansion_bonus1', bonus2: 'expansion_bonus2' };
   return `
     <div class="codex">
-      <div class="codex__header">
-        <h1 class="codex__title">역할 도감</h1>
-        <p class="codex__subtitle">전체 ${ROLE_IDS.length}개 역할 · 탭하여 상세 보기</p>
+      <div class="codex__banner">
+        <img class="codex__banner-img" src="${uiImgSrc('header_codex')}" alt="" loading="lazy">
+        <div class="codex__banner-fade"></div>
+        <div class="codex__banner-text">
+          <h1 class="codex__title">역할 도감</h1>
+          <p class="codex__subtitle">전체 ${ROLE_IDS.length}개 역할 · 탭하여 상세 보기</p>
+        </div>
       </div>
       <div class="codex__content">
         ${groups.map(g => `
@@ -1906,17 +1919,20 @@ function renderWikiIndexHTML() {
       </div>`;
   }
 
-  const wikiBgMap = { '📜': 'expansion_base', '🎭': 'expansion_base', '🌅': 'expansion_daybreak', '⭐': 'expansion_bonus1', '💎': 'expansion_bonus2' };
   return `
     <div class="wiki">
-      <div class="wiki__header">
-        <h1 class="wiki__title">롤북</h1>
-        <p class="wiki__subtitle">게임 규칙과 역할 가이드</p>
+      <div class="codex__banner">
+        <img class="codex__banner-img" src="${uiImgSrc('header_rulebook')}" alt="" loading="lazy">
+        <div class="codex__banner-fade"></div>
+        <div class="codex__banner-text">
+          <h1 class="wiki__title">롤북</h1>
+          <p class="wiki__subtitle">게임 규칙 가이드</p>
+        </div>
       </div>
       <div class="wiki__index">
         ${idx.categories.map(cat => `
           <div class="wiki__category">
-            <div class="wiki__cat-banner" style="background-image:url('${uiImgSrc(wikiBgMap[cat.icon] || 'expansion_base')}')">
+            <div class="wiki__cat-banner" style="background-image:url('${uiImgSrc('expansion_base')}')"
               <div class="wiki__cat-banner-overlay">
                 <span class="wiki__cat-icon">${cat.icon}</span>
                 <span class="wiki__cat-title">${cat.title}</span>
