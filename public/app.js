@@ -27,7 +27,6 @@ const ROLES = {
   villager:                { name: '마을 주민',      team: 'village', emoji: '🏠', desc: '특별한 능력이 없습니다. 토론과 추리로 늑대인간을 찾아내세요.', expansion: 'base' },
 
   // ── 데이브레이크 확장 ──
-  sentinel:                { name: '경비병',         team: 'village', emoji: '🛡️', desc: '밤에 플레이어 1명의 카드에 방패 토큰을 놓습니다. 방패를 받은 플레이어의 카드는 다른 사람이 보거나 옮길 수 없습니다.', expansion: 'daybreak' },
   alpha_wolf:              { name: '태초의 늑대인간', team: 'wolf',   emoji: '🐺‍', desc: '늑대인간처럼 동료를 확인합니다. 추가로 센터 카드 1장을 비늑대 플레이어 카드와 교환해 새 늑대인간을 만들 수 있습니다.', expansion: 'daybreak' },
   mystic_wolf:             { name: '신비한 늑대인간', team: 'wolf',   emoji: '🔮🐺', desc: '늑대인간처럼 동료를 확인한 뒤, 다른 플레이어 1명의 카드를 몰래 볼 수 있습니다.', expansion: 'daybreak' },
   dream_wolf:              { name: '잠자는 늑대인간', team: 'wolf',   emoji: '💤🐺', desc: '늑대 팀이지만 밤에 눈을 뜨지 않습니다. 다른 늑대는 잠자는 늑대인간의 존재를 확인할 수 있습니다.', expansion: 'daybreak' },
@@ -36,8 +35,6 @@ const ROLES = {
   witch:                   { name: '마녀',           team: 'village', emoji: '🧙', desc: '밤에 센터 카드 1장을 확인합니다. 원한다면 그 카드를 다른 플레이어 카드와 바꿔야 합니다.', expansion: 'daybreak' },
   village_idiot:           { name: '동네 얼간이',    team: 'village', emoji: '🤪', desc: '자신을 제외한 모든 플레이어의 카드를 왼쪽 또는 오른쪽으로 한 칸씩 이동시킬 수 있습니다.', expansion: 'daybreak' },
   revealer:                { name: '계시자',         team: 'village', emoji: '👁️', desc: '플레이어 1명의 카드를 뒤집어 공개합니다. 늑대인간이나 무두장이면 다시 덮습니다.', expansion: 'daybreak' },
-  curator:                 { name: '유물 관리자',    team: 'village', emoji: '🏺', desc: '밤에 플레이어 1명에게 유물 토큰을 놓습니다. 유물 효과로 역할이나 승리 조건이 바뀔 수 있습니다.', expansion: 'daybreak' },
-  bodyguard:               { name: '호위병',         team: 'village', emoji: '💪', desc: '밤에 보호 대상을 정합니다. 진행 규칙에 따라 보호 대상은 특정 이동이나 효과에서 지켜질 수 있습니다.', expansion: 'daybreak' },
 
   // ── 데이브레이크 보너스팩 1 ──
   aura_seer:               { name: '영기 예언자',    team: 'village', emoji: '✨🔮', desc: '밤 동안 카드를 이동하거나 확인한 플레이어가 누구인지 감지합니다.', expansion: 'daybreak_bonus1' },
@@ -108,10 +105,6 @@ const DESC_HIGHLIGHTS = {
     { t: '늑대인간을 찾아내세요', c: '#fb7185' },
   ],
   // 데이브레이크
-  sentinel: [
-    { t: '방패 토큰', c: '#60a5fa' },
-    { t: '보거나 옮길 수 없습니다', c: '#34d399' },
-  ],
   alpha_wolf: [
     { t: '동료를 확인', c: '#fb7185' },
     { t: '새 늑대인간을 만들 수 있습니다', c: '#fbbf24' },
@@ -142,14 +135,6 @@ const DESC_HIGHLIGHTS = {
   revealer: [
     { t: '카드를 뒤집어 공개', c: '#fb7185' },
     { t: '늑대인간이나 무두장이면 다시 덮습니다', c: '#94a3b8' },
-  ],
-  curator: [
-    { t: '유물 토큰', c: '#fbbf24' },
-    { t: '역할이나 승리 조건이 바뀔 수 있습니다', c: '#22d3ee' },
-  ],
-  bodyguard: [
-    { t: '밤에 보호 대상을 정합니다', c: '#34d399' },
-    { t: '특정 이동이나 효과에서 지켜질 수 있습니다', c: '#60a5fa' },
   ],
   // 보너스팩 1
   aura_seer: [
@@ -196,7 +181,7 @@ function highlightDesc(roleId, desc) {
 // ===== EXPANSION DEFINITIONS =====
 const EXPANSIONS = [
   { id: 'base',            name: '기본판',           desc: '필수 포함', required: true },
-  { id: 'daybreak',        name: '데이브레이크',     desc: '늑대 변종, 경비병, 마녀 등' },
+  { id: 'daybreak',        name: '데이브레이크',     desc: '늑대 변종, 마녀, 계시자 등' },
   { id: 'daybreak_bonus1', name: '보너스팩 1',       desc: '영기 예언자, 왕자, 저주받은 자' },
   { id: 'bonus2',          name: '보너스팩 2',       desc: '종자, 주시자, 견습 무두장이 등' },
 ];
@@ -231,10 +216,10 @@ const ROLE_IDS = [
   // 기본판 (12)
   'doppelganger','werewolf','minion','mason','seer','robber','troublemaker',
   'drunk','insomniac','hunter','tanner','villager',
-  // 데이브레이크 (11)
-  'sentinel','alpha_wolf','mystic_wolf','dream_wolf',
+  // 데이브레이크 (8)
+  'alpha_wolf','mystic_wolf','dream_wolf',
   'apprentice_seer','paranormal_investigator','witch','village_idiot',
-  'revealer','curator','bodyguard',
+  'revealer',
   // 보너스팩1 (3)
   'aura_seer','prince','cursed',
   // 보너스팩2 (4)
@@ -243,7 +228,7 @@ const ROLE_IDS = [
 
 // 밤 단계
 const NIGHT_ORDER = [
-  'doppelganger','sentinel',
+  'doppelganger',
   'werewolf','alpha_wolf','mystic_wolf','dream_wolf',
   'minion','mason',
   'seer','apprentice_seer','paranormal_investigator',
@@ -251,11 +236,11 @@ const NIGHT_ORDER = [
   'village_idiot','drunk',
   'aura_seer','thing','beholder','squire',
   // 마지막
-  'insomniac','curator','revealer','bodyguard',
+  'insomniac','revealer',
 ];
 
 function encodeDeck(deck) {
-  // Each role can appear 0-3 times → 2 bits each. 30 roles × 2 = 60 bits → base62(~11 chars)
+  // Each role can appear 0-3 times → 2 bits each. 27 roles × 2 = 54 bits → base62(~10 chars)
   const counts = ROLE_IDS.map(r => deck.filter(d => d === r).length);
   let val = 0n;
   for (let i = 0; i < counts.length; i++) val = val * 4n + BigInt(counts[i]);
@@ -318,10 +303,7 @@ function generateRandomDeck(playerCount, scenarioId) {
     ['apprentice_seer'],
     ['paranormal_investigator'],
     ['village_idiot'],
-    ['sentinel'],
-    ['curator'],
     ['revealer'],
-    ['bodyguard'],
     // 보너스팩1
     ['aura_seer'],
     ['prince'],
@@ -466,10 +448,10 @@ const state = {
 };
 
 // ===== ROOM CODE =====
-// v3: scenario(4 bits) + episode(2 bits) + deck(30 roles × 2 bits = 60 bits) = 66 bits → base62(~12 chars)
+// v3: scenario(4 bits) + episode(2 bits) + deck(27 roles × 2 bits = 54 bits) = 60 bits → base62(~11 chars)
 // Player count derived from deck.length - 3.
 const _B62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-const _DECK_BITS = BigInt(ROLE_IDS.length * 2); // 60
+const _DECK_BITS = BigInt(ROLE_IDS.length * 2); // 54
 
 function encodeRoomCode(scenarioId, episodeId, playerCount, deck) {
   const sIdx = BigInt(Math.max(0, SCENARIOS.findIndex(s => s.id === scenarioId)));

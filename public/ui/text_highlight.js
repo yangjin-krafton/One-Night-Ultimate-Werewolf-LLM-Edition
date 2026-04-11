@@ -75,13 +75,6 @@
       { term: "마녀", color: "#a78bfa" },
       { term: "revealer", color: "#22d3ee" },
       { term: "폭로자", color: "#22d3ee" },
-      { term: "curator", color: "#a78bfa" },
-      { term: "큐레이터", color: "#a78bfa" },
-      { term: "bodyguard", color: "#60a5fa" },
-      { term: "경호원", color: "#60a5fa" },
-      { term: "sentinel", color: "#93c5fd" },
-      { term: "파수꾼", color: "#93c5fd" },
-
       { term: "mason", color: "#2dd4bf" },
       { term: "프리메이슨", color: "#2dd4bf" },
       { term: "메이슨", color: "#2dd4bf" },

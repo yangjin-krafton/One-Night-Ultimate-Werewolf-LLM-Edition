@@ -25,7 +25,6 @@
     "dream_wolf",
     "minion",
     "mason", "mason",
-    "sentinel",
     "seer",
     "apprentice_seer",
     "paranormal_investigator",
@@ -37,8 +36,6 @@
     "insomniac",
     "aura_seer",
     "revealer",
-    "curator",
-    "bodyguard",
     "villager", "villager", "villager",
     "hunter",
     "tanner",
@@ -51,7 +48,6 @@
   ],
   "roleWakeOrder": [
     "doppelganger",
-    "sentinel",
     "werewolf",
     "alpha_wolf",
     "mystic_wolf",
@@ -71,8 +67,6 @@
     "aura_seer",
     "beholder",
     "revealer",
-    "curator",
-    "bodyguard",
     "insomniac"
   ],
   "narration": {

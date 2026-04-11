@@ -19,7 +19,6 @@
     "hunter":                  { "name": "사냥꾼",          "desc": "자신이 죽으면 투표한 상대도 죽음, 밤 행동 없음" },
     "insomniac":               { "name": "불면증환자",      "desc": "밤 마지막에 자기 현재 카드 확인" },
 
-    "sentinel":                { "name": "경비병",          "desc": "플레이어 1명에게 방패 토큰 배치, 해당 카드 교환·이동 보호" },
     "alpha_wolf":              { "name": "태초의 늑대인간",  "desc": "늑대 확인 후 중앙 카드 1장을 플레이어 카드와 교환 가능" },
     "mystic_wolf":             { "name": "신비한 늑대인간",  "desc": "늑대 확인 후 플레이어 1명 카드 추가 엿보기" },
     "dream_wolf":              { "name": "잠자는 늑대인간",  "desc": "늑대 팀이지만 눈을 뜨지 않음, 다른 늑대만 존재 인지" },
@@ -28,8 +27,6 @@
     "witch":                   { "name": "마녀",            "desc": "중앙 1장 확인 후 선택적으로 플레이어 카드와 교환" },
     "village_idiot":           { "name": "동네 얼간이",      "desc": "자신 제외 전원 카드를 왼쪽 또는 오른쪽 한 칸 밀기 (선택)" },
     "revealer":                { "name": "계시자",          "desc": "플레이어 1명 카드 공개 시도, 늑대인간·무두장이면 다시 덮음" },
-    "curator":                 { "name": "유물 관리자",      "desc": "플레이어 1명 카드 위에 유물 토큰 배치" },
-    "bodyguard":               { "name": "호위병",          "desc": "플레이어 1명 보호, 보호 대상 카드 교환·이동 불가" },
     "aura_seer":               { "name": "영기 예언자",      "desc": "밤에 카드 이동 또는 확인한 자를 감지" },
     "prince":                  { "name": "왕자",            "desc": "투표로 죽지 않음, 밤 행동 없음" },
     "cursed":                  { "name": "저주받은 사람",    "desc": "특정 조건에서 늑대 편으로 변환, 밤 행동 없음" },
@@ -55,7 +52,6 @@
   "hunter": "Rekhar",
   "insomniac": "Kachina",
 
-  "sentinel": "Sethos",
   "alpha_wolf": "Badawi",
   "mystic_wolf": "Ei",
   "dream_wolf": "Shrimati",
@@ -64,8 +60,6 @@
   "witch": "Granny_Shan",
   "village_idiot": "Sethos",
   "revealer": "Emilie",
-  "curator": "Ganyu",
-  "bodyguard": "Arataki_Itto",
   "aura_seer": "Hu_Tao",
   "prince": "Kiminami_Anna",
   "cursed": "Mualani",
