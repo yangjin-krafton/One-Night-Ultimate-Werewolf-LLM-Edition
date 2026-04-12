@@ -70,7 +70,7 @@ const TEAM_META = {
 const ROLES = {
   // ── 기본판 ──
   doppelganger:            { name: '도플갱어',       team: 'village', emoji: '🪞', desc: '다른 플레이어 1명의 카드를 보고 그 역할을 복제합니다. 복제한 역할의 팀에 속하며, 역할에 따라 즉시 행동하거나 해당 순서에 다시 행동합니다.', expansion: 'base' },
-  werewolf:                { name: '늑대인간',       team: 'wolf',    emoji: '🐺', desc: '밤에 눈을 떠서 다른 늑대인간을 확인합니다. 혼자라면 센터 카드 1장을 볼 수 있습니다. 하수인 행동 시 눈을 감은 채 엄지를 올려 자신을 알립니다.', expansion: 'base' },
+  werewolf:                { name: '늑대인간',       team: 'wolf',    emoji: '🐺', desc: '밤에 눈을 떠서 다른 늑대인간을 확인합니다. 혼자라면 센터 카드 1장을 볼 수 있습니다. 하수인이나 종자 행동 시에는 계속 눈을 감은 채 엄지를 올려 자신을 알립니다.', expansion: 'base' },
   minion:                  { name: '하수인',         team: 'wolf',    emoji: '👹', desc: '밤에 눈을 떠서 엄지를 올린 늑대인간을 확인합니다. 늑대인간은 하수인을 모릅니다.', expansion: 'base' },
   mason:                   { name: '프리메이슨',     team: 'village', emoji: '🤝', desc: '밤에 다른 프리메이슨을 확인합니다. 서로의 존재가 마을 팀의 단서가 됩니다.', expansion: 'base' },
   seer:                    { name: '예언자',         team: 'village', emoji: '🔮', desc: '밤에 다른 플레이어 1명의 카드를 보거나, 센터 카드 2장을 확인할 수 있습니다.', expansion: 'base' },
@@ -99,7 +99,7 @@ const ROLES = {
 
   // ── 보너스팩 2 ──
   apprentice_tanner:       { name: '견습 무두장이',  team: 'tanner',  emoji: '💀✨', desc: '무두장이가 죽으면 함께 승리합니다. 무두장이가 없으면 마을 팀으로 행동합니다.', expansion: 'bonus2' },
-  thing:                   { name: '어떤것',         team: 'village', emoji: '👆', desc: '밤에 바로 옆 사람의 어깨를 톡 쳐서 자신의 존재를 알립니다.', expansion: 'bonus2' },
+  thing:                   { name: '어떤것',         team: 'village', emoji: '👆', desc: '밤에 터치를 받는 쪽은 계속 눈을 감고 있고, 어떤것은 눈을 떠서 바로 옆 사람 한 명의 어깨를 톡 쳐서 자신의 존재를 알립니다.', expansion: 'bonus2' },
   squire:                  { name: '종자',           team: 'wolf',    emoji: '🛡️🐺', desc: '늑대인간이 누구인지 확인할 수 있는 늑대 팀 보조 역할입니다. 하수인과 비슷하지만 별도로 행동합니다.', expansion: 'bonus2' },
   beholder:                { name: '주시자',         team: 'village', emoji: '👀', desc: '예언자가 누구인지 확인합니다. 예언자의 정체를 아는 마을 보조 역할입니다.', expansion: 'bonus2' },
 
