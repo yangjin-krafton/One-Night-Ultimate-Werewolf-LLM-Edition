@@ -38,19 +38,19 @@ RESIZE_RULES = {
 
 # ui/ 개별 규칙
 UI_RULES = {
-    "card_back":          (256, 332),
-    "card_back_center":   (256, 332),
-    "team_badge_village": (128, 128),
-    "team_badge_wolf":    (128, 128),
-    "team_badge_tanner":  (128, 128),
     "logo_title":         (664, 256),
-    "night_phase_overlay":(800, 462),
-    "day_phase_overlay":  (800, 462),
-    "vote_phase_overlay": (800, 462),
     "expansion_base":     (320, 160),
     "expansion_daybreak": (320, 160),
     "expansion_bonus1":   (320, 160),
     "expansion_bonus2":   (320, 160),
+    "btn_play":           (800, 200),
+    "bg_m_home":          (512, 512),
+    "bg_m_setup":         (512, 512),
+    "bg_m_join":          (512, 512),
+    "bg_m_night":         (512, 512),
+    "bg_m_day":           (512, 512),
+    "bg_m_vote":          (512, 512),
+    "bg_m_lobby":         (512, 512),
 }
 
 

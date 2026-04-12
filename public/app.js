@@ -1136,7 +1136,7 @@ function renderHomeHTML() {
   return `
     <div class="home">
       <div class="home__bg">
-        <img class="home__bg-img" src="${uiImgSrc('night_phase_overlay')}" alt="" loading="lazy">
+        <img class="home__bg-img" src="${uiImgSrc('bg_m_home')}" alt="" loading="lazy">
         <div class="home__bg-fade"></div>
       </div>
       <div class="home__content">
@@ -1254,7 +1254,7 @@ function renderSetupHTML() {
   if (step === 1) {
     return `
     <div class="wiz">
-      <div class="wiz__bg" style="background-image:url('${scenarioBgSrc(SCENARIOS[0]?.id || '')}')"></div>
+      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_setup')}')"></div>
       <div class="wiz__bg-overlay"></div>
       <button class="wiz__back" onclick="goHome()">← 나가기</button>
       <div class="wiz__panel wiz__panel--scenarios">
@@ -1283,18 +1283,16 @@ function renderSetupHTML() {
   // ── STEP 2: 에피소드 선택 ──
   if (step === 2) {
     return `
-    <div class="wiz wiz--banner">
+    <div class="wiz">
+      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_setup')}')"></div>
+      <div class="wiz__bg-overlay"></div>
       <button class="wiz__back" onclick="state.scenarioIdx=null;state.episodeIdx=null;state.playerCount=0;render()">← 시나리오</button>
-      <div class="wiz-banner">
-        <img class="wiz-banner__img" src="${scenarioBgSrc(sc.id)}" alt="" loading="lazy">
-        <div class="wiz-banner__fade"></div>
-        <div class="wiz-banner__text">
+      <div class="wiz__panel">
+        <div class="wiz__panel-header">
           <div class="wiz__hero-genre">${info.genre || ''}</div>
           <h1 class="wiz__hero-title">${sc.title}</h1>
           <p class="wiz__hero-synopsis">${info.synopsis || ''}</p>
         </div>
-      </div>
-      <div class="wiz__content">
         <div class="wiz__step-tag">STEP 2</div>
         <h2 class="wiz__step-title">에피소드</h2>
         <div class="wiz__ep-list">
@@ -1314,18 +1312,16 @@ function renderSetupHTML() {
 
   // ── STEP 3~4: 설정 + 시작 ──
   return `
-    <div class="wiz wiz--banner">
+    <div class="wiz">
+      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_setup')}')"></div>
+      <div class="wiz__bg-overlay"></div>
       <button class="wiz__back" onclick="state.episodeIdx=null;state.playerCount=0;render()">← 에피소드</button>
-      <div class="wiz-banner wiz-banner--compact">
-        <img class="wiz-banner__img" src="${bgImage}" alt="" loading="lazy">
-        <div class="wiz-banner__fade"></div>
-        <div class="wiz-banner__text">
+      <div class="wiz__panel">
+        <div class="wiz__panel-header">
           <div class="wiz__hero-genre">${info.genre || ''}</div>
           <h1 class="wiz__hero-title">${sc.title}</h1>
           <div class="wiz__hero-ep">${ep.title}</div>
         </div>
-      </div>
-      <div class="wiz__content">
         <div class="wiz__step-tag">STEP 3</div>
         <h2 class="wiz__step-title">게임 설정</h2>
 
@@ -1388,15 +1384,19 @@ function renderJoinHTML() {
       </div>` : '';
 
   return `
-    <div class="join">
-      <button class="back-btn" onclick="goHome()" style="position:absolute;top:20px;left:20px;">← 돌아가기</button>
-      <h1 class="join__title">게임 참가</h1>
-      <div class="join__input-group">
-        <input class="join__input" id="codeInput" maxlength="22" placeholder="방 코드 입력" autocomplete="off" autofocus>
-        <div class="join__error" id="joinError"></div>
+    <div class="wiz">
+      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_join')}')"></div>
+      <div class="wiz__bg-overlay"></div>
+      <button class="wiz__back" onclick="goHome()">← 돌아가기</button>
+      <div class="wiz__panel wiz__panel--center">
+        <h1 class="join__title">게임 참가</h1>
+        <div class="join__input-group">
+          <input class="join__input" id="codeInput" maxlength="22" placeholder="방 코드 입력" autocomplete="off" autofocus>
+          <div class="join__error" id="joinError"></div>
+        </div>
+        <button class="btn btn--primary btn--full" style="max-width:280px;" onclick="submitJoin()">입장</button>
+        ${recentHTML}
       </div>
-      <button class="btn btn--primary btn--full" style="max-width:280px;" onclick="submitJoin()">입장</button>
-      ${recentHTML}
     </div>`;
 }
 
@@ -1420,13 +1420,13 @@ function renderLobbyHTML() {
   });
 
   return `
-    <div class="wiz wiz--lobby wiz--banner">
+    <div class="wiz wiz--lobby">
+      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_lobby')}')"></div>
+      <div class="wiz__bg-overlay"></div>
       <button class="wiz__back" onclick="goHome()">← 나가기</button>
 
-      <div class="wiz-banner">
-        <img class="wiz-banner__img" src="${episodeBgSrc(config.scenarioId, config.episodeId)}" alt="" loading="lazy">
-        <div class="wiz-banner__fade"></div>
-        <div class="wiz-banner__text">
+      <div class="wiz__panel">
+        <div class="wiz__panel-header">
           <div class="wiz__hero-genre">${info.genre || ''}</div>
           <h1 class="wiz__hero-title">${scenario.title}</h1>
           <div class="wiz__hero-ep">${episode.title} · ${config.playerCount}명</div>
@@ -1435,9 +1435,6 @@ function renderLobbyHTML() {
             <span class="lobby__code-text">${code.match(/.{1,5}/g).join('-')}</span>
           </div>
         </div>
-      </div>
-
-      <div class="wiz__content">
         <!-- 재생 컨트롤 -->
         <div class="lobby__play-section">
           <button class="lobby__play-big" onclick="startPlayback()" style="background-image:url('${uiImgSrc('btn_play')}')">
@@ -1496,8 +1493,8 @@ function renderPlayingOverlayHTML() {
   const current = state.playlistIndex + 1;
   const pct = Math.round((current / total) * 100);
   const config = resolveCurrentConfig();
-  // 배경: 역할이 있으면 night overlay, 없으면 에피소드 배경
-  const bgSrc = uiImgSrc('night_phase_overlay');
+  // 배경: 모바일 1:1 밤 행동 배경
+  const bgSrc = uiImgSrc('bg_m_night');
 
   return `
     <div class="playing-overlay">
@@ -1756,25 +1753,18 @@ function renderCodexHTML() {
     roles: ROLE_IDS.filter(id => ROLES[id].expansion === exp.id)
   }));
 
-  const expBgMap = { base: 'expansion_base', daybreak: 'expansion_daybreak', daybreak_bonus1: 'expansion_bonus1', bonus2: 'expansion_bonus2' };
   return `
     <div class="codex">
-      <div class="codex__banner">
-        <img class="codex__banner-img" src="${uiImgSrc('header_codex')}" alt="" loading="lazy">
-        <div class="codex__banner-fade"></div>
-        <div class="codex__banner-text">
-          <h1 class="codex__title">역할 도감</h1>
-          <p class="codex__subtitle">전체 ${ROLE_IDS.length}개 역할 · 탭하여 상세 보기</p>
-        </div>
+      <div class="codex__hero">
+        <h1 class="codex__title">역할 도감</h1>
+        <p class="codex__subtitle">전체 ${ROLE_IDS.length}개 역할 · 탭하여 상세 보기</p>
       </div>
       <div class="codex__content">
         ${groups.map(g => `
           <div class="codex__group">
-            <div class="codex__group-banner" style="background-image:url('${uiImgSrc(expBgMap[g.id] || '')}')">
-              <div class="codex__group-banner-overlay">
-                <div class="codex__group-title">${g.name}</div>
-                <div class="codex__group-desc">${g.desc} · ${g.roles.length}개 역할</div>
-              </div>
+            <div class="codex__group-header">
+              <div class="codex__group-title">${g.name}</div>
+              <div class="codex__group-desc">${g.desc} · ${g.roles.length}개 역할</div>
             </div>
             <div class="role-icon-grid">
               ${g.roles.map(id => {
@@ -1920,21 +1910,17 @@ function renderWikiIndexHTML() {
 
   return `
     <div class="wiki">
-      <div class="codex__banner">
-        <img class="codex__banner-img" src="${uiImgSrc('header_rulebook')}" alt="" loading="lazy">
-        <div class="codex__banner-fade"></div>
-        <div class="codex__banner-text">
-          <h1 class="wiki__title">롤북</h1>
-          <p class="wiki__subtitle">게임 규칙 가이드</p>
-        </div>
+      <div class="codex__hero">
+        <h1 class="wiki__title">롤북</h1>
+        <p class="wiki__subtitle">게임 규칙 가이드</p>
       </div>
       <div class="wiki__index">
         ${idx.categories.map(cat => `
           <div class="wiki__category">
             <div class="wiki__card-grid">
               ${cat.pages.map(p => {
-                const pageBgMap = { game_overview: 'header_codex', game_setup: 'header_lobby', night_phase: 'night_phase_overlay', day_phase: 'day_phase_overlay', victory: 'vote_phase_overlay', special_rules: 'bg_vote' };
-                const bg = pageBgMap[p.id] || 'night_phase_overlay';
+                const pageBgMap = { game_overview: 'bg_m_home', game_setup: 'bg_m_setup', night_phase: 'bg_m_night', day_phase: 'bg_m_day', victory: 'bg_m_vote', special_rules: 'bg_m_vote' };
+                const bg = pageBgMap[p.id] || 'bg_m_home';
                 return `
                 <button class="wiki__page-card" onclick="openWikiPage('${p.id}')">
                   <img class="wiki__page-card-img" src="${uiImgSrc(bg)}" alt="" loading="lazy">
@@ -2012,12 +1998,12 @@ function renderWikiPageHTML() {
 
   // 배너 이미지: ui 이미지 우선, 없으면 rules 배너 폴백
   const PAGE_BANNER_MAP = {
-    game_overview: 'header_codex',
-    game_setup: 'header_lobby',
-    night_phase: 'night_phase_overlay',
-    day_phase: 'day_phase_overlay',
-    victory: 'vote_phase_overlay',
-    special_rules: 'bg_vote',
+    game_overview: 'bg_m_home',
+    game_setup: 'bg_m_setup',
+    night_phase: 'bg_m_night',
+    day_phase: 'bg_m_day',
+    victory: 'bg_m_vote',
+    special_rules: 'bg_m_vote',
   };
   const uiBanner = PAGE_BANNER_MAP[pageId];
   const bannerSrc = uiBanner ? uiImgSrc(uiBanner) : imgPath('rules', `banner_${pageId}`);

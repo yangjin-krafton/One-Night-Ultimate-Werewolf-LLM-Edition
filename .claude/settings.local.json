@@ -3,7 +3,8 @@
     "allow": [
       "Bash(ffprobe -hide_banner -i \"D:/Weeks/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices/basic/ep1/p10/opening/001/voice.wav\" 2>&1 | tail -5)",
       "Bash(cd \"D:/Weeks/One-Night-Ultimate-Werewolf-LLM-Edition/public/assets/voices\" && find . -name \"*.wav\" | while read f; do\n  out=\"${f%.wav}.m4a\"\n  ffmpeg -y -hide_banner -loglevel error -i \"$f\" -c:a aac -b:a 64k -movflags +faststart \"$out\" && echo \"OK: $out\"\ndone 2>&1)",
-      "WebFetch(domain:namu.wiki)"
+      "WebFetch(domain:namu.wiki)",
+      "Bash(rm:*)"
     ]
   }
 }

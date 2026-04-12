@@ -40,11 +40,10 @@ OPTIMIZE_RULES = {
     "ui_extra": None,  # 개별
 }
 UI_OPTIMIZE = {
-    "btn_play": (800, 200), "btn_reroll": (400, 200),
-    "header_lobby": (800, 200), "header_codex": (800, 200), "header_rulebook": (800, 200),
-    "divider_wolf": (800, 200), "divider_village": (800, 200), "divider_tanner": (800, 200),
-    "bg_vote": (800, 462), "bg_result_village_win": (800, 462),
-    "bg_result_wolf_win": (800, 462), "bg_result_tanner_win": (800, 462),
+    "btn_play": (800, 200),
+    "bg_m_home": (512, 512), "bg_m_setup": (512, 512), "bg_m_join": (512, 512),
+    "bg_m_night": (512, 512), "bg_m_day": (512, 512), "bg_m_vote": (512, 512),
+    "bg_m_lobby": (512, 512),
 }
 
 
