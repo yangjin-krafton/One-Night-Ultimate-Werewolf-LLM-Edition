@@ -26,7 +26,7 @@
 
 - 처형된 플레이어의 최종 카드가 [늑대인간](werewolf.md)(일반 늑대인간, [태초의 늑대인간](alpha_wolf.md), [신비한 늑대인간](mystic_wolf.md), [잠자는 늑대인간](dream_wolf.md) 중 하나)이면 마을 팀의 승리입니다.
 - 동점으로 2명이 처형될 때, 그 중 1명이라도 늑대인간이면 마을 팀이 승리합니다.
-- 마을 팀에 속하는 역할: [예언자](seer.md), [강도](robber.md), [말썽쟁이](troublemaker.md), [프리메이슨](mason.md), [마을 주민](villager.md), [사냥꾼](hunter.md), [왕자](prince.md), [견습 예언자](apprentice_seer.md), [마녀](witch.md), [불면증환자](insomniac.md), [주정뱅이](drunk.md), [동네 얼간이](village_idiot.md), [영기 예언자](aura_seer.md), [계시자](revealer.md), [주시자](beholder.md), [종자](squire.md), [어떤것](thing.md) 등
+- 마을 팀에 속하는 역할: [예언자](seer.md), [강도](robber.md), [말썽쟁이](troublemaker.md), [프리메이슨](mason.md), [마을주민](villager.md), [사냥꾼](hunter.md), [왕자](prince.md), [견습 예언자](apprentice_seer.md), [마녀](witch.md), [불면증환자](insomniac.md), [주정뱅이](drunk.md), [동네 얼간이](village_idiot.md), [영기 예언자](aura_seer.md), [계시자](revealer.md), [주시자](beholder.md), [종자](squire.md), [어떤것](thing.md) 등
 
 #### 늑대인간 팀 승리
 
@@ -88,7 +88,7 @@
 
 - [사냥꾼](hunter.md)의 추가 사망은 투표와 동시에 발생합니다.
 - 사냥꾼이 늑대인간을 지목했다면, 늑대인간도 사망하므로 마을 팀 승리에 기여할 수 있습니다.
-- 사냥꾼이 마을 주민을 지목했다면, 추가 피해가 발생합니다.
+- 사냥꾼이 마을주민을 지목했다면, 추가 피해가 발생합니다.
 - **중요**: 사냥꾼의 능력은 사냥꾼의 **최종 카드**가 사냥꾼일 때만 발동합니다. [밤 단계](night_phase.md)에서 카드가 바뀌어 더 이상 사냥꾼이 아니라면 효과 없음.
 
 #### 왕자 (Prince)

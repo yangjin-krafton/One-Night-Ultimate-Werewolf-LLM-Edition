@@ -59,7 +59,7 @@
 
 | 진영 | 목표 | 대표 역할 |
 |------|------|-----------|
-| **마을 팀** | 늑대인간을 최소 1명 처형 | [예언자](seer.md), [강도](robber.md), [말썽쟁이](troublemaker.md), [프리메이슨](mason.md), [마을 주민](villager.md) 등 |
+| **마을 팀** | 늑대인간을 최소 1명 처형 | [예언자](seer.md), [강도](robber.md), [말썽쟁이](troublemaker.md), [프리메이슨](mason.md), [마을주민](villager.md) 등 |
 | **늑대인간 팀** | 늑대인간이 아무도 처형되지 않도록 생존 | [늑대인간](werewolf.md), [신비한 늑대인간](mystic_wolf.md), [태초의 늑대인간](alpha_wolf.md), [하수인](minion.md) 등 |
 | **독립 진영** | 각자 고유한 [승리 조건](victory.md) | [무두장이](tanner.md)(태너), [견습 무두장이](apprentice_tanner.md) 등 |
 

@@ -24,7 +24,7 @@
 
 **감지 대상**: 카드를 "확인(peek)"하거나 "이동(move)"한 행위를 한 플레이어입니다.
 - **감지되는 역할**: [예언자](seer.md), [견습 예언자](apprentice_seer.md), [강도](robber.md), [마녀](witch.md), [말썽쟁이](troublemaker.md), [동네 얼간이](village_idiot.md), [심령 수사관](paranormal_investigator.md), [신비한 늑대인간](mystic_wolf.md), [태초의 늑대인간](alpha_wolf.md), [계시자](revealer.md) 등
-- **감지되지 않는 역할**: [마을 주민](villager.md), [잠자는 늑대인간](dream_wolf.md), [왕자](prince.md), [저주받은 자](cursed.md), [무두장이](tanner.md), [프리메이슨](mason.md) 등 (밤에 카드를 확인하거나 이동하지 않는 역할)
+- **감지되지 않는 역할**: [마을주민](villager.md), [잠자는 늑대인간](dream_wolf.md), [왕자](prince.md), [저주받은 사람](cursed.md), [무두장이](tanner.md), [프리메이슨](mason.md) 등 (밤에 카드를 확인하거나 이동하지 않는 역할)
 
 **중요**: 영기 예언자는 누가 **무슨 행동**을 했는지는 알 수 없습니다. 단지 밤에 카드 관련 활동을 했는지 여부만 알 수 있습니다.
 
