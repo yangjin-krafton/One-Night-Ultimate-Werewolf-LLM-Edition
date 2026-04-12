@@ -1249,13 +1249,14 @@ function renderSetupHTML() {
   let bgImage = '';
   if (ep) bgImage = episodeBgSrc(sc.id, ep.id);
   else if (sc) bgImage = scenarioBgSrc(sc.id);
+  const setupBgSrc = bgImage || uiImgSrc('bg_m_setup');
 
   // ── STEP 1: 시나리오 선택 ──
   if (step === 1) {
     return `
-    <div class="wiz">
-      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_setup')}')"></div>
-      <div class="wiz__bg-overlay"></div>
+    <div class="wiz wiz--setup">
+      <div class="wiz__bg wiz__bg--banner" style="background-image:url('${setupBgSrc}')"></div>
+      <div class="wiz__bg-overlay wiz__bg-overlay--banner"></div>
       <button class="wiz__back" onclick="goHome()">← 나가기</button>
       <div class="wiz__panel wiz__panel--scenarios">
         <div class="wiz__step-tag">STEP 1</div>
@@ -1283,9 +1284,9 @@ function renderSetupHTML() {
   // ── STEP 2: 에피소드 선택 ──
   if (step === 2) {
     return `
-    <div class="wiz">
-      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_setup')}')"></div>
-      <div class="wiz__bg-overlay"></div>
+    <div class="wiz wiz--setup">
+      <div class="wiz__bg wiz__bg--banner" style="background-image:url('${setupBgSrc}')"></div>
+      <div class="wiz__bg-overlay wiz__bg-overlay--banner"></div>
       <button class="wiz__back" onclick="state.scenarioIdx=null;state.episodeIdx=null;state.playerCount=0;render()">← 시나리오</button>
       <div class="wiz__panel">
         <div class="wiz__panel-header">
@@ -1312,9 +1313,9 @@ function renderSetupHTML() {
 
   // ── STEP 3~4: 설정 + 시작 ──
   return `
-    <div class="wiz">
-      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_setup')}')"></div>
-      <div class="wiz__bg-overlay"></div>
+    <div class="wiz wiz--setup">
+      <div class="wiz__bg wiz__bg--banner" style="background-image:url('${setupBgSrc}')"></div>
+      <div class="wiz__bg-overlay wiz__bg-overlay--banner"></div>
       <button class="wiz__back" onclick="state.episodeIdx=null;state.playerCount=0;render()">← 에피소드</button>
       <div class="wiz__panel">
         <div class="wiz__panel-header">
@@ -1410,6 +1411,7 @@ function renderLobbyHTML() {
   const roleCounts = countRoles(variant.deck);
   const centerCount = variant.deck.length - config.playerCount;
   const info = SCENARIO_SYNOPSIS[config.scenarioId] || {};
+  const ingameBgSrc = episodeBgSrc(config.scenarioId, config.episodeId);
 
   const wakeOrder = variant.wakeOrder || [];
   const uniqueRoles = Object.keys(roleCounts);
@@ -1421,9 +1423,9 @@ function renderLobbyHTML() {
 
   return `
     <div class="wiz wiz--lobby">
-      <div class="wiz__bg" style="background-image:url('${uiImgSrc('bg_m_lobby')}')"></div>
-      <div class="wiz__bg-overlay"></div>
-      <button class="wiz__back" onclick="goHome()">← 나가기</button>
+      <div class="wiz__bg wiz__bg--banner" style="background-image:url('${ingameBgSrc}')"></div>
+      <div class="wiz__bg-overlay wiz__bg-overlay--banner"></div>
+      <button class="wiz__back" onclick="goBackFromLobby()">← 나가기</button>
 
       <div class="wiz__panel">
         <div class="wiz__panel-header">
@@ -1493,13 +1495,12 @@ function renderPlayingOverlayHTML() {
   const current = state.playlistIndex + 1;
   const pct = Math.round((current / total) * 100);
   const config = resolveCurrentConfig();
-  // 배경: 모바일 1:1 밤 행동 배경
-  const bgSrc = uiImgSrc('bg_m_night');
+  const bgSrc = episodeBgSrc(config.scenarioId, config.episodeId);
 
   return `
     <div class="playing-overlay">
-      <div class="wiz__bg" style="background-image:url('${bgSrc}')"></div>
-      <div class="wiz__bg-overlay" style="background:linear-gradient(180deg,rgba(10,10,20,0.5) 0%,rgba(10,10,20,0.85) 50%,rgba(10,10,20,0.98) 100%)"></div>
+      <div class="wiz__bg wiz__bg--banner" style="background-image:url('${bgSrc}')"></div>
+      <div class="wiz__bg-overlay wiz__bg-overlay--banner"></div>
 
       <div class="play__hero">
         ${clip.roleId ? roleIconLg(clip.roleId, 'role-icon role-icon--xxl') : '<div class="play__moon-icon"></div>'}
@@ -1594,6 +1595,23 @@ function goHome() {
   state.deck = null;
   try { history.replaceState(null, '', location.pathname); } catch {}
   render();
+}
+
+function goBackFromLobby() {
+  if (state.scenarioIdx !== null) {
+    // 호스트: 인원 선택 화면(setup step 3)으로 복귀
+    state.screen = 'setup';
+    state.playerCount = null;
+    state.deck = null;
+    state.roomCode = null;
+    try { history.replaceState(null, '', location.pathname); } catch {}
+    render();
+  } else {
+    // 참가자: 게임 참가 페이지로 복귀
+    state.roomCode = null;
+    try { history.replaceState(null, '', location.pathname); } catch {}
+    goJoin();
+  }
 }
 
 function goSetup() {
@@ -1919,11 +1937,19 @@ function renderWikiIndexHTML() {
           <div class="wiki__category">
             <div class="wiki__card-grid">
               ${cat.pages.map(p => {
-                const pageBgMap = { game_overview: 'bg_m_home', game_setup: 'bg_m_setup', night_phase: 'bg_m_night', day_phase: 'bg_m_day', victory: 'bg_m_vote', special_rules: 'bg_m_vote' };
-                const bg = pageBgMap[p.id] || 'bg_m_home';
+                const pageBgMap = {
+                  game_overview: 'bg_m_home',
+                  game_setup: 'bg_m_setup',
+                  night_phase: 'bg_m_night',
+                  day_phase: 'bg_m_day',
+                  victory: 'bg_m_vote',
+                  special_rules: 'bg_m_lobby',
+                };
+                const bg = pageBgMap[p.id];
+                const bgSrc = bg ? uiImgSrc(bg) : imgPath('rules', `banner_${p.id}`);
                 return `
                 <button class="wiki__page-card" onclick="openWikiPage('${p.id}')">
-                  <img class="wiki__page-card-img" src="${uiImgSrc(bg)}" alt="" loading="lazy">
+                  <img class="wiki__page-card-img" src="${bgSrc}" alt="" loading="lazy">
                   <div class="wiki__page-card-fade"></div>
                   <div class="wiki__page-card-body">
                     <span class="wiki__page-card-title">${p.title}</span>
@@ -2003,7 +2029,7 @@ function renderWikiPageHTML() {
     night_phase: 'bg_m_night',
     day_phase: 'bg_m_day',
     victory: 'bg_m_vote',
-    special_rules: 'bg_m_vote',
+    special_rules: 'bg_m_lobby',
   };
   const uiBanner = PAGE_BANNER_MAP[pageId];
   const bannerSrc = uiBanner ? uiImgSrc(uiBanner) : imgPath('rules', `banner_${pageId}`);

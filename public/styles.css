@@ -440,6 +440,12 @@ body {
   display: flex;
   flex-direction: column;
 }
+.wiz--lobby {
+  background: linear-gradient(180deg, #070813 0%, #0b0d19 48%, #101320 100%);
+}
+.wiz--setup {
+  background: linear-gradient(180deg, #070813 0%, #0b0d19 48%, #101320 100%);
+}
 .wiz__bg {
   position: fixed;
   inset: -60px;
@@ -461,6 +467,27 @@ body {
     rgba(10,10,20,0.8) 100%
   );
   z-index: 1;
+}
+.wiz__bg--banner {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: min(42vh, 360px);
+  background-position: center top;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.96) 60%, rgba(0,0,0,0.45) 82%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.96) 60%, rgba(0,0,0,0.45) 82%, rgba(0,0,0,0) 100%);
+}
+.wiz__bg-overlay--banner {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: min(52vh, 420px);
+  background: linear-gradient(
+    180deg,
+    rgba(10,10,20,0.12) 0%,
+    rgba(10,10,20,0.24) 28%,
+    rgba(10,10,20,0.58) 62%,
+    rgba(10,10,20,0.88) 82%,
+    rgba(10,10,20,1) 100%
+  );
 }
 /* ── glass panel: 하단 고정 콘텐츠 패널 ── */
 .wiz__panel {
@@ -831,6 +858,7 @@ body {
   z-index: 200;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(180deg, #070813 0%, #0b0d19 48%, #0f111e 100%);
 }
 .playing-overlay .wiz__bg,
 .playing-overlay .wiz__bg-overlay {
