@@ -19,7 +19,7 @@ from urllib.request import Request, urlopen
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
-FISH_DEFAULT_API_BASE = "http://100.66.65.124:8080"
+FISH_DEFAULT_API_BASE = "http://100.66.68.140:8080"
 FISH_DEFAULT_FORMAT = "wav"
 FISH_DEFAULT_TEMPERATURE = 0.8
 FISH_DEFAULT_TOP_P = 0.8

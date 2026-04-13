@@ -452,7 +452,7 @@ def main() -> int:
     parser.add_argument("--qwen3-request-retries", type=int, default=int(os.environ.get("QWEN3_TTS_REQUEST_RETRIES", "2")))
 
     # Fish Speech arguments
-    default_fish_api_base = os.environ.get("FISH_SPEECH_API_BASE", "http://100.66.65.124:8080")
+    default_fish_api_base = os.environ.get("FISH_SPEECH_API_BASE", "http://100.66.68.140:8080")
     parser.add_argument("--fish-api-base", default=default_fish_api_base, help="Fish Speech server URL.")
     parser.add_argument("--fish-temperature", type=float, default=float(os.environ.get("FISH_SPEECH_TEMPERATURE", "0.8")))
     parser.add_argument("--fish-top-p", type=float, default=float(os.environ.get("FISH_SPEECH_TOP_P", "0.8")))
