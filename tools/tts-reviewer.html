@@ -311,6 +311,53 @@
     font-size: 12px; padding: 3px 6px;
   }
 
+  /* ── Voice Chip → Role Picker Popup ── */
+  .vb-role-picker {
+    position: fixed; z-index: 350;
+    background: var(--bg); border: 2px solid var(--accent);
+    border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    width: 260px; max-height: 360px;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .vb-role-picker-header {
+    padding: 10px 14px; background: var(--accent); color: #fff;
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .vb-role-picker-header .close-btn {
+    background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; padding: 0 4px;
+  }
+  .vb-role-picker-list { overflow-y: auto; flex: 1; }
+  .vb-role-picker-item {
+    padding: 8px 14px; font-size: 13px; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid var(--border); transition: background 0.1s;
+  }
+  .vb-role-picker-item:hover { background: var(--surface2); }
+  .vb-role-picker-item .role-label { font-weight: 600; }
+  .vb-role-picker-item .cur-voice {
+    font-size: 10px; color: var(--text-dim); max-width: 100px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .vb-role-picker-item.same-voice .cur-voice { color: var(--green); }
+  .vb-role-picker-backdrop {
+    position: fixed; inset: 0; z-index: 349; background: transparent;
+  }
+
+  /* ── Confirm Dialog ── */
+  .confirm-overlay {
+    position: fixed; inset: 0; z-index: 400;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .confirm-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; min-width: 320px; max-width: 420px;
+  }
+  .confirm-box h3 { font-size: 15px; margin-bottom: 10px; }
+  .confirm-box p { font-size: 13px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.5; }
+  .confirm-box .actions { display: flex; gap: 8px; justify-content: flex-end; }
+
   @media (max-width: 800px) {
     .clip-card { grid-template-columns: 1fr; gap: 8px; }
     .clip-actions { flex-direction: row; flex-wrap: wrap; min-width: unset; }
@@ -346,6 +393,11 @@
     <input id="ttsApiBase" type="text" placeholder="TTS API Base URL"
            value="http://100.66.65.124:8080">
     <button class="btn btn-sm" id="btnPing">연결 확인</button>
+    <span style="margin-left:8px;font-size:11px;color:var(--text-dim)">|</span>
+    <span class="status-dot" id="convertStatus" title="변환 서버 상태"></span>
+    <input id="convertApiBase" type="text" placeholder="변환 서버"
+           value="http://localhost:3457" style="width:180px">
+    <span id="convertLabel" style="font-size:11px;color:var(--text-dim)">M4A 변환</span>
   </div>
 </header>
 
@@ -374,13 +426,13 @@
 </div>
 
 <!-- Voice Map Panel -->
-<div class="vmpanel-overlay" id="vmOverlay" onclick="closeVoiceMapPanel()"></div>
+<div class="vmpanel-overlay" id="vmOverlay" onclick="closeVoiceMapPanel(false)"></div>
 <div class="vmpanel" id="vmPanel">
   <div class="vmpanel-header">
     <h2>Voice Map Editor</h2>
     <span class="vm-voice-count" id="vmVoiceCount">--</span>
     <button class="btn btn-sm" onclick="fetchServerVoices()">&#128193; 음성 라이브러리 폴더</button>
-    <button class="btn btn-sm" onclick="closeVoiceMapPanel()">&#10005;</button>
+    <button class="btn btn-sm" onclick="closeVoiceMapPanel(false)">&#10005;</button>
   </div>
   <div class="vmpanel-body" id="vmBody">
     <!-- Voice Browser: hover-to-play -->
@@ -393,8 +445,7 @@
         <input class="vb-search" id="vbSearch" type="text" placeholder="음성 이름 검색..." oninput="renderVoiceBrowser()">
         <div class="vb-grid" id="vbGrid"></div>
         <div class="vb-assign-bar">
-          <span>클릭 시 할당:</span>
-          <select id="vbTargetRole"></select>
+          <span>hover = 미리듣기 | 클릭 = 역할에 할당</span>
           <span id="vbNowPlaying" style="margin-left:auto;color:var(--accent)"></span>
         </div>
       </div>
@@ -405,10 +456,13 @@
     <div id="vmRoleList"></div>
   </div>
   <div class="vmpanel-footer">
-    <button class="btn" onclick="closeVoiceMapPanel()">닫기</button>
+    <button class="btn" onclick="closeVoiceMapPanel(false)">닫기</button>
     <button class="btn primary" id="btnVmSave" onclick="saveVoiceMap()">voice_map.json 저장</button>
   </div>
 </div>
+
+<!-- Role Picker Popup (for voice chip click) -->
+<div class="vb-role-picker" id="vbRolePicker" style="display:none"></div>
 
 <div class="toast-container" id="toastContainer"></div>
 
@@ -429,6 +483,8 @@ let playingIdx = -1;
 let isPlayAll = false;
 let regenQueue = [];
 let regenRunning = false;
+let voiceMapDirty = false;    // voice map changed since last save?
+let voiceMapOriginal = null;  // snapshot for dirty detection
 
 // ── File System Access API (local mode) ──
 let projectDirHandle = null;  // FileSystemDirectoryHandle
@@ -577,6 +633,8 @@ async function loadVoiceMap() {
       const resp = await fetch(`${basePath()}/characters/voice_map.json`);
       if (resp.ok) voiceMap = await resp.json();
     }
+    voiceMapOriginal = voiceMap ? JSON.stringify(voiceMap) : null;
+    voiceMapDirty = false;
   } catch { /* ignore */ }
 }
 
@@ -981,88 +1039,63 @@ async function regenNow(idx) {
 }
 
 // ============================================================================
-// WAV → M4A Conversion & Auto-save (WebCodecs + mp4-muxer)
+// WAV → M4A Conversion via local convert-server (node tools/convert-server.js)
 // ============================================================================
-let mp4MuxerModule = null;
-let m4aConvertSupported = null; // null = unchecked, true/false
+let convertServerOk = false;
 
-async function loadMp4Muxer() {
-  if (mp4MuxerModule) return mp4MuxerModule;
-  mp4MuxerModule = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
-  return mp4MuxerModule;
+function getConvertBase() {
+  const val = $('convertApiBase').value.trim().replace(/\/+$/, '');
+  lsSet('convertBase', val);
+  return val;
 }
 
-async function checkM4aSupport() {
-  if (m4aConvertSupported !== null) return m4aConvertSupported;
+async function pingConvertServer() {
+  const dot = $('convertStatus');
+  const label = $('convertLabel');
   try {
-    if (typeof AudioEncoder === 'undefined') { m4aConvertSupported = false; return false; }
-    const sup = await AudioEncoder.isConfigSupported({
-      codec: 'mp4a.40.2', sampleRate: 32000, numberOfChannels: 1, bitrate: 64000,
-    });
-    m4aConvertSupported = !!sup.supported;
-  } catch { m4aConvertSupported = false; }
-  return m4aConvertSupported;
+    const resp = await fetch(getConvertBase() + '/health', { signal: AbortSignal.timeout(2000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      convertServerOk = data.ffmpeg !== false;
+      dot.className = 'status-dot ok';
+      dot.title = '변환 서버 연결됨';
+      label.style.color = 'var(--green)';
+      label.textContent = 'M4A 변환 OK';
+    } else {
+      convertServerOk = false;
+      dot.className = 'status-dot err'; dot.title = '변환 서버 응답 오류';
+      label.style.color = 'var(--red)'; label.textContent = 'M4A 오류';
+    }
+  } catch {
+    convertServerOk = false;
+    dot.className = 'status-dot err';
+    dot.title = '변환 서버 없음 — node tools/convert-server.js 실행 필요';
+    label.style.color = 'var(--red)';
+    label.textContent = 'M4A 변환 서버 필요';
+  }
 }
 
 async function convertWavToM4a(wavBlob) {
-  const supported = await checkM4aSupport();
-  if (!supported) throw new Error('이 브라우저는 AAC 인코딩을 지원하지 않습니다 (Chrome 94+ 필요)');
+  if (!convertServerOk) {
+    // Re-check once in case server started after page load
+    await pingConvertServer();
+  }
+  if (!convertServerOk) {
+    throw new Error('M4A 변환 서버가 실행되지 않았습니다. 터미널에서: node tools/convert-server.js');
+  }
 
-  const { Muxer, ArrayBufferTarget } = await loadMp4Muxer();
-
-  // Decode WAV → AudioBuffer
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const arrayBuf = await wavBlob.arrayBuffer();
-  const audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
-  await audioCtx.close();
-
-  // Resample to mono 32kHz
-  const TARGET_RATE = 32000, TARGET_CH = 1;
-  const numFrames = Math.ceil(audioBuffer.duration * TARGET_RATE);
-  const offlineCtx = new OfflineAudioContext(TARGET_CH, numFrames, TARGET_RATE);
-  const src = offlineCtx.createBufferSource();
-  src.buffer = audioBuffer;
-  src.connect(offlineCtx.destination);
-  src.start();
-  const rendered = await offlineCtx.startRendering();
-
-  // Encode AAC + mux into MP4
-  const target = new ArrayBufferTarget();
-  const muxer = new Muxer({
-    target,
-    audio: { codec: 'aac', sampleRate: TARGET_RATE, numberOfChannels: TARGET_CH },
-    fastStart: 'in-memory',
+  const resp = await fetch(getConvertBase() + '/convert', {
+    method: 'POST',
+    headers: { 'Content-Type': 'audio/wav' },
+    body: wavBlob,
   });
 
-  return new Promise((resolve, reject) => {
-    const encoder = new AudioEncoder({
-      output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
-      error: reject,
-    });
-    encoder.configure({ codec: 'mp4a.40.2', sampleRate: TARGET_RATE, numberOfChannels: TARGET_CH, bitrate: 64000 });
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => resp.statusText);
+    throw new Error(`M4A 변환 실패 (${resp.status}): ${errText}`);
+  }
 
-    const channelData = rendered.getChannelData(0);
-    const CHUNK = 1024;
-    for (let off = 0; off < channelData.length; off += CHUNK) {
-      const end = Math.min(off + CHUNK, channelData.length);
-      const samples = new Float32Array(end - off);
-      samples.set(channelData.subarray(off, end));
-      const ad = new AudioData({
-        format: 'f32-planar', sampleRate: TARGET_RATE,
-        numberOfFrames: samples.length, numberOfChannels: TARGET_CH,
-        timestamp: Math.round((off / TARGET_RATE) * 1_000_000),
-        data: samples,
-      });
-      encoder.encode(ad);
-      ad.close();
-    }
-
-    encoder.flush().then(() => {
-      encoder.close();
-      muxer.finalize();
-      resolve(new Blob([target.buffer], { type: 'audio/mp4' }));
-    }).catch(reject);
-  });
+  return await resp.blob();
 }
 
 function getExpectedAudioPath(clip) {
@@ -1101,8 +1134,10 @@ async function regenAllClips() {
   if (!projectDirHandle) { toast('프로젝트 폴더가 연결되지 않았습니다', 'error'); return; }
   if (currentClips.length === 0 || regenAllRunning) return;
 
-  const supported = await checkM4aSupport();
-  if (!supported) { toast('이 브라우저는 AAC 인코딩을 지원하지 않습니다 (Chrome 94+ 필요)', 'error'); return; }
+  if (!convertServerOk) {
+    await pingConvertServer();
+    if (!convertServerOk) { toast('M4A 변환 서버가 필요합니다. 터미널에서: node tools/convert-server.js', 'error'); return; }
+  }
 
   regenAllRunning = true;
   $('btnRegenAll').disabled = true;
@@ -1283,8 +1318,9 @@ async function pingServer() {
 
 $('btnPing').addEventListener('click', async () => {
   $('serverStatus').className = 'status-dot';
-  await pingServer();
-  toast($('serverStatus').classList.contains('ok') ? '서버 연결 확인됨' : '서버 연결 실패',
+  $('convertStatus').className = 'status-dot';
+  await Promise.all([pingServer(), pingConvertServer()]);
+  toast($('serverStatus').classList.contains('ok') ? 'TTS 서버 연결됨' : 'TTS 서버 연결 실패',
         $('serverStatus').classList.contains('ok') ? 'success' : 'error');
 });
 
@@ -1294,7 +1330,12 @@ $('btnPing').addEventListener('click', async () => {
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   if (e.key === ' ') { e.preventDefault(); audioPlayer.paused ? audioPlayer.play() : audioPlayer.pause(); }
-  if (e.key === 'Escape') { closeVoiceMapPanel(); stopAll(); }
+  if (e.key === 'Escape') {
+    if ($('vbRolePicker').style.display !== 'none') { hideRolePicker(); return; }
+    const confirmEl = document.querySelector('.confirm-overlay');
+    if (confirmEl) { confirmEl.remove(); return; }
+    closeVoiceMapPanel(false); stopAll();
+  }
   if (e.key === 'ArrowRight' && playingIdx >= 0) _play(playingIdx + 1);
   if (e.key === 'ArrowLeft' && playingIdx > 0) _play(playingIdx - 1);
 });
@@ -1313,9 +1354,60 @@ function openVoiceMapPanel() {
   if (serverVoices.length === 0 && !voiceLibDirHandle) fetchServerVoices();
 }
 
-function closeVoiceMapPanel() {
+function closeVoiceMapPanel(force) {
+  if (!force && voiceMapDirty) {
+    showConfirm(
+      'Voice Map 변경사항',
+      '저장하지 않은 변경사항이 있습니다. 저장하시겠습니까?',
+      [
+        { label: '저장 후 닫기', cls: 'primary', action: async () => { await saveVoiceMap(); doCloseVmPanel(); } },
+        { label: '저장 안 함', cls: 'danger', action: () => { revertVoiceMap(); doCloseVmPanel(); } },
+        { label: '취소', cls: '', action: () => {} },
+      ]
+    );
+    return;
+  }
+  doCloseVmPanel();
+}
+
+function doCloseVmPanel() {
   $('vmOverlay').classList.remove('open');
   $('vmPanel').classList.remove('open');
+  hideRolePicker();
+}
+
+function revertVoiceMap() {
+  if (voiceMapOriginal) {
+    try { voiceMap = JSON.parse(voiceMapOriginal); } catch {}
+  }
+  voiceMapDirty = false;
+  updateVmSaveBtn();
+  if (currentClips.length > 0) renderClipList();
+}
+
+function showConfirm(title, message, buttons) {
+  const existing = document.querySelector('.confirm-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'confirm-overlay';
+  overlay.innerHTML = `
+    <div class="confirm-box">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(message)}</p>
+      <div class="actions" id="confirmActions"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const actionsEl = overlay.querySelector('#confirmActions');
+  for (const b of buttons) {
+    const btn = document.createElement('button');
+    btn.className = `btn ${b.cls}`;
+    btn.textContent = b.label;
+    btn.addEventListener('click', () => { overlay.remove(); b.action(); });
+    actionsEl.appendChild(btn);
+  }
 }
 
 async function fetchServerVoices() {
@@ -1405,8 +1497,20 @@ function onVoiceMapChange(selectEl) {
   const roleId = selectEl.dataset.role;
   const newVoice = selectEl.value;
   if (voiceMap) voiceMap[roleId] = newVoice;
-  // Update clip cards if rendered
+  voiceMapDirty = true;
+  updateVmSaveBtn();
   if (currentClips.length > 0) renderClipList();
+}
+
+function updateVmSaveBtn() {
+  const btn = $('btnVmSave');
+  if (voiceMapDirty) {
+    btn.innerHTML = '&#128190; voice_map.json 저장 <span style="color:var(--orange);font-size:10px">(변경됨)</span>';
+    btn.classList.add('primary');
+  } else {
+    btn.innerHTML = 'voice_map.json 저장';
+    btn.classList.remove('primary');
+  }
 }
 
 async function previewVoice(btn) {
@@ -1485,15 +1589,6 @@ function renderVoiceBrowser() {
     `<span class="vb-chip ${tag === vbPlayingTag ? 'playing' : ''}" data-tag="${escapeHtml(tag)}" style="background:${chipGradient(tag)}">${escapeHtml(tag)}</span>`
   ).join('');
 
-  // Populate target role selector
-  const sel = $('vbTargetRole');
-  const prevVal = sel.value;
-  const roles = getRoleEntries();
-  sel.innerHTML = roles.map(([rid]) =>
-    `<option value="${rid}">${roleDisplayName(rid)}</option>`
-  ).join('');
-  if (prevVal) sel.value = prevVal;
-
   // Attach hover + click events
   grid.querySelectorAll('.vb-chip').forEach(chip => {
     chip.addEventListener('mouseenter', onVbChipEnter);
@@ -1515,12 +1610,74 @@ function onVbChipLeave() {
 
 function onVbChipClick(e) {
   const tag = e.target.dataset.tag;
-  const targetRole = $('vbTargetRole').value;
-  if (!targetRole || !voiceMap) return;
-  voiceMap[targetRole] = tag;
-  toast(`${roleDisplayName(targetRole)} → ${tag}`, 'success');
-  renderVoiceMapList();
-  if (currentClips.length > 0) renderClipList();
+  if (!tag || !voiceMap) return;
+
+  // Position the picker near the chip
+  const rect = e.target.getBoundingClientRect();
+  showRolePicker(tag, rect.right + 8, rect.top);
+}
+
+function showRolePicker(tag, x, y) {
+  const picker = $('vbRolePicker');
+  const entries = getRoleEntries();
+  if (entries.length === 0) return;
+
+  // Clamp position to viewport
+  const vw = window.innerWidth, vh = window.innerHeight;
+  if (x + 260 > vw) x = vw - 270;
+  if (y + 360 > vh) y = Math.max(10, vh - 370);
+
+  picker.style.left = x + 'px';
+  picker.style.top = y + 'px';
+  picker.style.display = 'flex';
+
+  picker.innerHTML = `
+    <div class="vb-role-picker-header">
+      <span>${escapeHtml(tag)}</span>
+      <button class="close-btn" onclick="hideRolePicker()">&#10005;</button>
+    </div>
+    <div class="vb-role-picker-list">
+      ${entries.map(([rid, curVoice]) => {
+        const isSame = curVoice === tag;
+        return `<div class="vb-role-picker-item ${isSame ? 'same-voice' : ''}"
+                     data-role="${rid}" data-tag="${escapeHtml(tag)}">
+          <span class="role-label">${roleDisplayName(rid)}</span>
+          <span class="cur-voice" title="${escapeHtml(curVoice)}">${isSame ? '&#10003; 현재' : escapeHtml(curVoice)}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+
+  // Add backdrop to close on outside click
+  let backdrop = document.querySelector('.vb-role-picker-backdrop');
+  if (!backdrop) {
+    backdrop = document.createElement('div');
+    backdrop.className = 'vb-role-picker-backdrop';
+    backdrop.addEventListener('click', hideRolePicker);
+    document.body.appendChild(backdrop);
+  }
+  backdrop.style.display = 'block';
+
+  // Click handler for role items
+  picker.querySelectorAll('.vb-role-picker-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const roleId = item.dataset.role;
+      const voiceTag = item.dataset.tag;
+      voiceMap[roleId] = voiceTag;
+      voiceMapDirty = true;
+      updateVmSaveBtn();
+      toast(`${roleDisplayName(roleId)} → ${voiceTag}`, 'success');
+      hideRolePicker();
+      renderVoiceMapList();
+      if (currentClips.length > 0) renderClipList();
+    });
+  });
+}
+
+function hideRolePicker() {
+  $('vbRolePicker').style.display = 'none';
+  const backdrop = document.querySelector('.vb-role-picker-backdrop');
+  if (backdrop) backdrop.style.display = 'none';
 }
 
 async function playVoicePreview(tag) {
@@ -1566,6 +1723,9 @@ async function saveVoiceMap() {
       const writable = await fileHandle.createWritable();
       await writable.write(JSON.stringify(voiceMap, null, 2) + '\n');
       await writable.close();
+      voiceMapDirty = false;
+      voiceMapOriginal = JSON.stringify(voiceMap);
+      updateVmSaveBtn();
       toast('voice_map.json 저장 완료', 'success');
     } catch (e) {
       toast(`저장 실패: ${e.message}`, 'error');
@@ -1577,6 +1737,9 @@ async function saveVoiceMap() {
     const a = document.createElement('a');
     a.href = url; a.download = 'voice_map.json';
     a.click(); URL.revokeObjectURL(url);
+    voiceMapDirty = false;
+    voiceMapOriginal = JSON.stringify(voiceMap);
+    updateVmSaveBtn();
     toast('voice_map.json 다운로드됨 (수동으로 교체하세요)', 'success');
   }
 }
@@ -1639,6 +1802,10 @@ function restoreFromCache() {
   // Restore API base URL
   const savedApi = lsGet('apiBase', '');
   if (savedApi) $('ttsApiBase').value = savedApi;
+
+  // Restore convert server URL
+  const savedConvert = lsGet('convertBase', '');
+  if (savedConvert) $('convertApiBase').value = savedConvert;
 
   // Restore server voices cache
   const cachedVoices = lsGetJson('serverVoices', []);
@@ -1734,6 +1901,7 @@ async function tryRestoreHandles() {
       `;
     }
     pingServer();
+    pingConvertServer();
   } else {
     $('modeBadge').textContent = 'HTTP';
     $('modeBadge').className = 'mode-badge http';
@@ -1742,6 +1910,7 @@ async function tryRestoreHandles() {
     $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
     restoreSelection();
     pingServer();
+    pingConvertServer();
   }
 })();
 </script>
