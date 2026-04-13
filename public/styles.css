@@ -162,12 +162,14 @@ body {
 .role-icon--lg {
   width: 48px;
   height: 48px;
+  max-width: 48px;
   border-radius: 10px;
   border-width: 2px;
 }
 .role-icon--xl {
   width: 72px;
   height: 72px;
+  max-width: 72px;
   border-radius: 14px;
   border-width: 2px;
   margin-bottom: 8px;
@@ -877,6 +879,7 @@ body {
 .role-icon--xxl {
   width: 96px;
   height: 96px;
+  max-width: 96px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid rgba(255,255,255,0.15);
@@ -2045,6 +2048,7 @@ body {
 .role-icon--hero {
   width: 96px;
   height: 96px;
+  max-width: 96px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid rgba(255,255,255,0.15);
