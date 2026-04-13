@@ -338,6 +338,7 @@
   <div class="selector-group" id="playGroup" style="display:none">
     <button class="btn" id="btnPlayAll" disabled>&#9654; 전체 재생</button>
     <button class="btn" id="btnStopAll" disabled>&#9632; 정지</button>
+    <button class="btn primary" id="btnRegenAll" onclick="regenAllClips()" disabled>&#9889; 전체 재생성</button>
     <button class="btn" id="btnVoiceMap" onclick="openVoiceMapPanel()">Voice Map</button>
   </div>
   <div class="server-config">
@@ -687,7 +688,8 @@ function renderEpisode(episodeId) {
     currentClips.push({
       type: 'opening', speakerId: 'Narrator', roleId: 'Narrator',
       text: ep.openingClips, originalText: ep.openingClips,
-      audioUrl: findAudioUrl(scenarioId, episodeId, 'opening', null),
+      audioUrl: findAudioUrl(scenarioId, episodeId, 'opening', null)
+            || `/assets/voices/${scenarioId}/${episodeId}/pall/opening/001/voice.m4a`,
     });
   }
   if (ep.roleClips) {
@@ -695,7 +697,8 @@ function renderEpisode(episodeId) {
       currentClips.push({
         type: 'role', speakerId: roleId, roleId,
         text, originalText: text,
-        audioUrl: findAudioUrl(scenarioId, episodeId, 'role', roleId),
+        audioUrl: findAudioUrl(scenarioId, episodeId, 'role', roleId)
+              || `/assets/voices/${scenarioId}/${episodeId}/pall/role/${roleId}/during/001/voice.m4a`,
       });
     }
   }
@@ -703,7 +706,8 @@ function renderEpisode(episodeId) {
     currentClips.push({
       type: 'outro', speakerId: 'Narrator', roleId: 'Narrator',
       text: ep.nightOutroClips, originalText: ep.nightOutroClips,
-      audioUrl: findAudioUrl(scenarioId, episodeId, 'outro', null),
+      audioUrl: findAudioUrl(scenarioId, episodeId, 'outro', null)
+            || `/assets/voices/${scenarioId}/${episodeId}/pall/outro/001/voice.m4a`,
     });
   }
 
@@ -711,6 +715,7 @@ function renderEpisode(episodeId) {
   renderStats();
   $('btnPlayAll').disabled = false;
   $('btnStopAll').disabled = false;
+  $('btnRegenAll').disabled = false;
 }
 
 function findAudioUrl(scenarioId, episodeId, clipType, roleId) {
@@ -772,10 +777,10 @@ function renderClipList() {
         <button class="btn btn-sm" onclick="addToQueue(${idx})" title="TTS 재생성 큐에 추가">
           &#8635; 큐 추가
         </button>
-        <button class="btn btn-sm primary" onclick="regenNow(${idx})" title="즉시 TTS 재생성 후 재생">
-          &#9889; 즉시 재생성
+        <button class="btn btn-sm primary" onclick="regenNow(${idx})" title="즉시 TTS 재생성 → M4A 변환 → 자동 저장">
+          &#9889; 재생성 & 저장
         </button>
-        ${clip.regenBlobUrl ? `<button class="btn btn-sm" style="color:var(--green);border-color:var(--green)" onclick="saveClip(${idx})">&#128190; 저장</button>` : ''}
+        ${clip.regenBlobUrl ? `<span style="font-size:10px;color:var(--green)">&#10003; 저장됨</span>` : ''}
       </div>
     `;
     container.appendChild(card);
@@ -927,7 +932,7 @@ async function generateTts(text, speakerId, overrideTag) {
   }
 
   const blob = await resp.blob();
-  return URL.createObjectURL(blob);
+  return { blob, blobUrl: URL.createObjectURL(blob) };
 }
 
 function getTagOverride(idx) {
@@ -944,11 +949,29 @@ async function regenNow(idx) {
   card.classList.add('regenerating');
   try {
     toast(`재생성 중: ${roleDisplayName(clip.roleId)}...`);
-    const blobUrl = await generateTts(clip.text, clip.speakerId, getTagOverride(idx));
+    const { blob, blobUrl } = await generateTts(clip.text, clip.speakerId, getTagOverride(idx));
     clip.regenBlobUrl = blobUrl;
+
+    // Auto-convert to M4A and save
+    const audioPath = getExpectedAudioPath(clip);
+    if (projectDirHandle && audioPath) {
+      try {
+        toast(`M4A 변환 중: ${roleDisplayName(clip.roleId)}...`);
+        await autoSaveClipAsM4a(clip, audioPath, blob);
+        clip.audioUrl = audioPath;
+        delete audioBlobCache['public' + audioPath];
+        toast(`저장 완료: ${roleDisplayName(clip.roleId)}`, 'success');
+      } catch (e) {
+        toast(`M4A 변환/저장 실패: ${e.message}`, 'error');
+        console.error('M4A save error:', e);
+      }
+    } else {
+      toast(`재생성 완료: ${roleDisplayName(clip.roleId)}`, 'success');
+    }
+
     card.classList.remove('regenerating');
-    toast(`재생성 완료: ${roleDisplayName(clip.roleId)}`, 'success');
-    renderClipList();  // re-render to show save button
+    renderClipList();
+    renderStats();
     stopAll(); _play(idx);
   } catch (e) {
     card.classList.remove('regenerating');
@@ -958,41 +981,184 @@ async function regenNow(idx) {
 }
 
 // ============================================================================
-// Save regenerated clip to project (WAV → overwrite voice.m4a path)
+// WAV → M4A Conversion & Auto-save (WebCodecs + mp4-muxer)
 // ============================================================================
-let savedWavPaths = []; // track saved files for batch conversion
+let mp4MuxerModule = null;
+let m4aConvertSupported = null; // null = unchecked, true/false
 
-async function saveClip(idx) {
-  const clip = currentClips[idx];
-  if (!clip.regenBlobUrl) { toast('재생성된 오디오가 없습니다', 'error'); return; }
-  if (!clip.audioUrl) { toast('원본 오디오 경로를 알 수 없습니다', 'error'); return; }
-  if (!projectDirHandle) { toast('프로젝트 폴더가 연결되지 않았습니다', 'error'); return; }
+async function loadMp4Muxer() {
+  if (mp4MuxerModule) return mp4MuxerModule;
+  mp4MuxerModule = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm');
+  return mp4MuxerModule;
+}
 
-  // audioUrl: "/assets/voices/scenario/ep1/.../voice.m4a"
-  // project path: "public/assets/voices/scenario/ep1/.../voice.m4a"
-  const relPath = ('public' + clip.audioUrl).replace(/\//g, '/');
-
+async function checkM4aSupport() {
+  if (m4aConvertSupported !== null) return m4aConvertSupported;
   try {
-    // Write WAV alongside as voice.wav (keep original .m4a intact until conversion)
-    const wavRelPath = relPath.replace(/\.m4a$/, '.wav');
-    const parts = wavRelPath.split('/').filter(Boolean);
-    const fileName = parts.pop();
-    const dir = await getSubDir(projectDirHandle, parts);
-    const fileHandle = await dir.getFileHandle(fileName, { create: true });
-    const writable = await fileHandle.createWritable();
+    if (typeof AudioEncoder === 'undefined') { m4aConvertSupported = false; return false; }
+    const sup = await AudioEncoder.isConfigSupported({
+      codec: 'mp4a.40.2', sampleRate: 32000, numberOfChannels: 1, bitrate: 64000,
+    });
+    m4aConvertSupported = !!sup.supported;
+  } catch { m4aConvertSupported = false; }
+  return m4aConvertSupported;
+}
 
-    const resp = await fetch(clip.regenBlobUrl);
-    const blob = await resp.blob();
-    await writable.write(blob);
-    await writable.close();
+async function convertWavToM4a(wavBlob) {
+  const supported = await checkM4aSupport();
+  if (!supported) throw new Error('이 브라우저는 AAC 인코딩을 지원하지 않습니다 (Chrome 94+ 필요)');
 
-    savedWavPaths.push(wavRelPath);
-    toast(`저장됨: ${fileName}`, 'success');
-    renderStats();
-  } catch (e) {
-    toast(`저장 실패: ${e.message}`, 'error');
-    console.error(e);
+  const { Muxer, ArrayBufferTarget } = await loadMp4Muxer();
+
+  // Decode WAV → AudioBuffer
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const arrayBuf = await wavBlob.arrayBuffer();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuf);
+  await audioCtx.close();
+
+  // Resample to mono 32kHz
+  const TARGET_RATE = 32000, TARGET_CH = 1;
+  const numFrames = Math.ceil(audioBuffer.duration * TARGET_RATE);
+  const offlineCtx = new OfflineAudioContext(TARGET_CH, numFrames, TARGET_RATE);
+  const src = offlineCtx.createBufferSource();
+  src.buffer = audioBuffer;
+  src.connect(offlineCtx.destination);
+  src.start();
+  const rendered = await offlineCtx.startRendering();
+
+  // Encode AAC + mux into MP4
+  const target = new ArrayBufferTarget();
+  const muxer = new Muxer({
+    target,
+    audio: { codec: 'aac', sampleRate: TARGET_RATE, numberOfChannels: TARGET_CH },
+    fastStart: 'in-memory',
+  });
+
+  return new Promise((resolve, reject) => {
+    const encoder = new AudioEncoder({
+      output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+      error: reject,
+    });
+    encoder.configure({ codec: 'mp4a.40.2', sampleRate: TARGET_RATE, numberOfChannels: TARGET_CH, bitrate: 64000 });
+
+    const channelData = rendered.getChannelData(0);
+    const CHUNK = 1024;
+    for (let off = 0; off < channelData.length; off += CHUNK) {
+      const end = Math.min(off + CHUNK, channelData.length);
+      const samples = new Float32Array(end - off);
+      samples.set(channelData.subarray(off, end));
+      const ad = new AudioData({
+        format: 'f32-planar', sampleRate: TARGET_RATE,
+        numberOfFrames: samples.length, numberOfChannels: TARGET_CH,
+        timestamp: Math.round((off / TARGET_RATE) * 1_000_000),
+        data: samples,
+      });
+      encoder.encode(ad);
+      ad.close();
+    }
+
+    encoder.flush().then(() => {
+      encoder.close();
+      muxer.finalize();
+      resolve(new Blob([target.buffer], { type: 'audio/mp4' }));
+    }).catch(reject);
+  });
+}
+
+function getExpectedAudioPath(clip) {
+  if (clip.audioUrl) return clip.audioUrl;
+  if (!scenarioData) return null;
+  const sid = scenarioData.scenarioId;
+  const eid = $('selEpisode').value;
+  if (clip.type === 'opening') return `/assets/voices/${sid}/${eid}/pall/opening/001/voice.m4a`;
+  if (clip.type === 'outro') return `/assets/voices/${sid}/${eid}/pall/outro/001/voice.m4a`;
+  if (clip.type === 'role' && clip.roleId) return `/assets/voices/${sid}/${eid}/pall/role/${clip.roleId}/during/001/voice.m4a`;
+  return null;
+}
+
+async function getOrCreateSubDir(dirHandle, pathParts) {
+  let h = dirHandle;
+  for (const part of pathParts) h = await h.getDirectoryHandle(part, { create: true });
+  return h;
+}
+
+async function autoSaveClipAsM4a(clip, audioPath, wavBlob) {
+  const m4aBlob = await convertWavToM4a(wavBlob);
+  const relPath = ('public' + audioPath).replace(/\\/g, '/');
+  const parts = relPath.split('/').filter(Boolean);
+  const fileName = parts.pop();
+  const dir = await getOrCreateSubDir(projectDirHandle, parts);
+  const fileHandle = await dir.getFileHandle(fileName, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(m4aBlob);
+  await writable.close();
+}
+
+// ── Regenerate All Clips ──
+let regenAllRunning = false;
+
+async function regenAllClips() {
+  if (!projectDirHandle) { toast('프로젝트 폴더가 연결되지 않았습니다', 'error'); return; }
+  if (currentClips.length === 0 || regenAllRunning) return;
+
+  const supported = await checkM4aSupport();
+  if (!supported) { toast('이 브라우저는 AAC 인코딩을 지원하지 않습니다 (Chrome 94+ 필요)', 'error'); return; }
+
+  regenAllRunning = true;
+  $('btnRegenAll').disabled = true;
+  $('btnRegenAll').textContent = '재생성 중...';
+
+  const total = currentClips.length;
+  let done = 0, failed = 0;
+
+  // Show progress in queue panel
+  $('queuePanel').classList.add('visible');
+  const log = $('queueLog');
+  log.textContent = `[${new Date().toLocaleTimeString()}] === 전체 재생성 시작 (${total}개) ===\n`;
+  $('queueCount').textContent = total;
+  $('queueDone').textContent = '0';
+  $('queueProgressBar').style.width = '0%';
+
+  for (let idx = 0; idx < currentClips.length; idx++) {
+    const clip = currentClips[idx];
+    const card = $(`clip-${idx}`);
+    if (card) card.classList.add('regenerating');
+
+    log.textContent += `[${new Date().toLocaleTimeString()}] #${idx + 1} ${roleDisplayName(clip.roleId)} 재생성 중...\n`;
+    log.scrollTop = log.scrollHeight;
+
+    try {
+      const { blob, blobUrl } = await generateTts(clip.text, clip.speakerId, null);
+      clip.regenBlobUrl = blobUrl;
+
+      const audioPath = getExpectedAudioPath(clip);
+      if (audioPath) {
+        await autoSaveClipAsM4a(clip, audioPath, blob);
+        clip.audioUrl = audioPath;
+        delete audioBlobCache['public' + audioPath];
+        log.textContent += `  → M4A 저장 완료\n`;
+      }
+      done++;
+    } catch (e) {
+      log.textContent += `  → 실패: ${e.message}\n`;
+      failed++;
+    }
+
+    if (card) card.classList.remove('regenerating');
+    $('queueDone').textContent = done + failed;
+    $('queueProgressBar').style.width = `${((done + failed) / total) * 100}%`;
+    $('queueCount').textContent = total - done - failed;
+    log.scrollTop = log.scrollHeight;
   }
+
+  log.textContent += `[${new Date().toLocaleTimeString()}] === 완료: 성공 ${done}, 실패 ${failed} ===\n`;
+  toast(`전체 재생성 완료: 성공 ${done}개, 실패 ${failed}개`, done > 0 ? 'success' : 'error');
+
+  regenAllRunning = false;
+  $('btnRegenAll').disabled = false;
+  $('btnRegenAll').innerHTML = '&#9889; 전체 재생성';
+  renderClipList();
+  renderStats();
 }
 
 function renderStats() {
@@ -1000,43 +1166,15 @@ function renderStats() {
   const withAudio = currentClips.filter(c => c.audioUrl).length;
   const missing = total - withAudio;
   const regenCount = currentClips.filter(c => c.regenBlobUrl).length;
+  const modifiedCount = currentClips.filter(c => c.text !== c.originalText).length;
   $('statsBar').innerHTML = `
     <div class="stat-chip"><span class="num">${total}</span> 전체 클립</div>
     <div class="stat-chip" style="color:var(--green)"><span class="num">${withAudio}</span> 오디오 있음</div>
     ${missing > 0 ? `<div class="stat-chip" style="color:var(--red)"><span class="num">${missing}</span> 오디오 없음</div>` : ''}
     <div class="stat-chip"><span class="num">${regenQueue.length}</span> 재생성 큐</div>
-    ${regenCount > 0 ? `<div class="stat-chip" style="color:var(--orange)"><span class="num">${regenCount}</span> 재생성됨</div>` : ''}
-    ${savedWavPaths.length > 0 ? `<div class="stat-chip" style="color:var(--green);cursor:pointer" onclick="showConvertCommand()"><span class="num">${savedWavPaths.length}</span> 저장됨 (클릭→변환)</div>` : ''}
+    ${regenCount > 0 ? `<div class="stat-chip" style="color:var(--orange)"><span class="num">${regenCount}</span> 재생성됨 (자동저장)</div>` : ''}
+    ${modifiedCount > 0 ? `<div class="stat-chip" style="color:var(--orange)"><span class="num">${modifiedCount}</span> 텍스트 수정됨</div>` : ''}
   `;
-}
-
-function showConvertCommand() {
-  if (savedWavPaths.length === 0) return;
-  const projectRoot = projectDirHandle ? projectDirHandle.name : '.';
-
-  // Generate ffmpeg commands
-  const cmds = savedWavPaths.map(p => {
-    const m4a = p.replace(/\.wav$/, '.m4a');
-    return `ffmpeg -y -i "${p}" -c:a aac -b:a 64k -ar 32000 -ac 1 "${m4a}" && del "${p}"`;
-  });
-
-  const script = cmds.join('\n');
-
-  // Show in a modal-like toast
-  const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center';
-  el.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:700px;width:90%">
-      <h3 style="margin-bottom:12px">WAV → M4A 변환 (${savedWavPaths.length}개)</h3>
-      <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px">프로젝트 루트에서 실행하세요:</p>
-      <textarea readonly style="width:100%;height:200px;background:var(--bg);color:var(--green);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:Consolas,monospace;font-size:12px;resize:vertical">${escapeHtml(script)}</textarea>
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-sm" onclick="navigator.clipboard.writeText(this.closest('div').querySelector('textarea').value);toast('복사됨','success')">복사</button>
-        <button class="btn btn-sm" onclick="this.closest('[style*=fixed]').remove()">닫기</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(el);
 }
 
 // ============================================================================
@@ -1090,9 +1228,24 @@ async function runQueue() {
     if (card) card.classList.add('regenerating');
 
     try {
-      const blobUrl = await generateTts(item.text, item.speakerId, item.tagOverride);
+      const { blob, blobUrl } = await generateTts(item.text, item.speakerId, item.tagOverride);
       currentClips[idx].regenBlobUrl = blobUrl;
-      done++; log.textContent += `  -> 완료\n`;
+
+      // Auto-convert and save
+      const audioPath = getExpectedAudioPath(currentClips[idx]);
+      if (projectDirHandle && audioPath) {
+        try {
+          await autoSaveClipAsM4a(currentClips[idx], audioPath, blob);
+          currentClips[idx].audioUrl = audioPath;
+          delete audioBlobCache['public' + audioPath];
+          log.textContent += `  -> M4A 저장 완료\n`;
+        } catch (e2) {
+          log.textContent += `  -> TTS 완료, M4A 변환 실패: ${e2.message}\n`;
+        }
+      } else {
+        log.textContent += `  -> 완료\n`;
+      }
+      done++;
     } catch (e) {
       log.textContent += `  -> 실패: ${e.message}\n`;
       done++;
