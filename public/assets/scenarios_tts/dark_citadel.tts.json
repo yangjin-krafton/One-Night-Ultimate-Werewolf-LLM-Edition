@@ -17,7 +17,7 @@
         "dream_wolf": "[whisper] 잠자는 늑대인간은 눈을 뜨지 마라. [pause] 끝까지 모른다는 얼굴을 유지해라. [pause][emphasis] 낮에는 무지 연기를 너무 빨리 시작한 사람이 오히려 표적이 된다. [pause]",
         "minion": "[low voice] 하수인, [short pause]눈을 떠라. [pause]늑대인간은 엄지를 들어라. [pause]하수인은 그들을 확인하고 늑대는 엄지를 내려라. [pause] 성문 옆 충성파처럼 직접 감싸지 말고, [short pause]낮에는 누가 대신 변명하는지만 찍어라. [pause][low voice] 눈을 감아라. [pause]",
         "squire": "[low voice] 종자, [short pause]눈을 떠라. [pause]늑대인간은 엄지를 들어라. [pause]종자는 그들을 확인하고 늑대는 엄지를 내려라. [pause] 순서를 오래 기억하는 태도로 낮에는 누가 확인 순서를 바꿔 말하는지 잡아라. [pause][emphasis] 눈을 감아라. [pause]",
-        "mason": "[low voice] 프리메이슨, [short pause]눈을 떠라. [pause]다른 프리메이슨이 있으면 서로 확인해라. [pause]없으면 다른 메이슨은 중앙에 있다. [pause] 감정 대신 물증을 드는 태도로 낮에는 우물가 시간표를 어긴 진술을 찔러라. [pause][emphasis] 눈을 감아라. [pause]",
+        "mason": "[high tone] 프리메이슨, [short pause]눈을 떠라. [pause]다른 프리메이슨이 있으면 서로 확인해라. [pause]없으면 다른 메이슨은 중앙에 있다. [pause] 감정 대신 물증을 드는 태도로 낮에는 우물가 시간표를 어긴 진술을 찔러라. [pause][emphasis] 눈을 감아라. [pause]",
         "thing": "[whisper] 어떤것, [short pause]눈을 떠라. [pause]양옆 중 한 사람의 어깨나 팔을 가볍게 한 번 쳐라. [pause]원하지 않으면 하지 않아도 된다. [pause] [echo] 손끝 감각을 믿는 태도로 낮에는 접촉 얘기에 과민한 반응을 골라내라. [pause] 눈을 감아라. [pause]",
         "seer": "[low voice] 예언자, [short pause]눈을 떠라. [pause]다른 플레이어 한 명의 카드를 보거나 중앙 카드 두 장을 확인해라. [pause]둘 중 하나만 선택해라. [pause] 단서를 아끼는 태도로 낮에는 누가 정보 출처부터 재촉하는지 봐라. [pause][emphasis] 눈을 감아라. [pause]",
         "apprentice_seer": "[low volume] 견습 예언자, [short pause]눈을 떠라. [pause]중앙 카드 한 장을 확인해라. [pause] 작은 조각을 끝까지 쥐는 태도로 낮에는 중앙 이야기만 듣고 과하게 반응한 사람을 찍어라. [pause][emphasis] 눈을 감아라. [pause]",
@@ -32,7 +32,7 @@
         "revealer": "[emphasis] 계시자, [short pause]눈을 떠라. [pause]다른 플레이어 한 명의 카드를 공개 시도해라. [pause]늑대인간이면 다시 덮고 아니면 공개한 채 두어라. [pause] 폭로자의 태도로 낮에는 왜 그 사람을 골랐는지 역질문을 먼저 던져라. [pause] 눈을 감아라. [pause]",
         "insomniac": "[low volume] 불면증 환자, [short pause]눈을 떠라. [pause]지금 자기 카드를 확인해라. [pause]이 카드가 밤이 끝난 뒤의 최종 역할이다. [pause] 끝까지 본 목격자 태도로 낮에는 마지막 교환 가능성을 차분히 못 박아라. [pause][low voice] 눈을 감아라. [pause]"
       },
-      "nightOutroClips": "[emphasis] 모두 눈을 떠라. [pause] 누가 사실 확인 전에 처형부터 외쳤는지부터 밝힐까?"
+      "nightOutroClips": "[emphasis] 모두 눈을 떠라. [pause] 날이 밝아 졌다. 이제 게임은 시작됬다.[pause]"
     },
     "ep2": {
       "openingClips": "[low voice] 성채 복도, [short pause]발자국보다 소문이 빠르다. [pause] 카드부터 확인해. [pause] 바로 엎고 눈 감아. [pause][emphasis] 낮엔 질문 건너뛰고 결론부터 내는 사람을 찍자. [pause]",
