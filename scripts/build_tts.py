@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-전체 TTS 파이프라인: 삭제 → WAV 생성 → M4A 변환 → Manifest 업데이트 → Preview 생성
+전체 TTS 파이프라인 (Fish Speech): 삭제 → WAV 생성 → M4A 변환 → Manifest 업데이트 → Preview 생성
 
 사용법:
   python scripts/build_tts.py
@@ -53,10 +53,9 @@ def step_generate(scenario_tts: Path, dry_run: bool = False):
     cmd = [
         sys.executable, str(ROOT / "scripts" / "generate_scenario_audio.py"),
         "--scenario", str(scenario_tts),
-        "--tts", "qwen3",
+        "--tts", "fish",
         "--characters-dir", str(CHARACTERS_DIR),
         "--no-concat-episodes",
-        "--qwen3-use-xvec",
     ]
     if dry_run:
         cmd.append("--dry-run")

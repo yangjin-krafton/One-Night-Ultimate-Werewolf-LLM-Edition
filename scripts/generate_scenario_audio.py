@@ -47,6 +47,17 @@ def _load_qwen3_tts_module() -> Any:
     return module
 
 
+def _load_fish_speech_module() -> Any:
+    mod_path = ROOT / "scripts" / "fish_speech_tts.py"
+    spec = importlib.util.spec_from_file_location("one_night_fish_speech_tts", mod_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Failed to load module: {mod_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _load_concat_module() -> Any:
     mod_path = ROOT / "scripts" / "concat_episode_wavs.py"
     spec = importlib.util.spec_from_file_location("one_night_concat_episode_wavs", mod_path)
@@ -364,9 +375,9 @@ def main() -> int:
     )
     parser.add_argument(
         "--tts",
-        default=os.environ.get("TTS_BACKEND", "auto"),
-        choices=["auto", "gpt-sovits", "qwen3", "windows"],
-        help="TTS backend. auto=use gpt-sovits when character config exists, else windows. qwen3=Qwen3-TTS via Gradio API.",
+        default=os.environ.get("TTS_BACKEND", "fish"),
+        choices=["auto", "gpt-sovits", "qwen3", "fish", "windows"],
+        help="TTS backend. fish=Fish Speech (default). auto=gpt-sovits when character config exists, else windows. qwen3=Qwen3-TTS (legacy).",
     )
     parser.add_argument(
         "--on-error",
@@ -440,6 +451,15 @@ def main() -> int:
     parser.add_argument("--qwen3-top-k", type=int, default=int(os.environ.get("QWEN3_TTS_TOP_K", "50")))
     parser.add_argument("--qwen3-request-retries", type=int, default=int(os.environ.get("QWEN3_TTS_REQUEST_RETRIES", "2")))
 
+    # Fish Speech arguments
+    default_fish_api_base = os.environ.get("FISH_SPEECH_API_BASE", "http://100.66.65.124:8080")
+    parser.add_argument("--fish-api-base", default=default_fish_api_base, help="Fish Speech server URL.")
+    parser.add_argument("--fish-temperature", type=float, default=float(os.environ.get("FISH_SPEECH_TEMPERATURE", "0.8")))
+    parser.add_argument("--fish-top-p", type=float, default=float(os.environ.get("FISH_SPEECH_TOP_P", "0.8")))
+    parser.add_argument("--fish-repetition-penalty", type=float, default=float(os.environ.get("FISH_SPEECH_REP_PENALTY", "1.1")))
+    parser.add_argument("--fish-max-new-tokens", type=int, default=int(os.environ.get("FISH_SPEECH_MAX_TOKENS", "1024")))
+    parser.add_argument("--fish-request-retries", type=int, default=int(os.environ.get("FISH_SPEECH_REQUEST_RETRIES", "2")))
+
     parser.add_argument("--limit", type=int, default=0, help="If set, generate only first N clips.")
     parser.add_argument("--dry-run", action="store_true", help="Print planned outputs without generating.")
     parser.add_argument(
@@ -505,8 +525,26 @@ def main() -> int:
 
     tts_mod = _load_gpt_sovits_module()
     qwen3_mod = _load_qwen3_tts_module() if args.tts == "qwen3" else None
+    fish_mod = _load_fish_speech_module() if args.tts == "fish" else None
 
-    # Load voice_map and build voice_lock from Qwen3-TTS voice library
+    # ── Fish Speech: load voice_map ──
+    fish_voice_map: dict[str, str] | None = None
+    if fish_mod is not None:
+        voice_map_path = characters_dir / "voice_map.json"
+        if not voice_map_path.exists():
+            voice_map_path = ROOT / "characters" / "voice_map.json"
+        if voice_map_path.exists():
+            fish_voice_map = fish_mod.load_voice_map(voice_map_path)
+            print(f"[info] Loaded voice_map: {len(fish_voice_map)} roles from {voice_map_path.name}")
+        else:
+            print(f"[warn] voice_map.json not found at {voice_map_path}")
+        # Ping server
+        if fish_mod.ping(args.fish_api_base):
+            print(f"[info] Fish Speech server OK: {args.fish_api_base}")
+        else:
+            print(f"[warn] Fish Speech server unreachable: {args.fish_api_base}")
+
+    # ── Qwen3 (legacy): load voice_map and build voice_lock ──
     qwen3_voice_map: dict[str, str] | None = None
     qwen3_voice_lock: dict[str, dict[str, Any]] | None = None
     if qwen3_mod is not None:
@@ -522,7 +560,6 @@ def main() -> int:
             if qwen3_voice_map:
                 qwen3_voice_lock = qwen3_mod.build_voice_lock_from_map(qwen3_voice_map, all_voices, seed=42)
             else:
-                # Fallback: collect tags from character configs
                 all_tags: set[str] = set()
                 for job in jobs:
                     cfg_path = character_resolver.resolve(job.speaker_id)
@@ -570,7 +607,22 @@ def main() -> int:
         error: str | None = None
         used_backend = backend
         try:
-            if backend == "qwen3":
+            if backend == "fish":
+                assert fish_mod is not None and fish_voice_map is not None
+                fish_mod.generate_tts_for_role(
+                    text=job.text,
+                    speaker_id=job.speaker_id,
+                    voice_map=fish_voice_map,
+                    out_wav_path=str(job.out_wav_path),
+                    api_base=args.fish_api_base,
+                    temperature=float(args.fish_temperature),
+                    top_p=float(args.fish_top_p),
+                    repetition_penalty=float(args.fish_repetition_penalty),
+                    max_new_tokens=int(args.fish_max_new_tokens),
+                    timeout_s=int(args.timeout_s),
+                    request_retries=int(args.fish_request_retries),
+                )
+            elif backend == "qwen3":
                 assert qwen3_mod is not None
                 # Resolve voice tag base for this speaker
                 voice_tag_base = (qwen3_voice_map or {}).get(job.speaker_id)
