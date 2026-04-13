@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTS Voice Reviewer</title>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22222e;
+    --border: #2e2e3e;
+    --text: #e0e0e8;
+    --text-dim: #888898;
+    --accent: #7c6aef;
+    --accent-hover: #9584ff;
+    --green: #4ade80;
+    --red: #f87171;
+    --orange: #fb923c;
+    --blue: #60a5fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 18px; font-weight: 600; white-space: nowrap; }
+  .selector-group { display: flex; align-items: center; gap: 8px; }
+  .selector-group label { font-size: 13px; color: var(--text-dim); white-space: nowrap; }
+  select {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 12px; font-size: 14px; cursor: pointer; outline: none;
+  }
+  select:hover { border-color: var(--accent); }
+
+  .server-config {
+    margin-left: auto; display: flex; align-items: center; gap: 8px;
+  }
+  .server-config input {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 13px; width: 340px; outline: none;
+  }
+  .server-config input:focus { border-color: var(--accent); }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--text-dim); flex-shrink: 0;
+  }
+  .status-dot.ok { background: var(--green); }
+  .status-dot.err { background: var(--red); }
+
+  /* ── Folder picker banner ── */
+  .folder-banner {
+    background: var(--surface2);
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    margin: 60px auto;
+    max-width: 600px;
+  }
+  .folder-banner h2 { font-size: 20px; margin-bottom: 12px; }
+  .folder-banner p { font-size: 14px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+  .folder-banner .btn { font-size: 16px; padding: 12px 28px; }
+  .mode-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 4px;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
+  }
+  .mode-badge.local { border-color: var(--green); color: var(--green); }
+  .mode-badge.http { border-color: var(--blue); color: var(--blue); }
+
+  /* ── Main ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .stats-bar { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat-chip {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 16px; font-size: 13px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-chip .num { font-weight: 700; font-size: 16px; }
+
+  .clip-section-header {
+    background: var(--accent); color: #fff;
+    padding: 8px 16px; font-size: 13px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-radius: 6px 6px 0 0; margin-top: 16px;
+  }
+  .clip-section-header:first-child { margin-top: 0; }
+
+  .clip-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 14px 16px;
+    display: grid; grid-template-columns: 36px 130px 1fr auto;
+    gap: 12px; align-items: start; transition: background 0.15s;
+  }
+  .clip-card:hover { background: var(--surface2); }
+  .clip-card.playing { border-left: 3px solid var(--accent); }
+  .clip-card.modified { border-left: 3px solid var(--orange); }
+  .clip-card.regenerating { border-left: 3px solid var(--blue); opacity: 0.7; }
+
+  .clip-index { font-size: 12px; color: var(--text-dim); text-align: center; padding-top: 2px; }
+  .clip-speaker { display: flex; flex-direction: column; gap: 2px; }
+  .clip-speaker .role-name { font-size: 14px; font-weight: 600; color: var(--accent); }
+  .clip-speaker .voice-tag { font-size: 11px; color: var(--text-dim); }
+  .voice-tag-input {
+    background: var(--bg); color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 2px 6px; font-size: 11px; width: 120px; outline: none;
+  }
+  .voice-tag-input:focus { border-color: var(--accent); color: var(--text); }
+
+  .clip-body { display: flex; flex-direction: column; gap: 8px; }
+  .clip-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+  .clip-text-edit {
+    display: none; width: 100%; min-height: 80px;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--accent); border-radius: 6px;
+    padding: 10px; font-size: 14px; line-height: 1.6;
+    font-family: inherit; resize: vertical; outline: none;
+  }
+  .clip-actions {
+    display: flex; flex-direction: column; gap: 6px;
+    align-items: flex-end; min-width: 120px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border: 1px solid var(--border);
+    border-radius: 6px; background: var(--surface2);
+    color: var(--text); font-size: 12px; cursor: pointer;
+    white-space: nowrap; transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.danger { border-color: var(--red); color: var(--red); }
+  .btn.danger:hover { background: var(--red); color: #fff; }
+  .btn-sm { padding: 4px 8px; font-size: 11px; }
+
+  .queue-panel {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 12px 24px; display: flex; align-items: center; gap: 16px;
+    z-index: 100; transform: translateY(100%); transition: transform 0.3s;
+  }
+  .queue-panel.visible { transform: translateY(0); }
+  .queue-panel .queue-info { font-size: 13px; flex: 1; }
+  .queue-panel .queue-info strong { color: var(--accent); }
+  .queue-progress { width: 200px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .queue-progress-bar { height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width 0.3s; }
+  .queue-log { max-height: 60px; overflow-y: auto; font-size: 11px; color: var(--text-dim); flex: 1; font-family: 'Consolas', monospace; }
+
+  .playback-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--surface); border-top: 2px solid var(--accent);
+    padding: 10px 24px; display: flex; align-items: center; gap: 12px;
+    z-index: 99; transform: translateY(100%); transition: transform 0.3s;
+  }
+  .playback-bar.visible { transform: translateY(0); }
+  .playback-bar .now-playing { font-size: 13px; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .playback-bar .now-playing .role { color: var(--accent); font-weight: 600; }
+  .playback-bar audio { flex: 1; min-width: 200px; max-width: 480px; height: 36px; }
+
+  .toast-container { position: fixed; top: 80px; right: 24px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px; font-size: 13px;
+    animation: toastIn 0.3s, toastOut 0.3s 2.7s; max-width: 400px;
+  }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  @keyframes toastIn { from { opacity: 0; transform: translateX(20px); } }
+  @keyframes toastOut { to { opacity: 0; transform: translateX(20px); } }
+
+  .loading { text-align: center; padding: 60px; color: var(--text-dim); font-size: 14px; }
+  .spinner {
+    width: 24px; height: 24px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.6s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 800px) {
+    .clip-card { grid-template-columns: 1fr; gap: 8px; }
+    .clip-actions { flex-direction: row; flex-wrap: wrap; min-width: unset; }
+    header { flex-direction: column; align-items: flex-start; }
+    .server-config { margin-left: 0; }
+    .server-config input { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>TTS Voice Reviewer</h1>
+  <span class="mode-badge" id="modeBadge">--</span>
+  <div class="selector-group" id="selectorGroup" style="display:none">
+    <label>Scenario</label>
+    <select id="selScenario"><option value="">-- loading --</option></select>
+  </div>
+  <div class="selector-group" id="episodeGroup" style="display:none">
+    <label>Episode</label>
+    <select id="selEpisode"><option value="">--</option></select>
+  </div>
+  <div class="selector-group" id="playGroup" style="display:none">
+    <button class="btn" id="btnPlayAll" disabled>&#9654; 전체 재생</button>
+    <button class="btn" id="btnStopAll" disabled>&#9632; 정지</button>
+  </div>
+  <div class="server-config">
+    <span class="status-dot" id="serverStatus" title="TTS 서버 상태"></span>
+    <input id="ttsApiBase" type="text" placeholder="TTS API Base URL"
+           value="http://100.66.10.225:3000/tools/qwen3-tts">
+    <button class="btn btn-sm" id="btnPing">연결 확인</button>
+  </div>
+</header>
+
+<main>
+  <div class="stats-bar" id="statsBar"></div>
+  <div id="clipContainer">
+    <!-- folder picker banner or clip list -->
+  </div>
+</main>
+
+<div class="playback-bar" id="playbackBar">
+  <button class="btn btn-sm" id="pbPrev">&#9664;&#9664;</button>
+  <audio id="audioPlayer" controls></audio>
+  <button class="btn btn-sm" id="pbNext">&#9654;&#9654;</button>
+  <div class="now-playing" id="pbNowPlaying">--</div>
+</div>
+
+<div class="queue-panel" id="queuePanel">
+  <div class="queue-info">
+    재생성 큐: <strong id="queueCount">0</strong>개 대기 / <strong id="queueDone">0</strong>개 완료
+  </div>
+  <div class="queue-progress"><div class="queue-progress-bar" id="queueProgressBar"></div></div>
+  <button class="btn primary btn-sm" id="btnRunQueue" disabled>큐 실행</button>
+  <button class="btn danger btn-sm" id="btnClearQueue">큐 초기화</button>
+  <div class="queue-log" id="queueLog"></div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ============================================================================
+// State
+// ============================================================================
+const SCENARIOS = [
+  'beginner_dark_fantasy','dark_citadel','floodgate_nameplates',
+  'rust_orbit','salgol_ward','school_broadcast_prayer',
+];
+
+let scenarioData = null;
+let manifestData = null;
+let voiceMap = null;
+let currentClips = [];
+let playingIdx = -1;
+let isPlayAll = false;
+let regenQueue = [];
+let regenRunning = false;
+
+// ── File System Access API (local mode) ──
+let projectDirHandle = null;  // FileSystemDirectoryHandle
+const audioBlobCache = {};    // url → blobUrl
+
+const isFileProtocol = location.protocol === 'file:';
+
+// ============================================================================
+// Helpers
+// ============================================================================
+function $(id) { return document.getElementById(id); }
+
+function basePath() {
+  const loc = window.location.pathname;
+  if (loc.includes('/tools/')) return loc.substring(0, loc.lastIndexOf('/tools/'));
+  return '..';
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  $('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function roleDisplayName(roleId) {
+  if (voiceMap && voiceMap._roles && voiceMap._roles[roleId]) return voiceMap._roles[roleId].name;
+  const names = {
+    'Narrator':'Narrator','doppelganger':'도플갱어','villager':'마을주민','werewolf':'늑대인간',
+    'minion':'하수인','mason':'프리메이슨','seer':'예언자','robber':'강도',
+    'troublemaker':'말썽쟁이','tanner':'무두장이','drunk':'주정뱅이','hunter':'사냥꾼',
+    'insomniac':'불면증환자','alpha_wolf':'태초의 늑대인간','mystic_wolf':'신비한 늑대인간',
+    'dream_wolf':'잠자는 늑대인간','apprentice_seer':'견습 예언자',
+    'paranormal_investigator':'심령 수사관','witch':'마녀','village_idiot':'동네 얼간이',
+    'revealer':'계시자','aura_seer':'영기 예언자','prince':'왕자','cursed':'저주받은 자',
+    'apprentice_tanner':'견습 무두장이','thing':'어떤것','squire':'종자','beholder':'주시자',
+  };
+  return names[roleId] || roleId;
+}
+
+function getVoiceTag(roleId) {
+  return voiceMap ? (voiceMap[roleId] || voiceMap['Narrator'] || '--') : '--';
+}
+
+// ============================================================================
+// File System Access API helpers (for file:// mode)
+// ============================================================================
+async function getSubDir(dirHandle, pathParts) {
+  let h = dirHandle;
+  for (const part of pathParts) {
+    h = await h.getDirectoryHandle(part);
+  }
+  return h;
+}
+
+async function readJsonFromDir(dirHandle, relativePath) {
+  const parts = relativePath.replace(/\\/g, '/').split('/').filter(Boolean);
+  const fileName = parts.pop();
+  const dir = parts.length > 0 ? await getSubDir(dirHandle, parts) : dirHandle;
+  const fileHandle = await dir.getFileHandle(fileName);
+  const file = await fileHandle.getFile();
+  const text = await file.text();
+  return JSON.parse(text);
+}
+
+async function readFileBlobUrl(dirHandle, relativePath) {
+  if (audioBlobCache[relativePath]) return audioBlobCache[relativePath];
+  try {
+    const parts = relativePath.replace(/\\/g, '/').split('/').filter(Boolean);
+    const fileName = parts.pop();
+    const dir = parts.length > 0 ? await getSubDir(dirHandle, parts) : dirHandle;
+    const fileHandle = await dir.getFileHandle(fileName);
+    const file = await fileHandle.getFile();
+    const url = URL.createObjectURL(file);
+    audioBlobCache[relativePath] = url;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================================
+// Data Loading (dual mode: fetch vs FileSystemAccess)
+// ============================================================================
+async function loadVoiceMap() {
+  try {
+    if (projectDirHandle) {
+      voiceMap = await readJsonFromDir(projectDirHandle, 'characters/voice_map.json');
+    } else {
+      const resp = await fetch(`${basePath()}/characters/voice_map.json`);
+      if (resp.ok) voiceMap = await resp.json();
+    }
+  } catch { /* ignore */ }
+}
+
+async function loadScenario(scenarioId) {
+  if (projectDirHandle) {
+    return readJsonFromDir(projectDirHandle, `public/assets/scenarios_tts/${scenarioId}.tts.json`);
+  }
+  const resp = await fetch(`${basePath()}/public/assets/scenarios_tts/${scenarioId}.tts.json`);
+  if (!resp.ok) throw new Error(`Failed to load scenario: ${resp.status}`);
+  return resp.json();
+}
+
+async function loadManifest(scenarioId) {
+  try {
+    if (projectDirHandle) {
+      return await readJsonFromDir(projectDirHandle, `public/assets/voices/${scenarioId}/_manifest.json`);
+    }
+    const resp = await fetch(`${basePath()}/public/assets/voices/${scenarioId}/_manifest.json`);
+    if (resp.ok) return resp.json();
+  } catch { /* no manifest */ }
+  return null;
+}
+
+async function resolveAudioSrc(clip) {
+  if (clip.regenBlobUrl) return clip.regenBlobUrl;
+  if (!clip.audioUrl) return null;
+
+  if (projectDirHandle) {
+    // audioUrl is like "/assets/voices/scenario/ep1/.../voice.m4a"
+    const relPath = 'public' + clip.audioUrl;
+    return readFileBlobUrl(projectDirHandle, relPath);
+  }
+  return `${basePath()}/public${clip.audioUrl}`;
+}
+
+// ============================================================================
+// UI: Init & Selectors
+// ============================================================================
+function showSelectors() {
+  $('selectorGroup').style.display = '';
+  $('episodeGroup').style.display = '';
+  $('playGroup').style.display = '';
+}
+
+function initSelectors() {
+  const selScenario = $('selScenario');
+  selScenario.innerHTML = '<option value="">-- 시나리오 선택 --</option>';
+  for (const s of SCENARIOS) {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s.replace(/_/g, ' ');
+    selScenario.appendChild(opt);
+  }
+  selScenario.addEventListener('change', onScenarioChange);
+  $('selEpisode').addEventListener('change', onEpisodeChange);
+  showSelectors();
+}
+
+async function onScenarioChange() {
+  const scenarioId = $('selScenario').value;
+  if (!scenarioId) return;
+
+  $('clipContainer').innerHTML = '<div class="loading"><div class="spinner"></div>로딩 중...</div>';
+
+  try {
+    [scenarioData, manifestData] = await Promise.all([
+      loadScenario(scenarioId),
+      loadManifest(scenarioId),
+    ]);
+
+    const selEp = $('selEpisode');
+    selEp.innerHTML = '';
+    const eps = Object.keys(scenarioData.episodes || {});
+    for (const ep of eps) {
+      const opt = document.createElement('option');
+      opt.value = ep;
+      opt.textContent = ep.toUpperCase();
+      selEp.appendChild(opt);
+    }
+    if (eps.length > 0) {
+      selEp.value = eps[0];
+      renderEpisode(eps[0]);
+    }
+  } catch (e) {
+    $('clipContainer').innerHTML = `<div class="loading" style="color:var(--red)">${e.message}</div>`;
+  }
+}
+
+function onEpisodeChange() {
+  const ep = $('selEpisode').value;
+  if (ep) renderEpisode(ep);
+}
+
+// ============================================================================
+// Render
+// ============================================================================
+function renderEpisode(episodeId) {
+  stopAll();
+  clearRegenQueue();
+
+  const ep = scenarioData.episodes[episodeId];
+  if (!ep) return;
+
+  const scenarioId = scenarioData.scenarioId;
+  currentClips = [];
+
+  if (ep.openingClips) {
+    currentClips.push({
+      type: 'opening', speakerId: 'Narrator', roleId: 'Narrator',
+      text: ep.openingClips, originalText: ep.openingClips,
+      audioUrl: findAudioUrl(scenarioId, episodeId, 'opening', null),
+    });
+  }
+  if (ep.roleClips) {
+    for (const [roleId, text] of Object.entries(ep.roleClips)) {
+      currentClips.push({
+        type: 'role', speakerId: roleId, roleId,
+        text, originalText: text,
+        audioUrl: findAudioUrl(scenarioId, episodeId, 'role', roleId),
+      });
+    }
+  }
+  if (ep.nightOutroClips) {
+    currentClips.push({
+      type: 'outro', speakerId: 'Narrator', roleId: 'Narrator',
+      text: ep.nightOutroClips, originalText: ep.nightOutroClips,
+      audioUrl: findAudioUrl(scenarioId, episodeId, 'outro', null),
+    });
+  }
+
+  renderClipList();
+  renderStats();
+  $('btnPlayAll').disabled = false;
+  $('btnStopAll').disabled = false;
+}
+
+function findAudioUrl(scenarioId, episodeId, clipType, roleId) {
+  if (!manifestData || !manifestData.clips) return null;
+  for (const c of manifestData.clips) {
+    const id = c.clipId || '';
+    if (!id.includes(`/${episodeId}/`)) continue;
+    if (clipType === 'opening' && id.includes('/opening/')) return c.url;
+    if (clipType === 'outro' && id.includes('/outro/')) return c.url;
+    if (clipType === 'role' && roleId && id.includes(`/role/${roleId}/`)) return c.url;
+  }
+  return null;
+}
+
+function renderStats() {
+  const total = currentClips.length;
+  const withAudio = currentClips.filter(c => c.audioUrl).length;
+  const missing = total - withAudio;
+  $('statsBar').innerHTML = `
+    <div class="stat-chip"><span class="num">${total}</span> 전체 클립</div>
+    <div class="stat-chip" style="color:var(--green)"><span class="num">${withAudio}</span> 오디오 있음</div>
+    ${missing > 0 ? `<div class="stat-chip" style="color:var(--red)"><span class="num">${missing}</span> 오디오 없음</div>` : ''}
+    <div class="stat-chip"><span class="num">${regenQueue.length}</span> 재생성 큐</div>
+  `;
+}
+
+function renderClipList() {
+  const container = $('clipContainer');
+  container.innerHTML = '';
+  let lastType = '';
+
+  currentClips.forEach((clip, idx) => {
+    if (clip.type !== lastType) {
+      const header = document.createElement('div');
+      header.className = 'clip-section-header';
+      header.textContent = clip.type === 'opening' ? 'Opening' : clip.type === 'outro' ? 'Night Outro' : 'Role Clips';
+      container.appendChild(header);
+      lastType = clip.type;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'clip-card';
+    card.id = `clip-${idx}`;
+    if (clip.text !== clip.originalText) card.classList.add('modified');
+
+    const voiceTag = getVoiceTag(clip.roleId);
+    const hasAudio = !!clip.audioUrl || !!clip.regenBlobUrl;
+
+    card.innerHTML = `
+      <div class="clip-index">#${idx + 1}</div>
+      <div class="clip-speaker">
+        <span class="role-name">${roleDisplayName(clip.roleId)}</span>
+        <span class="voice-tag" title="Voice Tag">${escapeHtml(voiceTag)}</span>
+        <input class="voice-tag-input" id="vtag-${idx}" type="text" value="${escapeHtml(voiceTag)}"
+               placeholder="voice tag" title="재생성 시 사용할 voice tag (수정 가능)">
+      </div>
+      <div class="clip-body">
+        <div class="clip-text" id="text-${idx}">${escapeHtml(clip.text)}</div>
+        <textarea class="clip-text-edit" id="edit-${idx}">${escapeHtml(clip.text)}</textarea>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="toggleEdit(${idx})">&#9998; 편집</button>
+          <button class="btn btn-sm" id="saveBtn-${idx}" style="display:none" onclick="saveEdit(${idx})">저장</button>
+          <button class="btn btn-sm" id="cancelBtn-${idx}" style="display:none" onclick="cancelEdit(${idx})">취소</button>
+          <button class="btn btn-sm" id="revertBtn-${idx}" style="display:none" onclick="revertEdit(${idx})">원본 복원</button>
+        </div>
+      </div>
+      <div class="clip-actions">
+        <button class="btn btn-sm" onclick="playClip(${idx})" ${!hasAudio ? 'disabled title="오디오 파일 없음"' : ''}>
+          &#9654; 재생
+        </button>
+        <button class="btn btn-sm" onclick="addToQueue(${idx})" title="TTS 재생성 큐에 추가">
+          &#8635; 큐 추가
+        </button>
+        <button class="btn btn-sm primary" onclick="regenNow(${idx})" title="즉시 TTS 재생성 후 재생">
+          &#9889; 즉시 재생성
+        </button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ============================================================================
+// Edit
+// ============================================================================
+function toggleEdit(idx) {
+  const textEl = $(`text-${idx}`), editEl = $(`edit-${idx}`);
+  if (editEl.style.display !== 'none') { cancelEdit(idx); return; }
+  textEl.style.display = 'none';
+  editEl.style.display = 'block';
+  editEl.value = currentClips[idx].text;
+  $(`saveBtn-${idx}`).style.display = '';
+  $(`cancelBtn-${idx}`).style.display = '';
+  $(`revertBtn-${idx}`).style.display = currentClips[idx].text !== currentClips[idx].originalText ? '' : 'none';
+  editEl.focus();
+}
+
+function saveEdit(idx) {
+  const newText = $(`edit-${idx}`).value.trim();
+  if (!newText) return;
+  currentClips[idx].text = newText;
+  $(`text-${idx}`).textContent = newText;
+  $(`text-${idx}`).style.display = '';
+  $(`edit-${idx}`).style.display = 'none';
+  $(`saveBtn-${idx}`).style.display = 'none';
+  $(`cancelBtn-${idx}`).style.display = 'none';
+  $(`revertBtn-${idx}`).style.display = 'none';
+  const card = $(`clip-${idx}`);
+  if (newText !== currentClips[idx].originalText) card.classList.add('modified');
+  else card.classList.remove('modified');
+  renderStats();
+}
+
+function cancelEdit(idx) {
+  $(`text-${idx}`).style.display = '';
+  $(`edit-${idx}`).style.display = 'none';
+  $(`saveBtn-${idx}`).style.display = 'none';
+  $(`cancelBtn-${idx}`).style.display = 'none';
+  $(`revertBtn-${idx}`).style.display = 'none';
+}
+
+function revertEdit(idx) {
+  currentClips[idx].text = currentClips[idx].originalText;
+  $(`text-${idx}`).textContent = currentClips[idx].originalText;
+  $(`edit-${idx}`).value = currentClips[idx].originalText;
+  cancelEdit(idx);
+  $(`clip-${idx}`).classList.remove('modified');
+  renderStats();
+}
+
+// ============================================================================
+// Audio Playback
+// ============================================================================
+const audioPlayer = document.getElementById('audioPlayer');
+
+function playClip(idx) { stopAll(); isPlayAll = false; _play(idx); }
+
+async function _play(idx) {
+  if (idx < 0 || idx >= currentClips.length) { stopAll(); return; }
+
+  const clip = currentClips[idx];
+  const src = await resolveAudioSrc(clip);
+  if (!src) {
+    if (isPlayAll) { _play(idx + 1); } else { toast('오디오 파일이 없습니다', 'error'); }
+    return;
+  }
+
+  playingIdx = idx;
+
+  document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
+  const card = $(`clip-${idx}`);
+  if (card) { card.classList.add('playing'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+
+  $('playbackBar').classList.add('visible');
+  $('pbNowPlaying').innerHTML = `<span class="role">${roleDisplayName(clip.roleId)}</span> &mdash; ${escapeHtml(clip.text.substring(0, 80))}...`;
+
+  audioPlayer.src = src;
+  audioPlayer.play().catch(() => {});
+}
+
+// Native audio ended → advance in play-all mode
+audioPlayer.addEventListener('ended', () => {
+  document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
+  if (isPlayAll) { _play(playingIdx + 1); }
+  else { playingIdx = -1; $('playbackBar').classList.remove('visible'); }
+});
+audioPlayer.addEventListener('error', () => {
+  toast(`오디오 재생 실패: clip #${playingIdx + 1}`, 'error');
+  if (isPlayAll) _play(playingIdx + 1);
+});
+
+function stopAll() {
+  isPlayAll = false;
+  audioPlayer.pause();
+  audioPlayer.removeAttribute('src');
+  playingIdx = -1;
+  document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
+  $('playbackBar').classList.remove('visible');
+}
+
+$('btnPlayAll').addEventListener('click', () => { stopAll(); isPlayAll = true; _play(0); });
+$('btnStopAll').addEventListener('click', stopAll);
+$('pbPrev').addEventListener('click', () => { if (playingIdx > 0) { const p = playingIdx; stopAll(); _play(p - 1); } });
+$('pbNext').addEventListener('click', () => { if (playingIdx < currentClips.length - 1) { const p = playingIdx; stopAll(); _play(p + 1); } });
+
+// ============================================================================
+// TTS Regeneration (Gradio API)
+// ============================================================================
+function getApiBase() { return $('ttsApiBase').value.trim().replace(/\/+$/, ''); }
+
+async function callGradioApi(endpoint, data) {
+  const base = getApiBase();
+  const callResp = await fetch(`${base}/gradio_api/call/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
+  });
+  if (!callResp.ok) throw new Error(`Gradio call failed: ${callResp.status}`);
+  const { event_id } = await callResp.json();
+  if (!event_id) throw new Error('No event_id from Gradio');
+
+  const sseResp = await fetch(`${base}/gradio_api/call/${endpoint}/${event_id}`);
+  const text = await sseResp.text();
+  const lines = text.split('\n');
+  let currentEvent = null;
+  for (const line of lines) {
+    if (line.startsWith('event:')) currentEvent = line.substring(6).trim();
+    else if (line.startsWith('data:')) {
+      const dataStr = line.substring(5).trim();
+      if (currentEvent === 'error') throw new Error(`TTS API error: ${dataStr}`);
+      if (currentEvent === 'complete') return JSON.parse(dataStr);
+    }
+  }
+  throw new Error('SSE stream ended without completion');
+}
+
+function extractAudioPath(result) {
+  if (!result || !result.length) return null;
+  const first = result[0];
+  if (typeof first === 'object' && first !== null) return first.path || first.url || null;
+  return null;
+}
+
+async function downloadGradioFile(serverPath) {
+  const resp = await fetch(`${getApiBase()}/gradio_api/file=${serverPath}`);
+  if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);
+  return resp.blob();
+}
+
+async function generateTts(text, speakerId, overrideTag) {
+  const tagBase = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : 'lynette');
+  const tagsToTry = [`${tagBase}_기본`, tagBase];
+  let lastErr = null;
+  for (const tryTag of tagsToTry) {
+    try {
+      const result = await callGradioApi('generate_single_segment', [
+        tryTag, text, 'korean', true, 2048, true, 0.7, 0.95, 50,
+      ]);
+      const audioPath = extractAudioPath(result);
+      if (!audioPath) continue;
+      const blob = await downloadGradioFile(audioPath);
+      return URL.createObjectURL(blob);
+    } catch (e) {
+      lastErr = e;
+      console.warn(`Tag "${tryTag}" failed, trying next...`, e.message);
+    }
+  }
+  throw lastErr || new Error('TTS 재생성 실패: 사용 가능한 음성 태그 없음');
+}
+
+function getTagOverride(idx) {
+  const el = $(`vtag-${idx}`);
+  if (!el) return null;
+  const val = el.value.trim();
+  const defaultTag = getVoiceTag(currentClips[idx].roleId);
+  return (val && val !== defaultTag) ? val : null;
+}
+
+async function regenNow(idx) {
+  const clip = currentClips[idx];
+  const card = $(`clip-${idx}`);
+  card.classList.add('regenerating');
+  try {
+    toast(`재생성 중: ${roleDisplayName(clip.roleId)}...`);
+    const blobUrl = await generateTts(clip.text, clip.speakerId, getTagOverride(idx));
+    clip.regenBlobUrl = blobUrl;
+    card.classList.remove('regenerating');
+    toast(`재생성 완료: ${roleDisplayName(clip.roleId)}`, 'success');
+    stopAll(); _play(idx);
+  } catch (e) {
+    card.classList.remove('regenerating');
+    toast(`재생성 실패: ${e.message}`, 'error');
+    console.error(e);
+  }
+}
+
+// ============================================================================
+// Regen Queue
+// ============================================================================
+function addToQueue(idx) {
+  const clip = currentClips[idx];
+  if (regenQueue.some(q => q.clipIdx === idx)) { toast('이미 큐에 있습니다'); return; }
+  regenQueue.push({ clipIdx: idx, text: clip.text, speakerId: clip.speakerId, roleId: clip.roleId, tagOverride: getTagOverride(idx) });
+  renderStats(); updateQueuePanel();
+  toast(`큐에 추가됨: #${idx + 1} ${roleDisplayName(clip.roleId)}`);
+}
+
+function clearRegenQueue() { regenQueue = []; regenRunning = false; updateQueuePanel(); renderStats(); }
+
+function updateQueuePanel() {
+  const panel = $('queuePanel');
+  if (regenQueue.length > 0 || regenRunning) {
+    panel.classList.add('visible');
+    $('playbackBar').style.bottom = '60px';
+  } else {
+    panel.classList.remove('visible');
+    $('playbackBar').style.bottom = '0';
+  }
+  $('queueCount').textContent = regenQueue.length;
+  $('btnRunQueue').disabled = regenQueue.length === 0 || regenRunning;
+}
+
+$('btnRunQueue').addEventListener('click', runQueue);
+$('btnClearQueue').addEventListener('click', () => {
+  clearRegenQueue();
+  $('queueLog').textContent = '';
+  $('queueDone').textContent = '0';
+  $('queueProgressBar').style.width = '0%';
+});
+
+async function runQueue() {
+  if (regenQueue.length === 0 || regenRunning) return;
+  regenRunning = true;
+  $('btnRunQueue').disabled = true;
+  const total = regenQueue.length;
+  let done = 0;
+  const log = $('queueLog');
+
+  while (regenQueue.length > 0) {
+    const item = regenQueue.shift();
+    const idx = item.clipIdx;
+    const card = $(`clip-${idx}`);
+    log.textContent += `[${new Date().toLocaleTimeString()}] #${idx + 1} ${roleDisplayName(item.roleId)} 재생성 시작...\n`;
+    log.scrollTop = log.scrollHeight;
+    if (card) card.classList.add('regenerating');
+
+    try {
+      const blobUrl = await generateTts(item.text, item.speakerId, item.tagOverride);
+      currentClips[idx].regenBlobUrl = blobUrl;
+      done++; log.textContent += `  -> 완료\n`;
+    } catch (e) {
+      log.textContent += `  -> 실패: ${e.message}\n`;
+      done++;
+    }
+
+    if (card) card.classList.remove('regenerating');
+    $('queueDone').textContent = done;
+    $('queueProgressBar').style.width = `${(done / total) * 100}%`;
+    $('queueCount').textContent = regenQueue.length;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  regenRunning = false;
+  $('btnRunQueue').disabled = true;
+  toast(`큐 처리 완료: ${done}/${total}`, 'success');
+  renderStats();
+}
+
+// ============================================================================
+// Server Ping
+// ============================================================================
+async function pingServer() {
+  const dot = $('serverStatus');
+  try {
+    await fetch(getApiBase() + '/', { method: 'GET', mode: 'no-cors' });
+    dot.className = 'status-dot ok'; dot.title = '연결됨';
+  } catch {
+    dot.className = 'status-dot err'; dot.title = '연결 실패';
+  }
+}
+
+$('btnPing').addEventListener('click', async () => {
+  $('serverStatus').className = 'status-dot';
+  await pingServer();
+  toast($('serverStatus').classList.contains('ok') ? '서버 연결 확인됨' : '서버 연결 실패',
+        $('serverStatus').classList.contains('ok') ? 'success' : 'error');
+});
+
+// ============================================================================
+// Keyboard shortcuts
+// ============================================================================
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (e.key === ' ') { e.preventDefault(); audioPlayer.paused ? audioPlayer.play() : audioPlayer.pause(); }
+  if (e.key === 'Escape') stopAll();
+  if (e.key === 'ArrowRight' && playingIdx >= 0) _play(playingIdx + 1);
+  if (e.key === 'ArrowLeft' && playingIdx > 0) _play(playingIdx - 1);
+});
+
+// ============================================================================
+// Folder Picker (for file:// mode)
+// ============================================================================
+function showFolderPicker() {
+  $('clipContainer').innerHTML = `
+    <div class="folder-banner">
+      <h2>프로젝트 폴더 선택</h2>
+      <p>
+        file:// 프로토콜에서는 보안 제한으로 직접 파일을 읽을 수 없습니다.<br>
+        아래 버튼을 클릭해서 프로젝트 루트 폴더를 선택해주세요.<br>
+        <small style="color:var(--text-dim)">
+          (One-Night-Ultimate-Werewolf-LLM-Edition 폴더)
+        </small>
+      </p>
+      <button class="btn primary" onclick="pickProjectFolder()">폴더 선택</button>
+    </div>
+  `;
+}
+
+async function pickProjectFolder() {
+  try {
+    projectDirHandle = await window.showDirectoryPicker({ mode: 'read' });
+
+    // Verify it's the right folder by checking a known file
+    try {
+      await readJsonFromDir(projectDirHandle, 'characters/voice_map.json');
+    } catch {
+      toast('올바른 프로젝트 폴더가 아닙니다. One-Night-Ultimate-Werewolf-LLM-Edition 폴더를 선택해주세요.', 'error');
+      projectDirHandle = null;
+      return;
+    }
+
+    $('modeBadge').textContent = 'LOCAL';
+    $('modeBadge').className = 'mode-badge local';
+    toast('프로젝트 폴더 연결됨', 'success');
+
+    await loadVoiceMap();
+    initSelectors();
+    $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      toast(`폴더 선택 실패: ${e.message}`, 'error');
+    }
+  }
+}
+
+// ============================================================================
+// Init
+// ============================================================================
+(async function init() {
+  if (isFileProtocol) {
+    // file:// mode: need folder picker
+    $('modeBadge').textContent = 'FILE://';
+    $('modeBadge').className = 'mode-badge';
+
+    if (window.showDirectoryPicker) {
+      showFolderPicker();
+    } else {
+      $('clipContainer').innerHTML = `
+        <div class="folder-banner">
+          <h2>브라우저 지원 필요</h2>
+          <p>
+            file:// 모드에서는 File System Access API가 필요합니다.<br>
+            <strong>Chrome</strong> 또는 <strong>Edge</strong> 브라우저를 사용해주세요.<br>
+            또는 HTTP 서버로 실행하세요:
+            <code style="background:var(--bg);padding:4px 8px;border-radius:4px;display:block;margin-top:8px">
+              python -m http.server 8899
+            </code>
+          </p>
+        </div>
+      `;
+    }
+    pingServer();
+  } else {
+    // HTTP mode: normal fetch
+    $('modeBadge').textContent = 'HTTP';
+    $('modeBadge').className = 'mode-badge http';
+    await loadVoiceMap();
+    initSelectors();
+    $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
+    pingServer();
+  }
+})();
+</script>
+</body>
+</html>
