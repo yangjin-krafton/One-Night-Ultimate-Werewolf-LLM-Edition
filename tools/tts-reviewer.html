@@ -311,6 +311,66 @@
     font-size: 12px; padding: 3px 6px;
   }
 
+  /* ── Batch Panel ── */
+  .batch-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 300; display: none;
+  }
+  .batch-overlay.open { display: block; }
+  .batch-panel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(720px, 92vw); background: var(--bg);
+    border-left: 1px solid var(--border);
+    z-index: 301; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.3s;
+  }
+  .batch-panel.open { transform: translateX(0); }
+  .batch-panel-header {
+    padding: 16px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .batch-panel-header h2 { font-size: 16px; flex: 1; }
+  .batch-panel-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .batch-panel-footer {
+    padding: 12px 20px; background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center;
+  }
+  .batch-panel-footer .spacer { flex: 1; }
+
+  .batch-scenario-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .batch-scenario-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; font-size: 13px; cursor: pointer; transition: border-color 0.15s;
+  }
+  .batch-scenario-item:hover { border-color: var(--accent); }
+  .batch-scenario-item input[type=checkbox] { accent-color: var(--accent); }
+  .batch-scenario-item .name { font-weight: 600; flex: 1; }
+  .batch-scenario-item .meta { font-size: 11px; color: var(--text-dim); }
+
+  .batch-options { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .batch-options label { font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .batch-options input[type=checkbox] { accent-color: var(--accent); }
+
+  .batch-log-area {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px; font-family: 'Consolas', monospace; font-size: 11px;
+    color: var(--text-dim); max-height: 300px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .batch-progress-bar {
+    height: 8px; background: var(--border); border-radius: 4px;
+    overflow: hidden; margin-bottom: 12px;
+  }
+  .batch-progress-bar .fill {
+    height: 100%; background: var(--accent); border-radius: 4px;
+    width: 0%; transition: width 0.3s;
+  }
+  .batch-stats { display: flex; gap: 12px; margin-bottom: 12px; font-size: 12px; }
+  .batch-stats span { padding: 4px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+
   /* ── Voice Chip → Role Picker Popup ── */
   .vb-role-picker {
     position: fixed; z-index: 350;
@@ -386,6 +446,7 @@
     <button class="btn" id="btnPlayAll" disabled>&#9654; 전체 재생</button>
     <button class="btn" id="btnStopAll" disabled>&#9632; 정지</button>
     <button class="btn primary" id="btnRegenAll" onclick="regenAllClips()" disabled>&#9889; 전체 재생성</button>
+    <button class="btn" id="btnBatch" onclick="openBatchPanel()" style="background:var(--accent);color:#fff;border-color:var(--accent)">&#9881; 배치 생성</button>
     <button class="btn" id="btnVoiceMap" onclick="openVoiceMapPanel()">Voice Map</button>
   </div>
   <div class="server-config">
@@ -423,6 +484,42 @@
   <button class="btn primary btn-sm" id="btnRunQueue" disabled>큐 실행</button>
   <button class="btn danger btn-sm" id="btnClearQueue">큐 초기화</button>
   <div class="queue-log" id="queueLog"></div>
+</div>
+
+<!-- Batch Generation Panel -->
+<div class="batch-overlay" id="batchOverlay" onclick="closeBatchPanel()"></div>
+<div class="batch-panel" id="batchPanel">
+  <div class="batch-panel-header">
+    <h2>&#9881; 배치 TTS 생성</h2>
+    <button class="btn btn-sm" onclick="closeBatchPanel()">&#10005;</button>
+  </div>
+  <div class="batch-panel-body">
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">
+      시나리오를 선택하고 전체 TTS를 생성합니다. Fish Speech → M4A 변환 → 파일 저장 → Manifest 업데이트.
+    </p>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="btn btn-sm" onclick="batchSelectAll(true)">전체 선택</button>
+      <button class="btn btn-sm" onclick="batchSelectAll(false)">전체 해제</button>
+    </div>
+    <div class="batch-scenario-list" id="batchScenarioList"></div>
+
+    <div class="batch-options">
+      <label><input type="checkbox" id="batchOptClean"> 기존 파일 삭제 후 생성</label>
+      <label><input type="checkbox" id="batchOptSkipExist" checked> 기존 파일 건너뛰기</label>
+    </div>
+
+    <div class="batch-stats" id="batchStats"></div>
+    <div class="batch-progress-bar" id="batchProgressBar" style="display:none">
+      <div class="fill" id="batchProgressFill"></div>
+    </div>
+    <div class="batch-log-area" id="batchLog" style="display:none"></div>
+  </div>
+  <div class="batch-panel-footer">
+    <span style="font-size:11px;color:var(--text-dim)" id="batchFooterInfo">--</span>
+    <span class="spacer"></span>
+    <button class="btn" onclick="closeBatchPanel()">닫기</button>
+    <button class="btn primary" id="btnBatchStart" onclick="runBatchGeneration()">&#9889; 생성 시작</button>
+  </div>
 </div>
 
 <!-- Voice Map Panel -->
@@ -1877,6 +1974,231 @@ async function tryRestoreHandles() {
       }
     }
   }
+}
+
+// ============================================================================
+// Batch TTS Generation Panel
+// ============================================================================
+let batchRunning = false;
+
+function openBatchPanel() {
+  if (!projectDirHandle) { toast('프로젝트 폴더를 먼저 연결하세요', 'error'); return; }
+  $('batchOverlay').classList.add('open');
+  $('batchPanel').classList.add('open');
+  loadBatchScenarios();
+}
+
+function closeBatchPanel() {
+  if (batchRunning) { toast('배치 생성 중에는 닫을 수 없습니다', 'error'); return; }
+  $('batchOverlay').classList.remove('open');
+  $('batchPanel').classList.remove('open');
+}
+
+async function loadBatchScenarios() {
+  const list = $('batchScenarioList');
+  list.innerHTML = '<span style="color:var(--text-dim);font-size:12px">로딩 중...</span>';
+
+  const scenarios = [];
+  try {
+    const ttsDir = await getSubDir(projectDirHandle, ['public', 'assets', 'scenarios_tts']);
+    for await (const entry of ttsDir.values()) {
+      if (entry.kind === 'file' && entry.name.endsWith('.tts.json')) {
+        const file = await entry.getFile();
+        const data = JSON.parse(await file.text());
+        const sid = data.scenarioId || entry.name.replace('.tts.json', '');
+        const eps = Object.keys(data.episodes || {});
+        let clipCount = 0;
+        for (const ep of eps) {
+          const epData = data.episodes[ep];
+          if (epData.openingClips) clipCount++;
+          if (epData.roleClips) clipCount += Object.keys(epData.roleClips).length;
+          if (epData.nightOutroClips) clipCount++;
+        }
+        scenarios.push({ id: sid, fileName: entry.name, episodes: eps, clipCount, data });
+      }
+    }
+  } catch (e) {
+    list.innerHTML = `<span style="color:var(--red);font-size:12px">시나리오 로드 실패: ${e.message}</span>`;
+    return;
+  }
+
+  scenarios.sort((a, b) => a.id.localeCompare(b.id));
+
+  list.innerHTML = scenarios.map(s => `
+    <label class="batch-scenario-item">
+      <input type="checkbox" value="${s.id}" data-filename="${s.fileName}" checked>
+      <span class="name">${s.id.replace(/_/g, ' ')}</span>
+      <span class="meta">${s.episodes.length} eps, ${s.clipCount} clips</span>
+    </label>
+  `).join('');
+
+  const total = scenarios.reduce((sum, s) => sum + s.clipCount, 0);
+  $('batchFooterInfo').textContent = `${scenarios.length}개 시나리오, 총 ${total}개 클립`;
+
+  // Store for later use
+  window._batchScenarios = scenarios;
+}
+
+function batchSelectAll(checked) {
+  $('batchScenarioList').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = checked);
+}
+
+function batchLog(msg) {
+  const log = $('batchLog');
+  log.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+  log.scrollTop = log.scrollHeight;
+}
+
+async function runBatchGeneration() {
+  if (batchRunning) return;
+  if (!projectDirHandle) { toast('프로젝트 폴더를 먼저 연결하세요', 'error'); return; }
+  if (!convertServerOk) {
+    await pingConvertServer();
+    if (!convertServerOk) { toast('M4A 변환 서버 필요: node tools/convert-server.js', 'error'); return; }
+  }
+  if (!voiceMap) { toast('voice_map.json이 로드되지 않았습니다', 'error'); return; }
+
+  const selected = [...$('batchScenarioList').querySelectorAll('input:checked')].map(cb => cb.value);
+  if (selected.length === 0) { toast('시나리오를 선택하세요', 'error'); return; }
+
+  const skipExist = $('batchOptSkipExist').checked;
+  const cleanFirst = $('batchOptClean').checked;
+
+  batchRunning = true;
+  $('btnBatchStart').disabled = true;
+  $('btnBatchStart').textContent = '생성 중...';
+  $('batchLog').style.display = 'block';
+  $('batchLog').textContent = '';
+  $('batchProgressBar').style.display = 'block';
+  $('batchProgressFill').style.width = '0%';
+
+  const allScenarios = window._batchScenarios || [];
+  const targets = allScenarios.filter(s => selected.includes(s.id));
+
+  // Count total clips
+  let totalClips = targets.reduce((sum, s) => sum + s.clipCount, 0);
+  let doneClips = 0, failedClips = 0, skippedClips = 0;
+
+  function updateStats() {
+    $('batchStats').innerHTML = `
+      <span style="color:var(--accent)">전체 ${totalClips}</span>
+      <span style="color:var(--green)">완료 ${doneClips}</span>
+      ${skippedClips > 0 ? `<span style="color:var(--text-dim)">건너뜀 ${skippedClips}</span>` : ''}
+      ${failedClips > 0 ? `<span style="color:var(--red)">실패 ${failedClips}</span>` : ''}
+    `;
+    $('batchProgressFill').style.width = `${((doneClips + failedClips + skippedClips) / totalClips) * 100}%`;
+  }
+  updateStats();
+
+  for (const scenario of targets) {
+    batchLog(`\n=== ${scenario.id} (${scenario.clipCount} clips) ===`);
+
+    // Clean if requested
+    if (cleanFirst) {
+      try {
+        const voicesDir = await getSubDir(projectDirHandle, ['public', 'assets', 'voices']);
+        try {
+          await voicesDir.removeEntry(scenario.id, { recursive: true });
+          batchLog(`[clean] 삭제됨: voices/${scenario.id}`);
+        } catch { /* doesn't exist */ }
+      } catch {}
+    }
+
+    const manifest = [];
+
+    for (const epId of scenario.episodes) {
+      const epData = scenario.data.episodes[epId];
+      const clips = [];
+
+      // Build clip list
+      if (epData.openingClips) {
+        clips.push({ type: 'opening', roleId: 'Narrator', text: epData.openingClips,
+          path: `/assets/voices/${scenario.id}/${epId}/pall/opening/001/voice` });
+      }
+      if (epData.roleClips) {
+        for (const [roleId, text] of Object.entries(epData.roleClips)) {
+          clips.push({ type: 'role', roleId, text,
+            path: `/assets/voices/${scenario.id}/${epId}/pall/role/${roleId}/during/001/voice` });
+        }
+      }
+      if (epData.nightOutroClips) {
+        clips.push({ type: 'outro', roleId: 'Narrator', text: epData.nightOutroClips,
+          path: `/assets/voices/${scenario.id}/${epId}/pall/outro/001/voice` });
+      }
+
+      for (const clip of clips) {
+        const m4aRelPath = `public${clip.path}.m4a`;
+
+        // Skip if exists
+        if (skipExist && !cleanFirst) {
+          try {
+            const parts = m4aRelPath.split('/').filter(Boolean);
+            const fname = parts.pop();
+            const dir = await getSubDir(projectDirHandle, parts);
+            const fh = await dir.getFileHandle(fname);
+            const f = await fh.getFile();
+            if (f.size > 0) {
+              skippedClips++;
+              manifest.push({ clipId: `${scenario.id}/${epId}/pall/${clip.type === 'role' ? 'role/' + clip.roleId + '/during' : clip.type}/001`,
+                speakerId: clip.roleId, url: clip.path + '.m4a', text: clip.text });
+              updateStats();
+              continue;
+            }
+          } catch { /* doesn't exist, proceed */ }
+        }
+
+        const voiceTag = voiceMap[clip.roleId] || voiceMap['Narrator'] || null;
+        batchLog(`${epId}/${clip.roleId} [${voiceTag || '?'}]`);
+
+        try {
+          // 1) Generate TTS (WAV)
+          const { blob } = await generateTts(clip.text, clip.roleId, null);
+
+          // 2) Convert WAV → M4A
+          const m4aBlob = await convertWavToM4a(blob);
+
+          // 3) Save M4A to disk
+          const parts = m4aRelPath.split('/').filter(Boolean);
+          const fname = parts.pop();
+          const dir = await getOrCreateSubDir(projectDirHandle, parts);
+          const fh = await dir.getFileHandle(fname, { create: true });
+          const writable = await fh.createWritable();
+          await writable.write(m4aBlob);
+          await writable.close();
+
+          doneClips++;
+          manifest.push({ clipId: `${scenario.id}/${epId}/pall/${clip.type === 'role' ? 'role/' + clip.roleId + '/during' : clip.type}/001`,
+            speakerId: clip.roleId, url: clip.path + '.m4a', text: clip.text });
+        } catch (e) {
+          batchLog(`  → 실패: ${e.message}`);
+          failedClips++;
+        }
+        updateStats();
+      }
+    }
+
+    // Write _manifest.json
+    try {
+      const manifestObj = { generatedFrom: scenario.fileName, clips: manifest };
+      const manifestJson = JSON.stringify(manifestObj, null, 2);
+      const manifestParts = ['public', 'assets', 'voices', scenario.id];
+      const manifestDir = await getOrCreateSubDir(projectDirHandle, manifestParts);
+      const fh = await manifestDir.getFileHandle('_manifest.json', { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(manifestJson);
+      await writable.close();
+      batchLog(`[manifest] ${scenario.id}/_manifest.json 저장 (${manifest.length} clips)`);
+    } catch (e) {
+      batchLog(`[manifest] 저장 실패: ${e.message}`);
+    }
+  }
+
+  batchLog(`\n=== 배치 완료: 성공 ${doneClips}, 실패 ${failedClips}, 건너뜀 ${skippedClips} ===`);
+  toast(`배치 생성 완료: 성공 ${doneClips}, 실패 ${failedClips}`, doneClips > 0 ? 'success' : 'error');
+
+  batchRunning = false;
+  $('btnBatchStart').disabled = false;
+  $('btnBatchStart').innerHTML = '&#9889; 생성 시작';
 }
 
 (async function init() {
