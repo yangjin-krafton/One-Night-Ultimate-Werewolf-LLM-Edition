@@ -228,7 +228,7 @@
   <div class="server-config">
     <span class="status-dot" id="serverStatus" title="TTS 서버 상태"></span>
     <input id="ttsApiBase" type="text" placeholder="TTS API Base URL"
-           value="http://100.66.10.225:3000/tools/qwen3-tts">
+           value="http://100.66.65.124:8080">
     <button class="btn btn-sm" id="btnPing">연결 확인</button>
   </div>
 </header>
@@ -693,68 +693,51 @@ $('pbPrev').addEventListener('click', () => { if (playingIdx > 0) { const p = pl
 $('pbNext').addEventListener('click', () => { if (playingIdx < currentClips.length - 1) { const p = playingIdx; stopAll(); _play(p + 1); } });
 
 // ============================================================================
-// TTS Regeneration (Gradio API)
+// TTS Regeneration (Fish Speech API)
 // ============================================================================
 function getApiBase() { return $('ttsApiBase').value.trim().replace(/\/+$/, ''); }
 
-async function callGradioApi(endpoint, data) {
+async function generateTts(text, speakerId, overrideTag) {
   const base = getApiBase();
-  const callResp = await fetch(`${base}/gradio_api/call/${endpoint}`, {
+  const refId = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : null);
+
+  const body = {
+    text,
+    format: 'wav',
+    temperature: 0.8,
+    top_p: 0.8,
+    repetition_penalty: 1.1,
+    max_new_tokens: 1024,
+    normalize: true,
+  };
+  if (refId) body.reference_id = refId;
+
+  const resp = await fetch(`${base}/v1/tts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ data }),
+    body: JSON.stringify(body),
   });
-  if (!callResp.ok) throw new Error(`Gradio call failed: ${callResp.status}`);
-  const { event_id } = await callResp.json();
-  if (!event_id) throw new Error('No event_id from Gradio');
 
-  const sseResp = await fetch(`${base}/gradio_api/call/${endpoint}/${event_id}`);
-  const text = await sseResp.text();
-  const lines = text.split('\n');
-  let currentEvent = null;
-  for (const line of lines) {
-    if (line.startsWith('event:')) currentEvent = line.substring(6).trim();
-    else if (line.startsWith('data:')) {
-      const dataStr = line.substring(5).trim();
-      if (currentEvent === 'error') throw new Error(`TTS API error: ${dataStr}`);
-      if (currentEvent === 'complete') return JSON.parse(dataStr);
-    }
-  }
-  throw new Error('SSE stream ended without completion');
-}
-
-function extractAudioPath(result) {
-  if (!result || !result.length) return null;
-  const first = result[0];
-  if (typeof first === 'object' && first !== null) return first.path || first.url || null;
-  return null;
-}
-
-async function downloadGradioFile(serverPath) {
-  const resp = await fetch(`${getApiBase()}/gradio_api/file=${serverPath}`);
-  if (!resp.ok) throw new Error(`Download failed: ${resp.status}`);
-  return resp.blob();
-}
-
-async function generateTts(text, speakerId, overrideTag) {
-  const tagBase = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : 'lynette');
-  const tagsToTry = [`${tagBase}_기본`, tagBase];
-  let lastErr = null;
-  for (const tryTag of tagsToTry) {
-    try {
-      const result = await callGradioApi('generate_single_segment', [
-        tryTag, text, 'korean', true, 2048, true, 0.7, 0.95, 50,
-      ]);
-      const audioPath = extractAudioPath(result);
-      if (!audioPath) continue;
-      const blob = await downloadGradioFile(audioPath);
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => resp.statusText);
+    // reference not found → retry without reference_id
+    if (resp.status === 400 && refId) {
+      console.warn(`reference_id "${refId}" failed, retrying without reference...`);
+      delete body.reference_id;
+      const retry = await fetch(`${base}/v1/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!retry.ok) throw new Error(`TTS 실패: ${retry.status}`);
+      const blob = await retry.blob();
       return URL.createObjectURL(blob);
-    } catch (e) {
-      lastErr = e;
-      console.warn(`Tag "${tryTag}" failed, trying next...`, e.message);
     }
+    throw new Error(`TTS 실패 (${resp.status}): ${errText}`);
   }
-  throw lastErr || new Error('TTS 재생성 실패: 사용 가능한 음성 태그 없음');
+
+  const blob = await resp.blob();
+  return URL.createObjectURL(blob);
 }
 
 function getTagOverride(idx) {
@@ -861,8 +844,12 @@ async function runQueue() {
 async function pingServer() {
   const dot = $('serverStatus');
   try {
-    await fetch(getApiBase() + '/', { method: 'GET', mode: 'no-cors' });
-    dot.className = 'status-dot ok'; dot.title = '연결됨';
+    const resp = await fetch(getApiBase() + '/v1/health', { method: 'GET' });
+    if (resp.ok) {
+      dot.className = 'status-dot ok'; dot.title = '연결됨 (Fish Speech)';
+    } else {
+      dot.className = 'status-dot err'; dot.title = `서버 응답: ${resp.status}`;
+    }
   } catch {
     dot.className = 'status-dot err'; dot.title = '연결 실패';
   }
