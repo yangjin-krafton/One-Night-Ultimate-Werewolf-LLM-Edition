@@ -199,12 +199,126 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Voice Map Panel ── */
+  .vmpanel-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 300; display: none;
+  }
+  .vmpanel-overlay.open { display: block; }
+  .vmpanel {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: min(640px, 90vw); background: var(--bg);
+    border-left: 1px solid var(--border);
+    z-index: 301; display: flex; flex-direction: column;
+    transform: translateX(100%); transition: transform 0.3s;
+  }
+  .vmpanel.open { transform: translateX(0); }
+  .vmpanel-header {
+    padding: 16px 20px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .vmpanel-header h2 { font-size: 16px; flex: 1; }
+  .vmpanel-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .vmpanel-footer {
+    padding: 12px 20px; background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+
+  .vm-search {
+    width: 100%; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 12px; font-size: 13px; outline: none; margin-bottom: 12px;
+  }
+  .vm-search:focus { border-color: var(--accent); }
+
+  .vm-role-row {
+    display: grid; grid-template-columns: 130px 1fr auto;
+    gap: 10px; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .vm-role-name { font-size: 13px; font-weight: 600; }
+  .vm-role-id { font-size: 10px; color: var(--text-dim); }
+  .vm-voice-select {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 8px; font-size: 13px; outline: none; width: 100%;
+  }
+  .vm-voice-select:focus { border-color: var(--accent); }
+  .vm-preview-btn {
+    padding: 4px 10px; font-size: 11px; cursor: pointer;
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    white-space: nowrap;
+  }
+  .vm-preview-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .vm-preview-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .vm-preview-btn.loading { color: var(--blue); border-color: var(--blue); }
+
+  .vm-section-title {
+    font-size: 12px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 12px 0 6px; border-bottom: 2px solid var(--accent);
+    margin-top: 8px;
+  }
+  .vm-voice-count { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+
+  /* ── Voice Browser (hover-to-play grid) ── */
+  .vb-container {
+    border: 1px solid var(--border); border-radius: 8px;
+    margin-bottom: 16px; overflow: hidden;
+  }
+  .vb-header {
+    background: var(--surface); padding: 8px 12px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border); cursor: pointer;
+  }
+  .vb-header:hover { background: var(--surface2); }
+  .vb-header h3 { font-size: 13px; flex: 1; }
+  .vb-search {
+    width: 100%; background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 6px 10px; font-size: 12px; outline: none;
+    margin: 8px 12px; width: calc(100% - 24px);
+  }
+  .vb-search:focus { border-color: var(--accent); }
+  .vb-grid {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding: 8px 12px; max-height: 240px; overflow-y: auto;
+  }
+  .vb-chip {
+    padding: 4px 10px; font-size: 11px;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
+    cursor: pointer; transition: all 0.12s; white-space: nowrap;
+  }
+  .vb-chip:hover {
+    border-color: #fff; transform: scale(1.08);
+    filter: brightness(1.25);
+  }
+  .vb-chip.playing {
+    border-color: #fff; transform: scale(1.08);
+    box-shadow: 0 0 8px rgba(124,106,239,0.6);
+    filter: brightness(1.3);
+  }
+  .vb-assign-bar {
+    background: var(--surface); padding: 6px 12px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .vb-assign-bar select {
+    font-size: 12px; padding: 3px 6px;
+  }
+
   @media (max-width: 800px) {
     .clip-card { grid-template-columns: 1fr; gap: 8px; }
     .clip-actions { flex-direction: row; flex-wrap: wrap; min-width: unset; }
     header { flex-direction: column; align-items: flex-start; }
     .server-config { margin-left: 0; }
     .server-config input { width: 100%; }
+    .vmpanel { width: 100vw; }
+    .vm-role-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -224,6 +338,7 @@
   <div class="selector-group" id="playGroup" style="display:none">
     <button class="btn" id="btnPlayAll" disabled>&#9654; 전체 재생</button>
     <button class="btn" id="btnStopAll" disabled>&#9632; 정지</button>
+    <button class="btn" id="btnVoiceMap" onclick="openVoiceMapPanel()">Voice Map</button>
   </div>
   <div class="server-config">
     <span class="status-dot" id="serverStatus" title="TTS 서버 상태"></span>
@@ -257,6 +372,43 @@
   <div class="queue-log" id="queueLog"></div>
 </div>
 
+<!-- Voice Map Panel -->
+<div class="vmpanel-overlay" id="vmOverlay" onclick="closeVoiceMapPanel()"></div>
+<div class="vmpanel" id="vmPanel">
+  <div class="vmpanel-header">
+    <h2>Voice Map Editor</h2>
+    <span class="vm-voice-count" id="vmVoiceCount">--</span>
+    <button class="btn btn-sm" onclick="fetchServerVoices()">&#128193; 음성 라이브러리 폴더</button>
+    <button class="btn btn-sm" onclick="closeVoiceMapPanel()">&#10005;</button>
+  </div>
+  <div class="vmpanel-body" id="vmBody">
+    <!-- Voice Browser: hover-to-play -->
+    <div class="vb-container" id="vbContainer">
+      <div class="vb-header" onclick="$('vbBody').style.display = $('vbBody').style.display === 'none' ? '' : 'none'">
+        <h3>Voice Browser (hover-to-play)</h3>
+        <span style="font-size:11px;color:var(--text-dim)" id="vbCount">0</span>
+      </div>
+      <div id="vbBody">
+        <input class="vb-search" id="vbSearch" type="text" placeholder="음성 이름 검색..." oninput="renderVoiceBrowser()">
+        <div class="vb-grid" id="vbGrid"></div>
+        <div class="vb-assign-bar">
+          <span>클릭 시 할당:</span>
+          <select id="vbTargetRole"></select>
+          <span id="vbNowPlaying" style="margin-left:auto;color:var(--accent)"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role mapping list -->
+    <input class="vm-search" id="vmSearch" type="text" placeholder="역할 또는 음성 검색...">
+    <div id="vmRoleList"></div>
+  </div>
+  <div class="vmpanel-footer">
+    <button class="btn" onclick="closeVoiceMapPanel()">닫기</button>
+    <button class="btn primary" id="btnVmSave" onclick="saveVoiceMap()">voice_map.json 저장</button>
+  </div>
+</div>
+
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
@@ -279,9 +431,60 @@ let regenRunning = false;
 
 // ── File System Access API (local mode) ──
 let projectDirHandle = null;  // FileSystemDirectoryHandle
+let voiceLibDirHandle = null; // FileSystemDirectoryHandle for voice library
+let voicesJsonData = [];      // parsed voices.json entries
 const audioBlobCache = {};    // url → blobUrl
 
 const isFileProtocol = location.protocol === 'file:';
+
+// ── localStorage persistence ──
+const LS_PREFIX = 'tts-reviewer:';
+function lsGet(key, fallback) { try { const v = localStorage.getItem(LS_PREFIX + key); return v !== null ? v : fallback; } catch { return fallback; } }
+function lsSet(key, val) { try { localStorage.setItem(LS_PREFIX + key, val); } catch {} }
+function lsGetJson(key, fallback) { try { const v = localStorage.getItem(LS_PREFIX + key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
+function lsSetJson(key, val) { try { localStorage.setItem(LS_PREFIX + key, JSON.stringify(val)); } catch {} }
+
+// ── IndexedDB for FileSystemDirectoryHandle persistence ──
+const IDB_NAME = 'tts-reviewer-handles';
+const IDB_STORE = 'handles';
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSave(key, handle) {
+  try {
+    const db = await idbOpen();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(handle, key);
+    await new Promise((r, j) => { tx.oncomplete = r; tx.onerror = j; });
+    db.close();
+  } catch {}
+}
+
+async function idbLoad(key) {
+  try {
+    const db = await idbOpen();
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(key);
+    const result = await new Promise((r, j) => { req.onsuccess = () => r(req.result); req.onerror = j; });
+    db.close();
+    return result || null;
+  } catch { return null; }
+}
+
+async function reRequestPermission(handle, mode) {
+  if (!handle) return false;
+  try {
+    if ((await handle.queryPermission({ mode })) === 'granted') return true;
+    return (await handle.requestPermission({ mode })) === 'granted';
+  } catch { return false; }
+}
 
 // ============================================================================
 // Helpers
@@ -434,6 +637,7 @@ function initSelectors() {
 async function onScenarioChange() {
   const scenarioId = $('selScenario').value;
   if (!scenarioId) return;
+  lsSet('scenario', scenarioId);
 
   $('clipContainer').innerHTML = '<div class="loading"><div class="spinner"></div>로딩 중...</div>';
 
@@ -463,7 +667,7 @@ async function onScenarioChange() {
 
 function onEpisodeChange() {
   const ep = $('selEpisode').value;
-  if (ep) renderEpisode(ep);
+  if (ep) { lsSet('episode', ep); renderEpisode(ep); }
 }
 
 // ============================================================================
@@ -695,11 +899,21 @@ $('pbNext').addEventListener('click', () => { if (playingIdx < currentClips.leng
 // ============================================================================
 // TTS Regeneration (Fish Speech API)
 // ============================================================================
-function getApiBase() { return $('ttsApiBase').value.trim().replace(/\/+$/, ''); }
+function getApiBase() {
+  const val = $('ttsApiBase').value.trim().replace(/\/+$/, '');
+  lsSet('apiBase', val);
+  return val;
+}
+
+// Find voice entry from voicesJsonData by tag name
+function findVoiceEntry(tag) {
+  if (!tag || voicesJsonData.length === 0) return null;
+  return voicesJsonData.find(v => v.tag === tag) || null;
+}
 
 async function generateTts(text, speakerId, overrideTag) {
   const base = getApiBase();
-  const refId = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : null);
+  const tag = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : null);
 
   const body = {
     text,
@@ -710,7 +924,7 @@ async function generateTts(text, speakerId, overrideTag) {
     max_new_tokens: 1024,
     normalize: true,
   };
-  if (refId) body.reference_id = refId;
+  if (tag) body.reference_id = tag;
 
   const resp = await fetch(`${base}/v1/tts`, {
     method: 'POST',
@@ -720,19 +934,6 @@ async function generateTts(text, speakerId, overrideTag) {
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => resp.statusText);
-    // reference not found → retry without reference_id
-    if (resp.status === 400 && refId) {
-      console.warn(`reference_id "${refId}" failed, retrying without reference...`);
-      delete body.reference_id;
-      const retry = await fetch(`${base}/v1/tts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!retry.ok) throw new Error(`TTS 실패: ${retry.status}`);
-      const blob = await retry.blob();
-      return URL.createObjectURL(blob);
-    }
     throw new Error(`TTS 실패 (${resp.status}): ${errText}`);
   }
 
@@ -868,15 +1069,298 @@ $('btnPing').addEventListener('click', async () => {
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
   if (e.key === ' ') { e.preventDefault(); audioPlayer.paused ? audioPlayer.play() : audioPlayer.pause(); }
-  if (e.key === 'Escape') stopAll();
+  if (e.key === 'Escape') { closeVoiceMapPanel(); stopAll(); }
   if (e.key === 'ArrowRight' && playingIdx >= 0) _play(playingIdx + 1);
   if (e.key === 'ArrowLeft' && playingIdx > 0) _play(playingIdx - 1);
 });
 
 // ============================================================================
+// Voice Map Panel
+// ============================================================================
+let serverVoices = [];      // reference IDs from Fish Speech server
+const voicePreviewCache = {}; // refId → blobUrl
+
+function openVoiceMapPanel() {
+  $('vmOverlay').classList.add('open');
+  $('vmPanel').classList.add('open');
+  renderVoiceMapList();
+  renderVoiceBrowser();
+  if (serverVoices.length === 0 && !voiceLibDirHandle) fetchServerVoices();
+}
+
+function closeVoiceMapPanel() {
+  $('vmOverlay').classList.remove('open');
+  $('vmPanel').classList.remove('open');
+}
+
+async function fetchServerVoices() {
+  // Load from local voice library directory (voices.json)
+  if (!voiceLibDirHandle) {
+    try {
+      voiceLibDirHandle = await window.showDirectoryPicker({ mode: 'read' });
+    } catch (e) {
+      if (e.name !== 'AbortError') toast(`폴더 선택 실패: ${e.message}`, 'error');
+      return;
+    }
+  }
+
+  try {
+    const fileHandle = await voiceLibDirHandle.getFileHandle('voices.json');
+    const file = await fileHandle.getFile();
+    const data = JSON.parse(await file.text());
+    voicesJsonData = data.voices || [];
+    serverVoices = voicesJsonData.map(v => v.tag).sort();
+    lsSetJson('serverVoices', serverVoices);
+    lsSet('voiceLibName', voiceLibDirHandle.name);
+    idbSave('voiceLibDir', voiceLibDirHandle);
+    $('vmVoiceCount').textContent = `${serverVoices.length}개 음성`;
+    renderVoiceMapList();
+    toast(`음성 라이브러리 ${serverVoices.length}개 로드됨 (${voiceLibDirHandle.name})`, 'success');
+  } catch (e) {
+    toast(`voices.json 로드 실패: ${e.message}. data/voices/ref 폴더를 선택하세요.`, 'error');
+    voiceLibDirHandle = null;
+  }
+}
+
+function getRoleEntries() {
+  if (!voiceMap) return [];
+  const skip = new Set(['_comment','_voicesSource','_note','_roles']);
+  return Object.entries(voiceMap).filter(([k]) => !skip.has(k) && !k.startsWith('_'));
+}
+
+function renderVoiceMapList() {
+  const container = $('vmRoleList');
+  const entries = getRoleEntries();
+  if (entries.length === 0) {
+    container.innerHTML = '<div class="loading">voice_map.json을 먼저 로드하세요</div>';
+    return;
+  }
+
+  const filter = ($('vmSearch').value || '').toLowerCase();
+
+  let html = '';
+  for (const [roleId, currentVoice] of entries) {
+    const displayName = roleDisplayName(roleId);
+    if (filter && !displayName.toLowerCase().includes(filter) && !roleId.toLowerCase().includes(filter) && !currentVoice.toLowerCase().includes(filter)) continue;
+
+    let options;
+    if (serverVoices.length > 0) {
+      options = serverVoices.map(v => {
+        const sel = v === currentVoice ? 'selected' : '';
+        return `<option value="${escapeHtml(v)}" ${sel}>${escapeHtml(v)}</option>`;
+      }).join('');
+      // Ensure current voice is in the list even if not found in library
+      if (currentVoice && !serverVoices.includes(currentVoice)) {
+        options = `<option value="${escapeHtml(currentVoice)}" selected>${escapeHtml(currentVoice)} (unknown)</option>` + options;
+      }
+    } else {
+      options = `<option value="${escapeHtml(currentVoice)}" selected>${escapeHtml(currentVoice)}</option>`;
+    }
+
+    html += `
+      <div class="vm-role-row">
+        <div>
+          <div class="vm-role-name">${displayName}</div>
+          <div class="vm-role-id">${roleId}</div>
+        </div>
+        <select class="vm-voice-select" data-role="${roleId}" onchange="onVoiceMapChange(this)">
+          ${options}
+        </select>
+        <button class="vm-preview-btn" data-role="${roleId}" onclick="previewVoice(this)">
+          &#9654; 미리듣기
+        </button>
+      </div>`;
+  }
+  container.innerHTML = html || '<div style="color:var(--text-dim);padding:20px;text-align:center">검색 결과 없음</div>';
+}
+
+$('vmSearch').addEventListener('input', renderVoiceMapList);
+
+function onVoiceMapChange(selectEl) {
+  const roleId = selectEl.dataset.role;
+  const newVoice = selectEl.value;
+  if (voiceMap) voiceMap[roleId] = newVoice;
+  // Update clip cards if rendered
+  if (currentClips.length > 0) renderClipList();
+}
+
+async function previewVoice(btn) {
+  const selectEl = btn.parentElement.querySelector('.vm-voice-select');
+  const tag = selectEl.value;
+  if (!tag) return;
+
+  // Check cache
+  if (voicePreviewCache[tag]) {
+    audioPlayer.src = voicePreviewCache[tag];
+    audioPlayer.play().catch(() => {});
+    $('playbackBar').classList.add('visible');
+    $('pbNowPlaying').innerHTML = `<span class="role">미리듣기</span> &mdash; ${escapeHtml(tag)}`;
+    return;
+  }
+
+  if (!voiceLibDirHandle) {
+    toast('음성 라이브러리 폴더를 먼저 선택하세요 (새로고침 버튼)', 'error');
+    return;
+  }
+
+  const entry = findVoiceEntry(tag);
+  if (!entry) { toast(`"${tag}" 음성 정보를 찾을 수 없습니다`, 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '로딩...';
+
+  try {
+    const fileHandle = await voiceLibDirHandle.getFileHandle(entry.audio_filename);
+    const file = await fileHandle.getFile();
+    const blobUrl = URL.createObjectURL(file);
+    voicePreviewCache[tag] = blobUrl;
+
+    audioPlayer.src = blobUrl;
+    audioPlayer.play().catch(() => {});
+    $('playbackBar').classList.add('visible');
+    const promptPreview = (entry.prompt_text || '').substring(0, 50);
+    $('pbNowPlaying').innerHTML = `<span class="role">${escapeHtml(tag)}</span> &mdash; ${escapeHtml(promptPreview)}...`;
+  } catch (e) {
+    toast(`미리듣기 실패: ${e.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '&#9654; 미리듣기';
+  }
+}
+
+// ============================================================================
+// Voice Browser (hover-to-play)
+// ============================================================================
+let vbHoverTimer = null;
+let vbPlayingTag = null;
+
+function chipGradient(str) {
+  let h1 = 0, h2 = 0;
+  for (let i = 0; i < str.length; i++) {
+    h1 = (h1 * 31 + str.charCodeAt(i)) & 0xFFFFFF;
+    h2 = (h2 * 37 + str.charCodeAt(str.length - 1 - i)) & 0xFFFFFF;
+  }
+  const hue1 = h1 % 360, hue2 = (h2 % 360);
+  return `linear-gradient(135deg, hsl(${hue1},55%,38%), hsl(${hue2},55%,32%))`;
+}
+
+function renderVoiceBrowser() {
+  const grid = $('vbGrid');
+  if (serverVoices.length === 0) {
+    grid.innerHTML = '<span style="color:var(--text-dim);font-size:12px;padding:8px">음성 라이브러리를 먼저 로드하세요</span>';
+    $('vbCount').textContent = '0';
+    return;
+  }
+
+  const filter = ($('vbSearch').value || '').toLowerCase();
+  const filtered = filter ? serverVoices.filter(v => v.toLowerCase().includes(filter)) : serverVoices;
+  $('vbCount').textContent = `${filtered.length}/${serverVoices.length}`;
+
+  grid.innerHTML = filtered.map(tag =>
+    `<span class="vb-chip ${tag === vbPlayingTag ? 'playing' : ''}" data-tag="${escapeHtml(tag)}" style="background:${chipGradient(tag)}">${escapeHtml(tag)}</span>`
+  ).join('');
+
+  // Populate target role selector
+  const sel = $('vbTargetRole');
+  const prevVal = sel.value;
+  const roles = getRoleEntries();
+  sel.innerHTML = roles.map(([rid]) =>
+    `<option value="${rid}">${roleDisplayName(rid)}</option>`
+  ).join('');
+  if (prevVal) sel.value = prevVal;
+
+  // Attach hover + click events
+  grid.querySelectorAll('.vb-chip').forEach(chip => {
+    chip.addEventListener('mouseenter', onVbChipEnter);
+    chip.addEventListener('mouseleave', onVbChipLeave);
+    chip.addEventListener('click', onVbChipClick);
+  });
+}
+
+async function onVbChipEnter(e) {
+  const tag = e.target.dataset.tag;
+  clearTimeout(vbHoverTimer);
+  // 200ms debounce to avoid rapid fire while scrolling
+  vbHoverTimer = setTimeout(() => playVoicePreview(tag), 200);
+}
+
+function onVbChipLeave() {
+  clearTimeout(vbHoverTimer);
+}
+
+function onVbChipClick(e) {
+  const tag = e.target.dataset.tag;
+  const targetRole = $('vbTargetRole').value;
+  if (!targetRole || !voiceMap) return;
+  voiceMap[targetRole] = tag;
+  toast(`${roleDisplayName(targetRole)} → ${tag}`, 'success');
+  renderVoiceMapList();
+  if (currentClips.length > 0) renderClipList();
+}
+
+async function playVoicePreview(tag) {
+  if (!voiceLibDirHandle) return;
+
+  // Mark playing chip
+  document.querySelectorAll('.vb-chip.playing').forEach(c => c.classList.remove('playing'));
+  const chip = document.querySelector(`.vb-chip[data-tag="${CSS.escape(tag)}"]`);
+  if (chip) chip.classList.add('playing');
+  vbPlayingTag = tag;
+  $('vbNowPlaying').textContent = tag;
+
+  // Use cache if available
+  if (voicePreviewCache[tag]) {
+    audioPlayer.src = voicePreviewCache[tag];
+    audioPlayer.play().catch(() => {});
+    return;
+  }
+
+  const entry = findVoiceEntry(tag);
+  if (!entry) return;
+
+  try {
+    const fileHandle = await voiceLibDirHandle.getFileHandle(entry.audio_filename);
+    const file = await fileHandle.getFile();
+    const blobUrl = URL.createObjectURL(file);
+    voicePreviewCache[tag] = blobUrl;
+    audioPlayer.src = blobUrl;
+    audioPlayer.play().catch(() => {});
+  } catch {}
+}
+
+async function saveVoiceMap() {
+  if (!voiceMap) { toast('voice_map 데이터 없음', 'error'); return; }
+
+  if (projectDirHandle) {
+    // Local mode: write via FileSystem Access API
+    try {
+      const parts = 'characters/voice_map.json'.split('/');
+      const fileName = parts.pop();
+      const dir = await getSubDir(projectDirHandle, parts);
+      const fileHandle = await dir.getFileHandle(fileName, { create: false });
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(voiceMap, null, 2) + '\n');
+      await writable.close();
+      toast('voice_map.json 저장 완료', 'success');
+    } catch (e) {
+      toast(`저장 실패: ${e.message}`, 'error');
+    }
+  } else {
+    // HTTP mode: can't write to server, download as file
+    const blob = new Blob([JSON.stringify(voiceMap, null, 2) + '\n'], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'voice_map.json';
+    a.click(); URL.revokeObjectURL(url);
+    toast('voice_map.json 다운로드됨 (수동으로 교체하세요)', 'success');
+  }
+}
+
+// ============================================================================
 // Folder Picker (for file:// mode)
 // ============================================================================
-function showFolderPicker() {
+function showFolderPicker(savedName) {
+  const hint = savedName ? `<br><small style="color:var(--green)">이전 폴더: ${escapeHtml(savedName)}</small>` : '';
   $('clipContainer').innerHTML = `
     <div class="folder-banner">
       <h2>프로젝트 폴더 선택</h2>
@@ -886,6 +1370,7 @@ function showFolderPicker() {
         <small style="color:var(--text-dim)">
           (One-Night-Ultimate-Werewolf-LLM-Edition 폴더)
         </small>
+        ${hint}
       </p>
       <button class="btn primary" onclick="pickProjectFolder()">폴더 선택</button>
     </div>
@@ -894,7 +1379,7 @@ function showFolderPicker() {
 
 async function pickProjectFolder() {
   try {
-    projectDirHandle = await window.showDirectoryPicker({ mode: 'read' });
+    projectDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
 
     // Verify it's the right folder by checking a known file
     try {
@@ -905,6 +1390,8 @@ async function pickProjectFolder() {
       return;
     }
 
+    lsSet('folderName', projectDirHandle.name);
+    idbSave('projectDir', projectDirHandle);
     $('modeBadge').textContent = 'LOCAL';
     $('modeBadge').className = 'mode-badge local';
     toast('프로젝트 폴더 연결됨', 'success');
@@ -912,6 +1399,7 @@ async function pickProjectFolder() {
     await loadVoiceMap();
     initSelectors();
     $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
+    restoreSelection();
   } catch (e) {
     if (e.name !== 'AbortError') {
       toast(`폴더 선택 실패: ${e.message}`, 'error');
@@ -922,14 +1410,89 @@ async function pickProjectFolder() {
 // ============================================================================
 // Init
 // ============================================================================
+function restoreFromCache() {
+  // Restore API base URL
+  const savedApi = lsGet('apiBase', '');
+  if (savedApi) $('ttsApiBase').value = savedApi;
+
+  // Restore server voices cache
+  const cachedVoices = lsGetJson('serverVoices', []);
+  if (cachedVoices.length > 0) serverVoices = cachedVoices;
+}
+
+function restoreSelection() {
+  // Restore last scenario & episode
+  const savedScenario = lsGet('scenario', '');
+  const savedEpisode = lsGet('episode', '');
+  if (savedScenario && $('selScenario').querySelector(`option[value="${savedScenario}"]`)) {
+    $('selScenario').value = savedScenario;
+    onScenarioChange().then(() => {
+      if (savedEpisode && $('selEpisode').querySelector(`option[value="${savedEpisode}"]`)) {
+        $('selEpisode').value = savedEpisode;
+        renderEpisode(savedEpisode);
+      }
+    });
+  }
+}
+
+async function tryRestoreHandles() {
+  // Try restoring project dir handle from IndexedDB
+  const savedProjectHandle = await idbLoad('projectDir');
+  if (savedProjectHandle) {
+    $('clipContainer').innerHTML = '<div class="loading"><div class="spinner"></div>이전 폴더 권한 확인 중...</div>';
+    const granted = await reRequestPermission(savedProjectHandle, 'readwrite');
+    if (granted) {
+      // Verify it's still valid
+      try {
+        await readJsonFromDir(savedProjectHandle, 'characters/voice_map.json');
+        projectDirHandle = savedProjectHandle;
+        $('modeBadge').textContent = 'LOCAL';
+        $('modeBadge').className = 'mode-badge local';
+        await loadVoiceMap();
+        initSelectors();
+        $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
+        restoreSelection();
+        toast('프로젝트 폴더 자동 연결됨', 'success');
+      } catch {
+        // Handle invalid, show picker
+        showFolderPicker(lsGet('folderName', ''));
+      }
+    } else {
+      showFolderPicker(lsGet('folderName', ''));
+    }
+  } else {
+    showFolderPicker(lsGet('folderName', ''));
+  }
+
+  // Try restoring voice lib handle
+  const savedVoiceLibHandle = await idbLoad('voiceLibDir');
+  if (savedVoiceLibHandle) {
+    const granted = await reRequestPermission(savedVoiceLibHandle, 'read');
+    if (granted) {
+      try {
+        const fh = await savedVoiceLibHandle.getFileHandle('voices.json');
+        const file = await fh.getFile();
+        const data = JSON.parse(await file.text());
+        voiceLibDirHandle = savedVoiceLibHandle;
+        voicesJsonData = data.voices || [];
+        serverVoices = voicesJsonData.map(v => v.tag).sort();
+        lsSetJson('serverVoices', serverVoices);
+      } catch {
+        voiceLibDirHandle = null;
+      }
+    }
+  }
+}
+
 (async function init() {
+  restoreFromCache();
+
   if (isFileProtocol) {
-    // file:// mode: need folder picker
     $('modeBadge').textContent = 'FILE://';
     $('modeBadge').className = 'mode-badge';
 
     if (window.showDirectoryPicker) {
-      showFolderPicker();
+      await tryRestoreHandles();
     } else {
       $('clipContainer').innerHTML = `
         <div class="folder-banner">
@@ -947,12 +1510,12 @@ async function pickProjectFolder() {
     }
     pingServer();
   } else {
-    // HTTP mode: normal fetch
     $('modeBadge').textContent = 'HTTP';
     $('modeBadge').className = 'mode-badge http';
     await loadVoiceMap();
     initSelectors();
     $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
+    restoreSelection();
     pingServer();
   }
 })();
