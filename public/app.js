@@ -752,6 +752,8 @@ function setBgmVolume(v) {
 }
 
 function startBgm() {
+  if (state._bgmFadeTimer) { clearInterval(state._bgmFadeTimer); state._bgmFadeTimer = null; }
+  bgmEl.muted = false;
   bgmEl.currentTime = 0;
   bgmEl.play().catch(() => {});
 }
@@ -808,6 +810,84 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// ===== GAME SESSION PERSISTENCE (restore after mobile tab kill) =====
+const GAME_SESSION_KEY = 'onw_game_session';
+const GAME_SESSION_MAX_AGE = 2 * 60 * 60 * 1000; // 2 hours
+
+function saveGameSession() {
+  if (!state.playing || !state.roomCode) return;
+  try {
+    localStorage.setItem(GAME_SESSION_KEY, JSON.stringify({
+      roomCode: state.roomCode,
+      playlistIndex: state.playlistIndex,
+      timestamp: Date.now(),
+    }));
+  } catch {}
+}
+
+function clearGameSession() {
+  try { localStorage.removeItem(GAME_SESSION_KEY); } catch {}
+}
+
+function loadGameSession() {
+  try {
+    const raw = localStorage.getItem(GAME_SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    if (Date.now() - session.timestamp > GAME_SESSION_MAX_AGE) {
+      clearGameSession();
+      return null;
+    }
+    return session;
+  } catch { return null; }
+}
+
+async function restoreGameSession(session) {
+  const decoded = decodeRoomCode(session.roomCode);
+  if (!decoded) { clearGameSession(); return false; }
+
+  state.roomCode = session.roomCode;
+  state.screen = 'lobby';
+
+  const { scenarioId, episodeId, playerCount, deck } = decoded;
+  const wakeOrder = deriveWakeOrder(deck);
+
+  let playlist = [];
+  let manifest = null;
+  try {
+    manifest = await loadManifest(scenarioId);
+    playlist = buildPlaylist(manifest, scenarioId, episodeId, playerCount, wakeOrder);
+  } catch {
+    try {
+      const ttsScenario = await loadTtsScenario(scenarioId);
+      playlist = buildPlaylistFromTts(ttsScenario, scenarioId, episodeId, wakeOrder);
+    } catch { clearGameSession(); return false; }
+  }
+
+  if (playlist.length === 0) { clearGameSession(); return false; }
+
+  const idx = Math.min(session.playlistIndex, playlist.length - 1);
+  state.manifest = manifest;
+  state.playlist = playlist;
+  state.playing = true;
+  state.paused = true; // paused state — user must tap to resume (mobile autoplay restriction)
+  state.playlistIndex = idx;
+
+  try { history.replaceState(null, '', '?room=' + encodeURIComponent(session.roomCode)); } catch {}
+  startBgm();
+  bgmEl.pause(); // BGM also paused until user resumes
+  render();
+  showToast('게임이 복원되었습니다. 재생 버튼을 눌러 이어서 진행하세요.');
+  return true;
+}
+
+// Save session when page is being hidden (screen lock, tab switch, app switch)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && state.playing) {
+    saveGameSession();
+  }
+});
+
 // ===== AUDIO PLAYBACK (mobile-safe, event-driven) =====
 const audioEl = document.getElementById('audioPlayer');
 let audioCtx = null;
@@ -829,7 +909,7 @@ function unlockAudio() {
   // Unlock BGM too
   bgmEl.muted = true;
   const bp = bgmEl.play();
-  if (bp) bp.then(() => { bgmEl.pause(); bgmEl.muted = false; }).catch(() => { bgmEl.muted = false; });
+  if (bp) bp.then(() => { if (!state.playing) bgmEl.pause(); bgmEl.muted = false; }).catch(() => { bgmEl.muted = false; });
 }
 
 function stopPlayback() {
@@ -843,6 +923,7 @@ function stopPlayback() {
   audioEl.removeAttribute('src');
   audioEl.onended = null;
   audioEl.onerror = null;
+  clearGameSession();
   render();
 }
 
@@ -852,7 +933,15 @@ function togglePause() {
   if (state.paused) {
     // Resume
     state.paused = false;
-    if (state._pausedDelay) {
+    // Cold resume after session restore — no active audio/speech, need to set up handlers and start clip
+    const isColdResume = !state._pausedDelay && !state._speechUtterance && !audioEl.src;
+    if (isColdResume) {
+      unlockAudio();
+      requestWakeLock();
+      audioEl.onended = () => playNext();
+      audioEl.onerror = () => { console.warn('Audio error, skipping:', state.playlist[state.playlistIndex]?.url); playNext(); };
+      playClip(curClip);
+    } else if (state._pausedDelay) {
       // Was paused during a delay timer — restart remaining delay
       state._delayTimer = setTimeout(() => {
         state._delayTimer = null;
@@ -894,10 +983,12 @@ function playNext() {
     state.playing = false;
     fadeOutBgm(3000);
     releaseWakeLock();
+    clearGameSession();
     render();
     showToast('밤이 끝났습니다. 토론을 시작하세요!');
     return;
   }
+  saveGameSession();
 
   const prevClip = state.playlist[state.playlistIndex - 1];
   const nextClip = state.playlist[state.playlistIndex];
@@ -971,11 +1062,13 @@ function skipToNext() {
   }
   if (target >= state.playlist.length) {
     state.playing = false;
+    clearGameSession();
     render();
     showToast('밤이 끝났습니다. 토론을 시작하세요!');
     return;
   }
   state.playlistIndex = target;
+  saveGameSession();
   playClip(state.playlist[target]);
 }
 
@@ -1002,6 +1095,7 @@ function skipToPrev() {
     }
   }
   state.playlistIndex = target;
+  saveGameSession();
   playClip(state.playlist[target]);
 }
 
@@ -1037,6 +1131,7 @@ async function startPlayback() {
 
   state.playing = true;
   state.playlistIndex = 0;
+  saveGameSession();
   startBgm();
   requestWakeLock();
   render();
@@ -1593,6 +1688,7 @@ function goHome() {
   state.playerCount = null;
   state.roomCode = null;
   state.deck = null;
+  clearGameSession();
   try { history.replaceState(null, '', location.pathname); } catch {}
   render();
 }
@@ -2290,6 +2386,20 @@ function _escHtml(text) {
 document.addEventListener('DOMContentLoaded', async () => {
   // Load scenario index before anything else
   await loadScenarioIndex();
+
+  // Try to restore an active game session (e.g. after mobile tab kill / screen lock)
+  const savedSession = loadGameSession();
+  if (savedSession) {
+    try {
+      const restored = await restoreGameSession(savedSession);
+      if (restored) {
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && state.screen === 'join') submitJoin();
+        });
+        return;
+      }
+    } catch { clearGameSession(); }
+  }
 
   // Auto-join if URL has ?room= parameter
   try {
