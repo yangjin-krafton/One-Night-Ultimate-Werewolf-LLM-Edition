@@ -62,31 +62,31 @@
       "nightOutroClips": "[urgent] 모두 눈을 떠라. [pause] 누가 확인보다 호명을 먼저 밀었는지부터 묻자꾸나. [pause]"
     },
     "ep3": {
-      "openingClips": "[suspense] 수문 쇠고리에서 이름패가 또 흔들리느니라. [pause] [sharp] 카드 확인하고, [short pause] 곧장 엎어 두어라. [pause] 눈 감아라. [pause] [urgent] 아침에는 첫 호명자부터 캐 보자꾸나. [pause]",
+      "openingClips": "[suspense] 수문 쇠고리에서 이름패가 또 흔들리느니라. [pause] [sharp] 카드 확인하고 곧장 엎어 두어라. [pause] 눈 감아라. [pause] [urgent] 아침에는 첫 호명자부터 캐 보자꾸나. [pause]",
       "roleClips": {
-        "doppelganger": "[mysterious] 남의 이름을 빌리는 자는 먼저 제 낯부터 잊느니라. [pause] 도플갱어여, 거울 너머로 눈을 뜨거라. [pause] 한 명 카드 보고 복제하거라. [pause] 복제한 역할에 밤행동 있으면 그대로 하거라. [pause] 아침 토론에서는 이름 말투가 겹치는 둘부터 붙여 보거라. [pause] [sneaky] 다시 잠들거라. [pause]",
-        "werewolf": "[creepy] 짐승의 숨은 물가 안개보다 먼저 번지느니라. [pause] 늑대인간이여, 포식자의 눈을 뜨거라. [pause] 서로 확인하고, 홀로면 중앙 한 장 보거라. [pause] 제방 이야기만 나오면 먼저 이름 박은 입부터 뒤쫓거라. [pause] [cold] 고개 숙이거라. [pause]",
-        "alpha_wolf": "[arrogant] 무리의 우두머리는 물길마저 제 뜻대로 돌리느니라. [pause] 태초의 늑대인간이여, 무리를 거느릴 눈을 뜨거라. [pause] 중앙 한 장을 늑대 아닌 한 명과 반드시 바꾸어라. [pause] 둑 안쪽으로 민 이름패를, [short pause] 어찌 골랐는지 낮에 답하거라. [pause] [confident] 눈 감거라. [pause]",
-        "mystic_wolf": "[sneaky] 떨리는 눈자위 하나가 곧 실마리가 되느니라. [pause] 신비한 늑대인간이여, 꿰뚫는 눈을 뜨거라. [pause] 원하면 한 명 카드만 보거라. [pause] 수문줄 흔들릴 적 시선 먼저 떨린 자를 찔러 보거라. [pause] [sharp] 시선 거두거라. [pause]",
-        "dream_wolf": "[drowsy] 깊이 잠든 짐승도 제 편의 기척만은 놓치지 않느니라. [pause] 잠자는 늑대인간이여, 오늘 밤도 눈을 뜨지 말거라. [pause] 호명도 하기 전에 입부터 여는 자를 먼저 의심하거라. [pause]",
-        "minion": "[fanatical] 충성은 이름보다 깊어 물밑으로 가라앉느니라. [pause] 하수인이여, 주인을 향해 눈을 뜨거라. [pause] 늑대 엄지를 확인하거라. [pause] 두둔부터 튀어나오는 쪽만 표시해 두거라. [pause] [sneaky] 숨어 버리거라. [pause]",
-        "squire": "[calm] 종자는 앞서 나서지 않아도 본 차례를 잊지 아니하느니라. [pause] 종자여, 조용히 눈을 뜨거라. [pause] 늑대 엄지를 확인하거라. [pause] 호명 순서 꼬아 말한 자는 끝까지 물고 늘어지거라. [pause] [serious] 침묵하거라. [pause]",
-        "mason": "[earnest] 돌에 새긴 맹세는 젖어도 쉬이 지워지지 않느니라. [pause] 프리메이슨이여, 결사의 눈을 뜨거라. [pause] 서로 확인하거라. [pause] 수문 장부와 맞지 않는 말은 짧게 끊어 버리거라. [pause] [earnest] 눈 감거라. [pause]",
-        "thing": "[bizarre] 눈보다 손끝이 먼저 진실의 결을 더듬느니라. [pause] 어떤것이여, 기괴한 눈을 뜨거라. [pause] 양옆 중 한 사람만 가볍게 치거라. [pause] 젖은 소매 이야기만 나와도 유난히 놀라는 자를 찍거라. [pause] [creepy] 촉수 거두거라. [pause]",
-        "seer": "[mystical] 흐린 물 위에도 진실의 그림자는 어김없이 비치느니라. [pause] 예언자여, 진실 비추는 눈을 뜨거라. [pause] 한 명 보거나 중앙 두 장 보거라. [pause] 이름 출처부터 파고드는 목소리부터 의심하거라. [pause] [wise] 눈 감거라. [pause]",
-        "apprentice_seer": "[anxious] 작은 조각 하나라도 끝내는 판을 뒤집느니라. [pause] 견습 예언자여, 조심스레 눈을 뜨거라. [pause] 중앙 한 장만 보거라. [pause] 중앙 이야기 듣고 곧장 이름 거는 자를 기억하거라. [pause] [cautious] 수정 덮거라. [pause]",
-        "paranormal_investigator": "[cynical] 괴담보다 사람 손이 더 먼저 흔적을 남기느니라. [pause] 심령 수사관이여, 날 선 눈을 뜨거라. [pause] 최대 두 장 보고 늑대 보이면 바로 멈추거라. [pause] 네 멈춘 자리만 물고 늘어지는 자를 보거라. [pause] [sharp] 의심을 거두거라. [pause]",
-        "robber": "[playful] 남의 이름패는 주머니보다 혀끝에서 먼저 훔치느니라. [pause] 강도여, 탐나는 손보다 먼저 눈을 뜨거라. [pause] 한 명과 바꾸고 새 제 카드 확인하거라. [pause] 교환 상대부터 캐는 질문은 되받아치거라. [pause] [mocking] 훔친 것은 숨기거라. [pause]",
-        "witch": "[wicked] 저주는 늘 물길을 타고 조용히 번지느니라. [pause] 마녀여, 비릿한 눈을 뜨거라. [pause] 중앙 한 장 보고 원하면 그 카드만 옮기거라. [pause] 중앙 카드 물길 막는 자부터 찔러 보거라. [pause] [ominous] 저주를 거두거라. [pause]",
-        "troublemaker": "[mischievous] 작은 뒤섞임 하나가 마을의 혀를 꼬이게 하느니라. [pause] 말썽쟁이여, 짓궂은 눈을 뜨거라. [pause] 다른 두 명 카드 서로 바꾸거라. [pause] 그 둘 중 말 먼저 비는 쪽을 밀어 보거라. [pause] [playful] 장난 끝내거라. [pause]",
-        "village_idiot": "[clumsy] 남들이 비웃는 손끝이 도리어 판의 흐름을 바로 짚느니라. [pause] 동네 얼간이여, 어리둥절한 낯으로 눈을 뜨거라. [pause] 원하면 너 빼고 전원 카드를 한 칸 같은 방향으로 밀어라. [pause] 물살 방향 질문 피하는 자를 곧장 집거라. [pause] [clueless] 그만두거라. [pause]",
-        "drunk": "[slurred] 흐릿한 눈이라도 바뀐 자리 하나쯤은 놓치지 않느니라. [pause] 주정뱅이여, 비틀거리더라도 눈을 뜨거라. [pause] 제 카드와 중앙 한 장 바꾸고 새 카드는 보지 말거라. [pause] 네가 모른다는 점으로 확신 과한 쪽을 깨뜨리거라. [pause] [dazed] 눈 감거라. [pause]",
-        "aura_seer": "[ethereal] 남은 기운은 물비늘처럼 허공에 오래 뜨느니라. [pause] 영기 예언자여, 기운 좇는 눈을 뜨거라. [pause] 오늘 밤 행동한 사람 엄지를 확인하거라. [pause] 안 움직였다는 말부터 대조하거라. [pause] [piercing] 기운 거두거라. [pause]",
-        "beholder": "[vigilant] 진실을 지키는 자는 입보다 낯빛을 먼저 읽느니라. [pause] 주시자여, 방패의 눈을 뜨거라. [pause] 예언자 엄지를 확인하거라. [pause] 예언자 흉내 내는 말씨를 얼굴에서 잡아내거라. [pause] [protective] 눈 감거라. [pause]",
-        "revealer": "[bold] 덮인 이름패일수록 억지로라도 들춰 보아야 하느니라. [pause] 계시자여, 단호히 눈을 뜨거라. [pause] 한 명 카드 공개 시도하고 늑대면 다시 덮어라. [pause] 어찌 그 이름패를 골랐는지 선빵 질문하거라. [pause] 심판을 끝내거라. [pause]",
-        "insomniac": "[paranoid] 끝까지 깨어 있는 자만 마지막 물결을 보느니라. [pause] 불면증 환자여, 예민한 눈을 뜨거라. [pause] 지금 제 카드를 확인하거라. [pause] 마지막 이동 가능성부터 못 박거라. [pause] [tense] 눈 감거라. [pause]"
+        "doppelganger": "[mysterious] 남의 이름을 빌리는 밤이로다. [pause] 도플갱어여, 눈을 뜨거라. [pause] 한 명 카드 보고 복제하거라. [pause] 말투 겹치는 둘부터 붙이거라. [pause] [sneaky] 다시 잠들거라. [pause]",
+        "werewolf": "[creepy] 짐승의 숨이 물안개보다 빠르도다. [pause] 늑대인간이여, 눈을 뜨거라. [pause] 서로 확인하고, 홀로면 중앙 한 장 보거라. [pause] 먼저 이름 박은 입부터 뒤쫓거라. [pause] [cold] 고개 숙이거라. [pause]",
+        "alpha_wolf": "[arrogant] 우두머리는 물길도 꺾는 법이니라. [pause] 태초의 늑대인간이여, 눈을 뜨거라. [pause] 중앙 한 장을 늑대 아닌 한 명과 반드시 바꾸어라. [pause] 민 이름패의 까닭을 대비하거라. [pause] [confident] 눈 감거라. [pause]",
+        "mystic_wolf": "[sneaky] 떨린 눈자위가 실마리로다. [pause] 신비한 늑대인간이여, 눈을 뜨거라. [pause] 원하면 한 명 카드만 보거라. [pause] 시선 먼저 떨린 자를 찔러 보거라. [pause] [sharp] 시선 거두거라. [pause]",
+        "dream_wolf": "[drowsy] 잠든 짐승도 기척은 듣느니라. [pause] 잠자는 늑대인간이여, 눈을 뜨지 말거라. [pause] 입부터 여는 자를 먼저 의심하거라. [pause]",
+        "minion": "[fanatical] 충성은 물밑으로 가라앉느니라. [pause] 하수인이여, 눈을 뜨거라. [pause] 늑대 엄지를 확인하거라. [pause] 두둔부터 하는 쪽을 표시해 두거라. [pause] [sneaky] 숨어 버리거라. [pause]",
+        "squire": "[calm] 종자는 본 차례를 잊지 않느니라. [pause] 종자여, 눈을 뜨거라. [pause] 늑대 엄지를 확인하거라. [pause] 순서 꼬는 자를 끝까지 물거라. [pause] [serious] 침묵하거라. [pause]",
+        "mason": "[earnest] 젖은 돌에도 맹세는 남느니라. [pause] 프리메이슨이여, 눈을 뜨거라. [pause] 서로 확인하거라. [pause] 장부와 안 맞는 말은 끊어 버리거라. [pause] [earnest] 눈 감거라. [pause]",
+        "thing": "[bizarre] 손끝이 먼저 진실을 더듬느니라. [pause] 어떤것이여, 눈을 뜨거라. [pause] 양옆 중 한 사람만 가볍게 치거라. [pause] 접촉에 놀라는 자를 찍거라. [pause] [creepy] 촉수 거두거라. [pause]",
+        "seer": "[mystical] 흐린 물에도 그림자는 비치느니라. [pause] 예언자여, 눈을 뜨거라. [pause] 한 명 보거나 중앙 두 장 보거라. [pause] 출처부터 캐는 목소리를 의심하거라. [pause] [wise] 눈 감거라. [pause]",
+        "apprentice_seer": "[anxious] 작은 조각도 판을 뒤집느니라. [pause] 견습 예언자여, 눈을 뜨거라. [pause] 중앙 한 장만 보거라. [pause] 곧장 이름 거는 자를 기억하거라. [pause] [cautious] 수정 덮거라. [pause]",
+        "paranormal_investigator": "[cynical] 괴담보다 사람 손이 먼저 남느니라. [pause] 심령 수사관이여, 눈을 뜨거라. [pause] 최대 두 장 보고 늑대 보이면 멈추거라. [pause] 네 멈춘 자리 묻는 자를 보거라. [pause] [sharp] 의심을 거두거라. [pause]",
+        "robber": "[playful] 이름패는 혀끝에서 훔치느니라. [pause] 강도여, 눈을 뜨거라. [pause] 한 명과 바꾸고 새 제 카드 확인하거라. [pause] 교환 상대부터 캐는 질문은 되받아치거라. [pause] [mocking] 훔친 것은 숨기거라. [pause]",
+        "witch": "[wicked] 저주는 물길 따라 번지느니라. [pause] 마녀여, 눈을 뜨거라. [pause] 중앙 한 장 보고 원하면 그 카드만 옮기거라. [pause] 물길 막는 자부터 찔러 보거라. [pause] [ominous] 저주 거두거라. [pause]",
+        "troublemaker": "[mischievous] 뒤섞임 하나면 혀가 꼬이느니라. [pause] 말썽쟁이여, 눈을 뜨거라. [pause] 다른 두 명 카드 서로 바꾸거라. [pause] 말 먼저 비는 쪽을 밀어 보거라. [pause] [playful] 장난 끝내거라. [pause]",
+        "village_idiot": "[clumsy] 비웃음받는 손끝이 흐름을 짚느니라. [pause] 동네 얼간이여, 눈을 뜨거라. [pause] 원하면 너 빼고 전원 카드를 한 칸 같은 방향으로 밀어라. [pause] 방향 질문 피하는 자를 집거라. [pause] [clueless] 그만두거라. [pause]",
+        "drunk": "[slurred] 흐릿한 눈도 바뀐 자린 아느니라. [pause] 주정뱅이여, 눈을 뜨거라. [pause] 제 카드와 중앙 한 장 바꾸고 새 카드는 보지 말거라. [pause] 확신 과한 쪽을 깨뜨리거라. [pause] [dazed] 눈 감거라. [pause]",
+        "aura_seer": "[ethereal] 남은 기운은 오래 뜨느니라. [pause] 영기 예언자여, 눈을 뜨거라. [pause] 오늘 밤 행동한 사람 엄지를 확인하거라. [pause] 안 움직였다는 말부터 대조하거라. [pause] [piercing] 기운 거두거라. [pause]",
+        "beholder": "[vigilant] 낯빛이 입보다 빠르니라. [pause] 주시자여, 눈을 뜨거라. [pause] 예언자 엄지를 확인하거라. [pause] 예언자 흉내 내는 말씨를 잡아내거라. [pause] [protective] 눈 감거라. [pause]",
+        "revealer": "[bold] 덮인 이름패일수록 들춰야 하느니라. [pause] 계시자여, 눈을 뜨거라. [pause] 한 명 카드 공개 시도하고 늑대면 다시 덮어라. [pause] 왜 그 이름패를 골랐는지 묻거라. [pause] 심판을 끝내거라. [pause]",
+        "insomniac": "[paranoid] 끝까지 깨어야 마지막 물결을 보느니라. [pause] 불면증 환자여, 눈을 뜨거라. [pause] 지금 제 카드를 확인하거라. [pause] 마지막 이동 가능성부터 못 박거라. [pause] [tense] 눈 감거라. [pause]"
       },
-      "nightOutroClips": "[urgent] 모두 눈 떠라. [pause] 물때 이야기도 하기 전에 이름 박은 사람부터 잡자꾸나. [pause]"
+      "nightOutroClips": "[urgent] 모두 눈 떠라. [pause] 이름 박은 사람부터 잡자꾸나. [pause]"
     }
   }
 }
