@@ -1354,6 +1354,13 @@ function openVoiceMapPanel() {
   if (serverVoices.length === 0 && !voiceLibDirHandle) fetchServerVoices();
 }
 
+function hideRolePicker() {
+  const picker = $('vbRolePicker');
+  if (picker) picker.style.display = 'none';
+  const backdrop = document.querySelector('.vb-role-picker-backdrop');
+  if (backdrop) backdrop.style.display = 'none';
+}
+
 function closeVoiceMapPanel(force) {
   if (!force && voiceMapDirty) {
     showConfirm(
@@ -1575,15 +1582,17 @@ function chipGradient(str) {
 
 function renderVoiceBrowser() {
   const grid = $('vbGrid');
+  if (!grid) return;
   if (serverVoices.length === 0) {
     grid.innerHTML = '<span style="color:var(--text-dim);font-size:12px;padding:8px">음성 라이브러리를 먼저 로드하세요</span>';
-    $('vbCount').textContent = '0';
+    const countEl = $('vbCount'); if (countEl) countEl.textContent = '0';
     return;
   }
 
-  const filter = ($('vbSearch').value || '').toLowerCase();
+  const searchEl = $('vbSearch');
+  const filter = (searchEl ? searchEl.value : '').toLowerCase();
   const filtered = filter ? serverVoices.filter(v => v.toLowerCase().includes(filter)) : serverVoices;
-  $('vbCount').textContent = `${filtered.length}/${serverVoices.length}`;
+  const countEl = $('vbCount'); if (countEl) countEl.textContent = `${filtered.length}/${serverVoices.length}`;
 
   grid.innerHTML = filtered.map(tag =>
     `<span class="vb-chip ${tag === vbPlayingTag ? 'playing' : ''}" data-tag="${escapeHtml(tag)}" style="background:${chipGradient(tag)}">${escapeHtml(tag)}</span>`
@@ -1672,12 +1681,6 @@ function showRolePicker(tag, x, y) {
       if (currentClips.length > 0) renderClipList();
     });
   });
-}
-
-function hideRolePicker() {
-  $('vbRolePicker').style.display = 'none';
-  const backdrop = document.querySelector('.vb-role-picker-backdrop');
-  if (backdrop) backdrop.style.display = 'none';
 }
 
 async function playVoicePreview(tag) {
