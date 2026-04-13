@@ -939,7 +939,7 @@ function togglePause() {
       unlockAudio();
       requestWakeLock();
       audioEl.onended = () => playNext();
-      audioEl.onerror = () => { console.warn('Audio error, skipping:', state.playlist[state.playlistIndex]?.url); playNext(); };
+      audioEl.onerror = () => { console.warn('Audio error, fallback to speech:', state.playlist[state.playlistIndex]?.url); fallbackToSpeech(state.playlist[state.playlistIndex]); };
       playClip(curClip);
     } else if (state._pausedDelay) {
       // Was paused during a delay timer — restart remaining delay
@@ -1043,8 +1043,34 @@ function playClip(clip) {
   audioEl.load();
   audioEl.play().catch((err) => {
     console.warn('play() rejected:', clip.url, err);
-    playNext();
+    fallbackToSpeech(clip);
   });
+}
+
+function fallbackToSpeech(clip) {
+  if (clip && clip.text && clip.text.trim() && window.speechSynthesis && window.SpeechSynthesisUtterance) {
+    cancelSpeechPlayback();
+    audioEl.pause();
+    audioEl.removeAttribute('src');
+    const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
+    utter.lang = 'ko-KR';
+    utter.rate = 1;
+    utter.pitch = 1;
+    utter.onend = () => {
+      if (state._speechUtterance !== utter) return;
+      state._speechUtterance = null;
+      playNext();
+    };
+    utter.onerror = () => {
+      if (state._speechUtterance !== utter) return;
+      state._speechUtterance = null;
+      playNext();
+    };
+    state._speechUtterance = utter;
+    window.speechSynthesis.speak(utter);
+    return;
+  }
+  playNext();
 }
 
 function skipToNext() {
@@ -1139,8 +1165,8 @@ async function startPlayback() {
   // Event-driven chain: ended → playNext (no async gaps that break mobile)
   audioEl.onended = () => playNext();
   audioEl.onerror = () => {
-    console.warn('Audio error, skipping:', state.playlist[state.playlistIndex]?.url);
-    playNext();
+    console.warn('Audio error, fallback to speech:', state.playlist[state.playlistIndex]?.url);
+    fallbackToSpeech(state.playlist[state.playlistIndex]);
   };
 
   // Start first clip
@@ -1152,9 +1178,7 @@ async function startPlayback() {
     audioEl.load();
     audioEl.play().catch((err) => {
       console.warn('First play() rejected:', err);
-      showToast('오디오 재생에 실패했습니다. 다시 시도해주세요.');
-      state.playing = false;
-      render();
+      fallbackToSpeech(firstClip);
     });
   }
 }
