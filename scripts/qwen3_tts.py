@@ -362,18 +362,17 @@ def generate_tts_for_role(
 ) -> Path:
     """Generate TTS for a single clip using voice_map + voice_lock.
 
-    Strips emotion tags from text, sends the FULL text to the server in one call.
+    Sends the FULL text to the server in one call.
+    Inline emotion/prosody tags are preserved so model-side tag parsing can work.
     The Qwen3-TTS server internally handles sentence splitting, per-segment
     generation, audio validation, and smooth concatenation (generate_clone_managed).
     """
     out_path = Path(out_wav_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Strip leading emotion tag: [xxx] or {xxx}
-    import re
-    clean_text = re.sub(r'^\s*[\[{][^\]}>]+[\]}]\s*', '', text).strip()
+    clean_text = text.strip()
     if not clean_text:
-        clean_text = text.strip()
+        raise ValueError("Empty text for Qwen3 TTS generation")
 
     # Try tag directly, then with _기본 fallback
     locked = voice_lock.get(voice_tag_base) or voice_lock.get(f"{voice_tag_base}_기본")
