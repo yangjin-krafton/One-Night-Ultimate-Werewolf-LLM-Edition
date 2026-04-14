@@ -892,6 +892,179 @@ document.addEventListener('visibilitychange', () => {
 const audioEl = document.getElementById('audioPlayer');
 let audioCtx = null;
 
+// ===== RADIO (WALKIE-TALKIE) EFFECT for rust_orbit scenario =====
+const radioFx = {
+  active: false,
+  mediaSource: null,   // MediaElementAudioSourceNode (created once per audioEl)
+  chain: null,         // { highpass, lowpass, midBoost, distortion, compressor, gain }
+  staticNoise: null,   // { source, gain }
+  directGain: null,    // bypass gain node for non-radio playback
+};
+
+function makeDistortionCurve(amount) {
+  const k = amount, n = 44100, curve = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const x = i * 2 / n - 1;
+    curve[i] = (3 + k) * Math.atan(Math.sinh(x * 0.25) * 5) / (Math.PI + k * Math.abs(x));
+  }
+  return curve;
+}
+
+function ensureMediaSource() {
+  if (!radioFx.mediaSource) {
+    radioFx.mediaSource = audioCtx.createMediaElementSource(audioEl);
+  }
+  return radioFx.mediaSource;
+}
+
+function buildRadioChain() {
+  const highpass = audioCtx.createBiquadFilter();
+  highpass.type = 'highpass'; highpass.frequency.value = 300; highpass.Q.value = 0.5;
+
+  const lowpass = audioCtx.createBiquadFilter();
+  lowpass.type = 'lowpass'; lowpass.frequency.value = 3500; lowpass.Q.value = 0.5;
+
+  const midBoost = audioCtx.createBiquadFilter();
+  midBoost.type = 'peaking'; midBoost.frequency.value = 1500; midBoost.Q.value = 2; midBoost.gain.value = 8;
+
+  const distortion = audioCtx.createWaveShaper();
+  distortion.curve = makeDistortionCurve(150);
+  distortion.oversample = '4x';
+
+  const compressor = audioCtx.createDynamicsCompressor();
+  compressor.threshold.value = -30; compressor.ratio.value = 12; compressor.knee.value = 10;
+
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.6;
+
+  // Chain: source → highpass → lowpass → midBoost → distortion → compressor → gain → dest
+  highpass.connect(lowpass);
+  lowpass.connect(midBoost);
+  midBoost.connect(distortion);
+  distortion.connect(compressor);
+  compressor.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  return { highpass, lowpass, midBoost, distortion, compressor, gain };
+}
+
+function startStaticNoise(volume) {
+  const bufLen = 2 * audioCtx.sampleRate;
+  const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf; src.loop = true;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass'; filter.frequency.value = 3000; filter.Q.value = 0.5;
+
+  const gain = audioCtx.createGain();
+  gain.gain.value = volume;
+
+  src.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+  src.start(0);
+  return { source: src, gain };
+}
+
+function stopStaticNoise() {
+  if (radioFx.staticNoise) {
+    try { radioFx.staticNoise.source.stop(); } catch (_) {}
+    try { radioFx.staticNoise.gain.disconnect(); } catch (_) {}
+    radioFx.staticNoise = null;
+  }
+}
+
+function enableRadioEffect() {
+  if (radioFx.active) return;
+  const src = ensureMediaSource();
+  src.disconnect();
+  radioFx.chain = buildRadioChain();
+  src.connect(radioFx.chain.highpass);
+  radioFx.staticNoise = startStaticNoise(0.015);
+  radioFx.active = true;
+}
+
+function disableRadioEffect() {
+  if (!radioFx.active) return;
+  stopStaticNoise();
+  if (radioFx.chain) {
+    Object.values(radioFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
+    radioFx.chain = null;
+  }
+  // Reconnect source directly to destination
+  if (radioFx.mediaSource) {
+    try { radioFx.mediaSource.disconnect(); } catch (_) {}
+    radioFx.mediaSource.connect(audioCtx.destination);
+  }
+  radioFx.active = false;
+}
+
+function ensureDirectRouting() {
+  // When radio is off but mediaSource exists, route directly to destination
+  if (radioFx.mediaSource && !radioFx.active) {
+    try { radioFx.mediaSource.disconnect(); } catch (_) {}
+    radioFx.mediaSource.connect(audioCtx.destination);
+  }
+}
+
+// Squelch burst + roger beep before a clip
+function playSquelchIn() {
+  if (!radioFx.active || !audioCtx) return Promise.resolve();
+  return new Promise(resolve => {
+    const now = audioCtx.currentTime;
+    // Noise burst (PTT press)
+    const bufLen = Math.floor(audioCtx.sampleRate * 0.12);
+    const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen);
+    const nSrc = audioCtx.createBufferSource(); nSrc.buffer = buf;
+    const nFilt = audioCtx.createBiquadFilter(); nFilt.type = 'bandpass'; nFilt.frequency.value = 2500; nFilt.Q.value = 1;
+    const nGain = audioCtx.createGain(); nGain.gain.value = 0.25;
+    nSrc.connect(nFilt); nFilt.connect(nGain); nGain.connect(audioCtx.destination);
+    nSrc.start(now);
+
+    // Brief roger beep after burst
+    const osc = audioCtx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 1800;
+    const bGain = audioCtx.createGain();
+    bGain.gain.setValueAtTime(0, now + 0.10);
+    bGain.gain.linearRampToValueAtTime(0.2, now + 0.105);
+    bGain.gain.setValueAtTime(0.2, now + 0.16);
+    bGain.gain.linearRampToValueAtTime(0, now + 0.17);
+    osc.connect(bGain); bGain.connect(audioCtx.destination);
+    osc.start(now + 0.10); osc.stop(now + 0.18);
+
+    setTimeout(resolve, 200);
+  });
+}
+
+// Squelch out after a clip (roger beep)
+function playSquelchOut() {
+  if (!radioFx.active || !audioCtx) return Promise.resolve();
+  return new Promise(resolve => {
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 1800;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.2, now + 0.005);
+    g.gain.setValueAtTime(0.2, now + 0.06);
+    g.gain.linearRampToValueAtTime(0, now + 0.07);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(now); osc.stop(now + 0.08);
+    // Short noise tail
+    const bufLen = Math.floor(audioCtx.sampleRate * 0.08);
+    const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen) * 0.5;
+    const nSrc = audioCtx.createBufferSource(); nSrc.buffer = buf;
+    const nGain = audioCtx.createGain(); nGain.gain.value = 0.15;
+    nSrc.connect(nGain); nGain.connect(audioCtx.destination);
+    nSrc.start(now + 0.07);
+    setTimeout(resolve, 160);
+  });
+}
+
 // Unlock audio on iOS/Android — must be called directly from user tap
 function unlockAudio() {
   // WebAudio unlock
@@ -918,6 +1091,7 @@ function stopPlayback() {
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   cancelSpeechPlayback();
   audioEl.pause();
+  disableRadioEffect();
   stopBgm();
   releaseWakeLock();
   audioEl.removeAttribute('src');
@@ -938,7 +1112,11 @@ function togglePause() {
     if (isColdResume) {
       unlockAudio();
       requestWakeLock();
-      audioEl.onended = () => playNext();
+      // Re-enable radio effect if needed (scenario info from session)
+      const cfg = resolveCurrentConfig();
+      if (cfg.scenarioId === 'rust_orbit') { ensureMediaSource(); enableRadioEffect(); }
+      else { disableRadioEffect(); ensureDirectRouting(); }
+      audioEl.onended = async () => { if (radioFx.active) await playSquelchOut(); playNext(); };
       audioEl.onerror = () => { console.warn('Audio error, fallback to speech:', state.playlist[state.playlistIndex]?.url); fallbackToSpeech(state.playlist[state.playlistIndex]); };
       playClip(curClip);
     } else if (state._pausedDelay) {
@@ -981,6 +1159,7 @@ function playNext() {
   state.playlistIndex++;
   if (state.playlistIndex >= state.playlist.length) {
     state.playing = false;
+    disableRadioEffect();
     fadeOutBgm(3000);
     releaseWakeLock();
     clearGameSession();
@@ -1008,7 +1187,7 @@ function playNext() {
   playClip(nextClip);
 }
 
-function playClip(clip) {
+async function playClip(clip) {
   renderPlayingOverlay();
   cancelSpeechPlayback();
   audioEl.pause();
@@ -1039,6 +1218,7 @@ function playClip(clip) {
     return;
   }
 
+  if (radioFx.active) await playSquelchIn();
   audioEl.src = clip.url;
   audioEl.load();
   audioEl.play().catch((err) => {
@@ -1160,27 +1340,30 @@ async function startPlayback() {
   saveGameSession();
   startBgm();
   requestWakeLock();
+
+  // Setup radio effect for rust_orbit scenario
+  if (scenarioId === 'rust_orbit') {
+    ensureMediaSource();
+    enableRadioEffect();
+  } else {
+    disableRadioEffect();
+    ensureDirectRouting();
+  }
+
   render();
 
   // Event-driven chain: ended → playNext (no async gaps that break mobile)
-  audioEl.onended = () => playNext();
+  audioEl.onended = async () => {
+    if (radioFx.active) await playSquelchOut();
+    playNext();
+  };
   audioEl.onerror = () => {
     console.warn('Audio error, fallback to speech:', state.playlist[state.playlistIndex]?.url);
     fallbackToSpeech(state.playlist[state.playlistIndex]);
   };
 
   // Start first clip
-  const firstClip = state.playlist[0];
-  if (isSpeechClip(firstClip)) {
-    playClip(firstClip);
-  } else {
-    audioEl.src = firstClip.url;
-    audioEl.load();
-    audioEl.play().catch((err) => {
-      console.warn('First play() rejected:', err);
-      fallbackToSpeech(firstClip);
-    });
-  }
+  playClip(state.playlist[0]);
 }
 
 // ===== HELPERS =====
