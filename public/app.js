@@ -895,10 +895,11 @@ let audioCtx = null;
 // ===== RADIO (WALKIE-TALKIE) EFFECT for rust_orbit scenario =====
 const radioFx = {
   active: false,
-  mediaSource: null,   // MediaElementAudioSourceNode (created once per audioEl)
-  chain: null,         // { highpass, lowpass, midBoost, distortion, compressor, gain }
-  staticNoise: null,   // { source, gain }
-  directGain: null,    // bypass gain node for non-radio playback
+  intensity: 1.0,      // 1.0 = full radio, 0.0 = clean audio (decays over playlist)
+  mediaSource: null,    // MediaElementAudioSourceNode (created once per audioEl)
+  chain: null,          // { highpass, lowpass, midBoost, distortion, compressor, gain }
+  staticNoise: null,    // { source, gain }
+  squelchChance: 0.3,   // 30% probability for squelch-in
 };
 
 function makeDistortionCurve(amount) {
@@ -948,6 +949,46 @@ function buildRadioChain() {
   return { highpass, lowpass, midBoost, distortion, compressor, gain };
 }
 
+// Lerp helper: interpolates between a (intensity=0, clean) and b (intensity=1, full radio)
+function rfxLerp(clean, radio, t) { return clean + (radio - clean) * t; }
+
+// Update all radio chain parameters based on current intensity (0→clean, 1→full radio)
+function updateRadioIntensity(intensity) {
+  radioFx.intensity = Math.max(0, Math.min(1, intensity));
+  const t = radioFx.intensity;
+  const c = radioFx.chain;
+  if (!c) return;
+
+  const rampTime = audioCtx.currentTime + 0.05; // smooth 50ms transition
+
+  // Highpass: 300Hz (radio) → 20Hz (clean, effectively off)
+  c.highpass.frequency.linearRampToValueAtTime(rfxLerp(20, 300, t), rampTime);
+  // Lowpass: 3500Hz (radio) → 20000Hz (clean, effectively off)
+  c.lowpass.frequency.linearRampToValueAtTime(rfxLerp(20000, 3500, t), rampTime);
+  // Mid boost: 8dB (radio) → 0dB (clean)
+  c.midBoost.gain.linearRampToValueAtTime(rfxLerp(0, 8, t), rampTime);
+  // Distortion curve: 150 (radio) → 0 (clean, linear pass-through)
+  c.distortion.curve = makeDistortionCurve(Math.round(rfxLerp(0, 150, t)));
+  // Compressor ratio: 12 (radio) → 1 (clean, no compression)
+  c.compressor.ratio.linearRampToValueAtTime(rfxLerp(1, 12, t), rampTime);
+  c.compressor.threshold.linearRampToValueAtTime(rfxLerp(0, -30, t), rampTime);
+  // Output gain: 0.6 (radio, compensate distortion) → 1.0 (clean)
+  c.gain.gain.linearRampToValueAtTime(rfxLerp(1.0, 0.6, t), rampTime);
+
+  // Static noise volume scales with intensity
+  if (radioFx.staticNoise) {
+    radioFx.staticNoise.gain.gain.linearRampToValueAtTime(0.015 * t, rampTime);
+  }
+}
+
+// Calculate intensity based on playlist progress (1.0 at start → 0.0 at end)
+function calcRadioIntensity() {
+  if (!state.playlist || state.playlist.length <= 1) return 1.0;
+  const progress = state.playlistIndex / (state.playlist.length - 1); // 0→1
+  // Quadratic ease-out: effect lingers early, fades faster at end
+  return Math.max(0, 1 - progress * progress);
+}
+
 function startStaticNoise(volume) {
   const bufLen = 2 * audioCtx.sampleRate;
   const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
@@ -983,6 +1024,7 @@ function enableRadioEffect() {
   radioFx.chain = buildRadioChain();
   src.connect(radioFx.chain.highpass);
   radioFx.staticNoise = startStaticNoise(0.015);
+  radioFx.intensity = 1.0;
   radioFx.active = true;
 }
 
@@ -993,25 +1035,27 @@ function disableRadioEffect() {
     Object.values(radioFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
     radioFx.chain = null;
   }
-  // Reconnect source directly to destination
   if (radioFx.mediaSource) {
     try { radioFx.mediaSource.disconnect(); } catch (_) {}
     radioFx.mediaSource.connect(audioCtx.destination);
   }
+  radioFx.intensity = 1.0;
   radioFx.active = false;
 }
 
 function ensureDirectRouting() {
-  // When radio is off but mediaSource exists, route directly to destination
   if (radioFx.mediaSource && !radioFx.active) {
     try { radioFx.mediaSource.disconnect(); } catch (_) {}
     radioFx.mediaSource.connect(audioCtx.destination);
   }
 }
 
-// Squelch burst + roger beep before a clip
+// Squelch burst + roger beep before a clip (30% random chance, scaled by intensity)
 function playSquelchIn() {
   if (!radioFx.active || !audioCtx) return Promise.resolve();
+  // Random 30% chance — skip if roll fails or intensity too low
+  if (Math.random() > radioFx.squelchChance || radioFx.intensity < 0.05) return Promise.resolve();
+  const vol = radioFx.intensity; // scale volume with intensity
   return new Promise(resolve => {
     const now = audioCtx.currentTime;
     // Noise burst (PTT press)
@@ -1021,7 +1065,7 @@ function playSquelchIn() {
     for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen);
     const nSrc = audioCtx.createBufferSource(); nSrc.buffer = buf;
     const nFilt = audioCtx.createBiquadFilter(); nFilt.type = 'bandpass'; nFilt.frequency.value = 2500; nFilt.Q.value = 1;
-    const nGain = audioCtx.createGain(); nGain.gain.value = 0.25;
+    const nGain = audioCtx.createGain(); nGain.gain.value = 0.25 * vol;
     nSrc.connect(nFilt); nFilt.connect(nGain); nGain.connect(audioCtx.destination);
     nSrc.start(now);
 
@@ -1029,8 +1073,8 @@ function playSquelchIn() {
     const osc = audioCtx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 1800;
     const bGain = audioCtx.createGain();
     bGain.gain.setValueAtTime(0, now + 0.10);
-    bGain.gain.linearRampToValueAtTime(0.2, now + 0.105);
-    bGain.gain.setValueAtTime(0.2, now + 0.16);
+    bGain.gain.linearRampToValueAtTime(0.2 * vol, now + 0.105);
+    bGain.gain.setValueAtTime(0.2 * vol, now + 0.16);
     bGain.gain.linearRampToValueAtTime(0, now + 0.17);
     osc.connect(bGain); bGain.connect(audioCtx.destination);
     osc.start(now + 0.10); osc.stop(now + 0.18);
@@ -1039,16 +1083,17 @@ function playSquelchIn() {
   });
 }
 
-// Squelch out after a clip (roger beep)
+// Squelch out after a clip (roger beep, scaled by intensity)
 function playSquelchOut() {
-  if (!radioFx.active || !audioCtx) return Promise.resolve();
+  if (!radioFx.active || !audioCtx || radioFx.intensity < 0.05) return Promise.resolve();
+  const vol = radioFx.intensity;
   return new Promise(resolve => {
     const now = audioCtx.currentTime;
     const osc = audioCtx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 1800;
     const g = audioCtx.createGain();
     g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(0.2, now + 0.005);
-    g.gain.setValueAtTime(0.2, now + 0.06);
+    g.gain.linearRampToValueAtTime(0.2 * vol, now + 0.005);
+    g.gain.setValueAtTime(0.2 * vol, now + 0.06);
     g.gain.linearRampToValueAtTime(0, now + 0.07);
     osc.connect(g); g.connect(audioCtx.destination);
     osc.start(now); osc.stop(now + 0.08);
@@ -1058,7 +1103,7 @@ function playSquelchOut() {
     const d = buf.getChannelData(0);
     for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen) * 0.5;
     const nSrc = audioCtx.createBufferSource(); nSrc.buffer = buf;
-    const nGain = audioCtx.createGain(); nGain.gain.value = 0.15;
+    const nGain = audioCtx.createGain(); nGain.gain.value = 0.15 * vol;
     nSrc.connect(nGain); nGain.connect(audioCtx.destination);
     nSrc.start(now + 0.07);
     setTimeout(resolve, 160);
@@ -1191,6 +1236,11 @@ async function playClip(clip) {
   renderPlayingOverlay();
   cancelSpeechPlayback();
   audioEl.pause();
+
+  // Update radio effect intensity based on playlist progress (decays over time)
+  if (radioFx.active) {
+    updateRadioIntensity(calcRadioIntensity());
+  }
 
   if (isSpeechClip(clip)) {
     if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
