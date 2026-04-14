@@ -513,6 +513,7 @@
     <span style="font-size:11px;color:var(--text-dim)" id="batchFooterInfo">--</span>
     <span class="spacer"></span>
     <button class="btn" onclick="closeBatchPanel()">닫기</button>
+    <button class="btn" id="btnBatchCancel" onclick="cancelBatchGeneration()" style="display:none;background:var(--red);color:#fff;border-color:var(--red)">&#9632; 중단</button>
     <button class="btn primary" id="btnBatchStart" onclick="runBatchGeneration()">&#9889; 생성 시작</button>
   </div>
 </div>
@@ -1945,6 +1946,15 @@ async function tryRestoreHandles() {
 // Batch TTS Generation Panel
 // ============================================================================
 let batchRunning = false;
+let batchCancelRequested = false;
+
+function cancelBatchGeneration() {
+  if (!batchRunning) return;
+  batchCancelRequested = true;
+  $('btnBatchCancel').disabled = true;
+  $('btnBatchCancel').textContent = '중단 중...';
+  batchLog('⚠ 중단 요청됨 — 현재 클립 완료 후 중단합니다.');
+}
 
 function openBatchPanel() {
   if (!projectDirHandle) { toast('프로젝트 폴더를 먼저 연결하세요', 'error'); return; }
@@ -2026,8 +2036,12 @@ async function runBatchGeneration() {
   const cleanFirst = $('batchOptClean').checked;
 
   batchRunning = true;
+  batchCancelRequested = false;
   $('btnBatchStart').disabled = true;
-  $('btnBatchStart').textContent = '생성 중...';
+  $('btnBatchStart').style.display = 'none';
+  $('btnBatchCancel').style.display = '';
+  $('btnBatchCancel').disabled = false;
+  $('btnBatchCancel').innerHTML = '&#9632; 중단';
   $('batchLog').style.display = 'block';
   $('batchLog').textContent = '';
   $('batchProgressBar').style.display = 'block';
@@ -2052,6 +2066,7 @@ async function runBatchGeneration() {
   updateStats();
 
   for (const scenario of targets) {
+    if (batchCancelRequested) break;
     batchLog(`\n=== ${scenario.id} (${scenario.clipCount} clips) ===`);
 
     // Clean if requested
@@ -2068,6 +2083,7 @@ async function runBatchGeneration() {
     const manifest = [];
 
     for (const epId of scenario.episodes) {
+      if (batchCancelRequested) break;
       const epData = scenario.data.episodes[epId];
       const clips = [];
 
@@ -2088,6 +2104,7 @@ async function runBatchGeneration() {
       }
 
       for (const clip of clips) {
+        if (batchCancelRequested) break;
         const m4aRelPath = `public${clip.path}.m4a`;
 
         // Skip if exists
@@ -2135,26 +2152,35 @@ async function runBatchGeneration() {
       }
     }
 
-    // Write _manifest.json
-    try {
-      const manifestObj = { generatedFrom: scenario.fileName, clips: manifest };
-      const manifestJson = JSON.stringify(manifestObj, null, 2);
-      const manifestParts = ['public', 'assets', 'voices', scenario.id];
-      const manifestDir = await getOrCreateSubDir(projectDirHandle, manifestParts);
-      const fh = await manifestDir.getFileHandle('_manifest.json', { create: true });
-      const writable = await fh.createWritable();
-      await writable.write(manifestJson);
-      await writable.close();
-      batchLog(`[manifest] ${scenario.id}/_manifest.json 저장 (${manifest.length} clips)`);
-    } catch (e) {
-      batchLog(`[manifest] 저장 실패: ${e.message}`);
+    // Write _manifest.json (중단되어도 현재까지 결과 저장)
+    if (manifest.length > 0) {
+      try {
+        const manifestObj = { generatedFrom: scenario.fileName, clips: manifest };
+        const manifestJson = JSON.stringify(manifestObj, null, 2);
+        const manifestParts = ['public', 'assets', 'voices', scenario.id];
+        const manifestDir = await getOrCreateSubDir(projectDirHandle, manifestParts);
+        const fh = await manifestDir.getFileHandle('_manifest.json', { create: true });
+        const writable = await fh.createWritable();
+        await writable.write(manifestJson);
+        await writable.close();
+        batchLog(`[manifest] ${scenario.id}/_manifest.json 저장 (${manifest.length} clips)`);
+      } catch (e) {
+        batchLog(`[manifest] 저장 실패: ${e.message}`);
+      }
     }
   }
 
-  batchLog(`\n=== 배치 완료: 성공 ${doneClips}, 실패 ${failedClips}, 건너뜀 ${skippedClips} ===`);
-  toast(`배치 생성 완료: 성공 ${doneClips}, 실패 ${failedClips}`, doneClips > 0 ? 'success' : 'error');
+  const cancelled = batchCancelRequested;
+  const statusMsg = cancelled
+    ? `배치 중단됨: 성공 ${doneClips}, 실패 ${failedClips}, 건너뜀 ${skippedClips}`
+    : `배치 완료: 성공 ${doneClips}, 실패 ${failedClips}, 건너뜀 ${skippedClips}`;
+  batchLog(`\n=== ${statusMsg} ===`);
+  toast(statusMsg, cancelled ? 'error' : (doneClips > 0 ? 'success' : 'error'));
 
   batchRunning = false;
+  batchCancelRequested = false;
+  $('btnBatchCancel').style.display = 'none';
+  $('btnBatchStart').style.display = '';
   $('btnBatchStart').disabled = false;
   $('btnBatchStart').innerHTML = '&#9889; 생성 시작';
 }
