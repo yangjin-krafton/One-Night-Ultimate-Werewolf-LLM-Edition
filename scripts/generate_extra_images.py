@@ -31,7 +31,7 @@ except ImportError:
     HAS_PIL = False
 
 PROMPTS_PATH = ROOT / "scripts" / "image_prompts_extra.json"
-WEB_BASE = ROOT / "public" / "assets" / "images_web" / "taisho_roman"
+WEB_BASE = ROOT / "public" / "assets" / "images_web" / "joseon_sageuk"
 
 # WebP 최적화 타겟 크기
 OPTIMIZE_RULES = {

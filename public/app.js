@@ -4,7 +4,7 @@
    ============================================================ */
 
 // ===== IMAGE CONFIG =====
-const IMG_STYLE = 'taisho_roman';
+const IMG_STYLE = 'joseon_sageuk';
 
 function imgPath(category, itemId) {
   return `assets/images_web/${IMG_STYLE}/${category}/${itemId}.webp`;

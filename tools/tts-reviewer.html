@@ -952,7 +952,7 @@ function toggleEdit(idx) {
   editEl.focus();
 }
 
-function saveEdit(idx) {
+async function saveEdit(idx) {
   const newText = $(`edit-${idx}`).value.trim();
   if (!newText) return;
   currentClips[idx].text = newText;
@@ -966,6 +966,44 @@ function saveEdit(idx) {
   if (newText !== currentClips[idx].originalText) card.classList.add('modified');
   else card.classList.remove('modified');
   renderStats();
+
+  // Update scenarioData and persist to .tts.json
+  const clip = currentClips[idx];
+  const episodeId = $('selEpisode').value;
+  const ep = scenarioData?.episodes?.[episodeId];
+  if (ep) {
+    if (clip.type === 'opening') ep.openingClips = newText;
+    else if (clip.type === 'outro') ep.nightOutroClips = newText;
+    else if (clip.type === 'role' && clip.roleId) ep.roleClips[clip.roleId] = newText;
+    await saveTtsJson();
+  }
+}
+
+async function saveTtsJson() {
+  if (!scenarioData) return;
+  const scenarioId = scenarioData.scenarioId;
+  if (projectDirHandle) {
+    try {
+      const parts = `public/assets/scenarios_tts/${scenarioId}.tts.json`.split('/');
+      const fileName = parts.pop();
+      const dir = await getSubDir(projectDirHandle, parts);
+      const fileHandle = await dir.getFileHandle(fileName, { create: false });
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify(scenarioData, null, 2) + '\n');
+      await writable.close();
+      toast(`${scenarioId}.tts.json 저장 완료`, 'success');
+    } catch (e) {
+      toast(`tts.json 저장 실패: ${e.message}`, 'error');
+    }
+  } else {
+    // HTTP mode: download as file
+    const blob = new Blob([JSON.stringify(scenarioData, null, 2) + '\n'], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${scenarioId}.tts.json`;
+    a.click(); URL.revokeObjectURL(url);
+    toast(`${scenarioId}.tts.json 다운로드됨`, 'success');
+  }
 }
 
 function cancelEdit(idx) {

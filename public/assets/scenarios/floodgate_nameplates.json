@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "scenarioId": "floodgate_nameplates",
   "scenarioMode": "advanced",
-  "title": "제방 수문: 젖은 이름패의 밤",
+  "title": "수문 관아: 조선 사극의 밤",
   "tags": [
     "advanced",
-    "colonial_horror",
-    "folk_occult",
+    "joseon_sageuk",
+    "korean_historical",
     "base",
     "daybreak",
     "werewolf",
@@ -17,11 +17,11 @@
     "ep2": "standard_mid",
     "ep3": "expert_fast"
   },
-  "subtitle": "숙련자형 · 식민지 괴담 · 전체 역할 풀",
+  "subtitle": "숙련자형 · 조선 사극 · 전체 역할 풀",
   "episodeTitles": {
-    "ep1": "EP1: 젖은 이름패",
-    "ep2": "EP2: 물속의 이름",
-    "ep3": "EP3: 수문을 지킨 배신자"
+    "ep1": "EP1: 관아의 밤",
+    "ep2": "EP2: 암행어사 출두",
+    "ep3": "EP3: 역모의 새벽"
   },
   "ttsSource": "assets/scenarios_tts/floodgate_nameplates.tts.json",
   "rolePool": [
