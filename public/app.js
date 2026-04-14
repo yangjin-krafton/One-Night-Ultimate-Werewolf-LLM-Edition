@@ -1237,9 +1237,17 @@ async function playClip(clip) {
   cancelSpeechPlayback();
   audioEl.pause();
 
-  // Update radio effect intensity based on playlist progress (decays over time)
+  // Narration clips (opening/outro) bypass radio effect entirely
+  const isNarration = clip.phase === 'opening' || clip.phase === 'outro';
+
   if (radioFx.active) {
-    updateRadioIntensity(calcRadioIntensity());
+    if (isNarration) {
+      // Temporarily silence radio effect for narration → clean audio
+      updateRadioIntensity(0);
+    } else {
+      // Role clips: decay intensity based on playlist progress
+      updateRadioIntensity(calcRadioIntensity());
+    }
   }
 
   if (isSpeechClip(clip)) {
@@ -1268,7 +1276,7 @@ async function playClip(clip) {
     return;
   }
 
-  if (radioFx.active) await playSquelchIn();
+  if (radioFx.active && !isNarration) await playSquelchIn();
   audioEl.src = clip.url;
   audioEl.load();
   audioEl.play().catch((err) => {
