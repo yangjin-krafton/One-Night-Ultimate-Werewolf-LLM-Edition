@@ -98,8 +98,17 @@ def main():
     style = data["style"]
     only_set = set(args.only.split(",")) if args.only else None
 
+    SUBDIR_MAP = {
+        "role_illustrations": "illustrations",
+        "rules_illustrations": "rules",
+        "ui_extra": "ui",
+        "scenario_episodes": None,  # per-item: episodes/ or scenarios/
+    }
+
     jobs = []
-    for cat_id in ["role_illustrations", "rules_illustrations", "ui_extra"]:
+    for cat_id in ["role_illustrations", "rules_illustrations", "ui_extra", "scenario_episodes"]:
+        if cat_id not in data:
+            continue
         if args.category and cat_id != args.category:
             continue
         cat = data[cat_id]
@@ -108,14 +117,16 @@ def main():
         suffix = cat_style.get("suffix", "")
         default_res = cat.get("resolution", {"width": 1024, "height": 512})
 
-        # output subdir
-        out_subdir = {"role_illustrations": "illustrations", "rules_illustrations": "rules", "ui_extra": "ui"}[cat_id]
-
         for item_id, item in cat["items"].items():
             if only_set and item_id not in only_set:
                 continue
             res = item.get("resolution", default_res)
             prompt = f"{prefix}{item['prompt']}{suffix}"
+
+            # output subdir
+            out_subdir = SUBDIR_MAP.get(cat_id)
+            if out_subdir is None:
+                out_subdir = "scenarios" if item.get("type") == "scenario" else "episodes"
             webp_path = WEB_BASE / out_subdir / f"{item_id}.webp"
 
             jobs.append({

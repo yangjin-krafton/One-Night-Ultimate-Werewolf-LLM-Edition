@@ -178,10 +178,23 @@
     }
   },
 
+  "scenario_episodes": {
+    "description": "시나리오별 대표 이미지 + 에피소드 배경. joseon_sageuk 스타일.",
+    "output_dir": "public/assets/images/joseon_sageuk/scenarios",
+    "resolution": { "width": 1024, "height": 512 },
+    "items": {
+      "floodgate_nameplates": { "type": "scenario", "prompt": "Joseon dynasty dark atmospheric panorama, a mysterious government office gwana at night beside a stone floodgate and reservoir, wooden name tablets hanging from iron chains dripping with water, wolf shadows lurking behind traditional Korean pillars, full moon reflecting on dark water, ominous atmosphere, Korean ink wash painting style, dancheong accents, hanji texture, masterpiece, best quality" },
+      "floodgate_nameplates_ep1": { "type": "episode", "prompt": "Joseon dynasty night scene, a dim government office gwana interior with a magistrate's empty seat, scattered wet wooden name tablets on a low table illuminated by a single oil lamp, shadows of figures in hanbok creeping along paper doors, tense investigative atmosphere, Korean ink wash painting style, dancheong accents, deep indigo and amber, hanji texture, masterpiece, best quality" },
+      "floodgate_nameplates_ep2": { "type": "episode", "prompt": "Joseon dynasty dramatic dawn scene, an amhaeng-eosa secret royal inspector arriving at a village gate on horseback, his mapae credential held high, villagers in hanbok gathering with nervous expressions, morning mist over traditional Korean rooftops, tension and revelation atmosphere, Korean ink wash painting style, dancheong accents, warm gold and cool blue, hanji texture, masterpiece, best quality" },
+      "floodgate_nameplates_ep3": { "type": "episode", "prompt": "Joseon dynasty tense pre-dawn scene, a dark fortress courtyard lit by scattered torches, conspirators in dark dopo robes exchanging secret documents near a stone floodgate, a lone loyalist figure watching from the shadows of a watchtower, betrayal and intrigue atmosphere, Korean ink wash painting style, dancheong accents, crimson and deep shadow, hanji texture, masterpiece, best quality" }
+    }
+  },
+
   "summary": {
     "role_illustrations": 78,
     "rules_illustrations": 18,
+    "scenario_episodes": 4,
     "ui_total": 25,
-    "total": 121
+    "total": 125
   }
 }
