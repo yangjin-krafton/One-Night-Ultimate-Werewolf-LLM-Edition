@@ -454,11 +454,6 @@
     <input id="ttsApiBase" type="text" placeholder="TTS API Base URL"
            value="http://100.66.68.140:8080">
     <button class="btn btn-sm" id="btnPing">연결 확인</button>
-    <span style="margin-left:8px;font-size:11px;color:var(--text-dim)">|</span>
-    <span class="status-dot" id="convertStatus" title="변환 서버 상태"></span>
-    <input id="convertApiBase" type="text" placeholder="변환 서버"
-           value="http://localhost:3457" style="width:180px">
-    <span id="convertLabel" style="font-size:11px;color:var(--text-dim)">M4A 변환</span>
   </div>
 </header>
 
@@ -1066,7 +1061,7 @@ async function generateTts(text, speakerId, overrideTag) {
 
   const body = {
     text,
-    format: 'wav',
+    format: 'm4a',
     temperature: 0.8,
     top_p: 0.8,
     repetition_penalty: 1.1,
@@ -1107,17 +1102,16 @@ async function regenNow(idx) {
     const { blob, blobUrl } = await generateTts(clip.text, clip.speakerId, getTagOverride(idx));
     clip.regenBlobUrl = blobUrl;
 
-    // Auto-convert to M4A and save
+    // Auto-save M4A
     const audioPath = getExpectedAudioPath(clip);
     if (projectDirHandle && audioPath) {
       try {
-        toast(`M4A 변환 중: ${roleDisplayName(clip.roleId)}...`);
-        await autoSaveClipAsM4a(clip, audioPath, blob);
+        await autoSaveClip(audioPath, blob);
         clip.audioUrl = audioPath;
         delete audioBlobCache['public' + audioPath];
         toast(`저장 완료: ${roleDisplayName(clip.roleId)}`, 'success');
       } catch (e) {
-        toast(`M4A 변환/저장 실패: ${e.message}`, 'error');
+        toast(`저장 실패: ${e.message}`, 'error');
         console.error('M4A save error:', e);
       }
     } else {
@@ -1136,64 +1130,8 @@ async function regenNow(idx) {
 }
 
 // ============================================================================
-// WAV → M4A Conversion via local convert-server (node tools/convert-server.js)
+// M4A File Save (TTS 서버에서 직접 m4a 반환)
 // ============================================================================
-let convertServerOk = false;
-
-function getConvertBase() {
-  const val = $('convertApiBase').value.trim().replace(/\/+$/, '');
-  lsSet('convertBase', val);
-  return val;
-}
-
-async function pingConvertServer() {
-  const dot = $('convertStatus');
-  const label = $('convertLabel');
-  try {
-    const resp = await fetch(getConvertBase() + '/health', { signal: AbortSignal.timeout(2000) });
-    if (resp.ok) {
-      const data = await resp.json();
-      convertServerOk = data.ffmpeg !== false;
-      dot.className = 'status-dot ok';
-      dot.title = '변환 서버 연결됨';
-      label.style.color = 'var(--green)';
-      label.textContent = 'M4A 변환 OK';
-    } else {
-      convertServerOk = false;
-      dot.className = 'status-dot err'; dot.title = '변환 서버 응답 오류';
-      label.style.color = 'var(--red)'; label.textContent = 'M4A 오류';
-    }
-  } catch {
-    convertServerOk = false;
-    dot.className = 'status-dot err';
-    dot.title = '변환 서버 없음 — node tools/convert-server.js 실행 필요';
-    label.style.color = 'var(--red)';
-    label.textContent = 'M4A 변환 서버 필요';
-  }
-}
-
-async function convertWavToM4a(wavBlob) {
-  if (!convertServerOk) {
-    // Re-check once in case server started after page load
-    await pingConvertServer();
-  }
-  if (!convertServerOk) {
-    throw new Error('M4A 변환 서버가 실행되지 않았습니다. 터미널에서: node tools/convert-server.js');
-  }
-
-  const resp = await fetch(getConvertBase() + '/convert', {
-    method: 'POST',
-    headers: { 'Content-Type': 'audio/wav' },
-    body: wavBlob,
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => resp.statusText);
-    throw new Error(`M4A 변환 실패 (${resp.status}): ${errText}`);
-  }
-
-  return await resp.blob();
-}
 
 function getExpectedAudioPath(clip) {
   if (clip.audioUrl) return clip.audioUrl;
@@ -1212,8 +1150,7 @@ async function getOrCreateSubDir(dirHandle, pathParts) {
   return h;
 }
 
-async function autoSaveClipAsM4a(clip, audioPath, wavBlob) {
-  const m4aBlob = await convertWavToM4a(wavBlob);
+async function autoSaveClip(audioPath, m4aBlob) {
   const relPath = ('public' + audioPath).replace(/\\/g, '/');
   const parts = relPath.split('/').filter(Boolean);
   const fileName = parts.pop();
@@ -1230,11 +1167,6 @@ let regenAllRunning = false;
 async function regenAllClips() {
   if (!projectDirHandle) { toast('프로젝트 폴더가 연결되지 않았습니다', 'error'); return; }
   if (currentClips.length === 0 || regenAllRunning) return;
-
-  if (!convertServerOk) {
-    await pingConvertServer();
-    if (!convertServerOk) { toast('M4A 변환 서버가 필요합니다. 터미널에서: node tools/convert-server.js', 'error'); return; }
-  }
 
   regenAllRunning = true;
   $('btnRegenAll').disabled = true;
@@ -1265,7 +1197,7 @@ async function regenAllClips() {
 
       const audioPath = getExpectedAudioPath(clip);
       if (audioPath) {
-        await autoSaveClipAsM4a(clip, audioPath, blob);
+        await autoSaveClip(audioPath, blob);
         clip.audioUrl = audioPath;
         delete audioBlobCache['public' + audioPath];
         log.textContent += `  → M4A 저장 완료\n`;
@@ -1363,16 +1295,16 @@ async function runQueue() {
       const { blob, blobUrl } = await generateTts(item.text, item.speakerId, item.tagOverride);
       currentClips[idx].regenBlobUrl = blobUrl;
 
-      // Auto-convert and save
+      // Auto-save M4A
       const audioPath = getExpectedAudioPath(currentClips[idx]);
       if (projectDirHandle && audioPath) {
         try {
-          await autoSaveClipAsM4a(currentClips[idx], audioPath, blob);
+          await autoSaveClip(audioPath, blob);
           currentClips[idx].audioUrl = audioPath;
           delete audioBlobCache['public' + audioPath];
           log.textContent += `  -> M4A 저장 완료\n`;
         } catch (e2) {
-          log.textContent += `  -> TTS 완료, M4A 변환 실패: ${e2.message}\n`;
+          log.textContent += `  -> TTS 완료, 저장 실패: ${e2.message}\n`;
         }
       } else {
         log.textContent += `  -> 완료\n`;
@@ -1415,8 +1347,7 @@ async function pingServer() {
 
 $('btnPing').addEventListener('click', async () => {
   $('serverStatus').className = 'status-dot';
-  $('convertStatus').className = 'status-dot';
-  await Promise.all([pingServer(), pingConvertServer()]);
+  await pingServer();
   toast($('serverStatus').classList.contains('ok') ? 'TTS 서버 연결됨' : 'TTS 서버 연결 실패',
         $('serverStatus').classList.contains('ok') ? 'success' : 'error');
 });
@@ -1903,10 +1834,6 @@ function restoreFromCache() {
   const savedApi = lsGet('apiBase', '');
   if (savedApi) $('ttsApiBase').value = savedApi;
 
-  // Restore convert server URL
-  const savedConvert = lsGet('convertBase', '');
-  if (savedConvert) $('convertApiBase').value = savedConvert;
-
   // Restore server voices cache
   const cachedVoices = lsGetJson('serverVoices', []);
   if (cachedVoices.length > 0) serverVoices = cachedVoices;
@@ -2052,10 +1979,6 @@ function batchLog(msg) {
 async function runBatchGeneration() {
   if (batchRunning) return;
   if (!projectDirHandle) { toast('프로젝트 폴더를 먼저 연결하세요', 'error'); return; }
-  if (!convertServerOk) {
-    await pingConvertServer();
-    if (!convertServerOk) { toast('M4A 변환 서버 필요: node tools/convert-server.js', 'error'); return; }
-  }
   if (!voiceMap) { toast('voice_map.json이 로드되지 않았습니다', 'error'); return; }
 
   const selected = [...$('batchScenarioList').querySelectorAll('input:checked')].map(cb => cb.value);
@@ -2151,19 +2074,16 @@ async function runBatchGeneration() {
         batchLog(`${epId}/${clip.roleId} [${voiceTag || '?'}]`);
 
         try {
-          // 1) Generate TTS (WAV)
+          // 1) Generate TTS (M4A directly from server)
           const { blob } = await generateTts(clip.text, clip.roleId, null);
 
-          // 2) Convert WAV → M4A
-          const m4aBlob = await convertWavToM4a(blob);
-
-          // 3) Save M4A to disk
+          // 2) Save M4A to disk
           const parts = m4aRelPath.split('/').filter(Boolean);
           const fname = parts.pop();
           const dir = await getOrCreateSubDir(projectDirHandle, parts);
           const fh = await dir.getFileHandle(fname, { create: true });
           const writable = await fh.createWritable();
-          await writable.write(m4aBlob);
+          await writable.write(blob);
           await writable.close();
 
           doneClips++;
@@ -2226,7 +2146,6 @@ async function runBatchGeneration() {
       `;
     }
     pingServer();
-    pingConvertServer();
   } else {
     $('modeBadge').textContent = 'HTTP';
     $('modeBadge').className = 'mode-badge http';
@@ -2235,7 +2154,6 @@ async function runBatchGeneration() {
     $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
     restoreSelection();
     pingServer();
-    pingConvertServer();
   }
 })();
 </script>
