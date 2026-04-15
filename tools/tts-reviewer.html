@@ -124,7 +124,24 @@
   .clip-card { cursor: pointer; user-select: none; }
   .clip-card.playing { border-left: 3px solid var(--accent); }
   .clip-card.modified { border-left: 3px solid var(--orange); }
-  .clip-card.regenerating { border-left: 3px solid var(--blue); opacity: 0.7; }
+  .clip-card.regenerating {
+    border-left: 3px solid var(--blue);
+    animation: regenPulse 1.5s ease-in-out infinite;
+    position: relative; overflow: hidden;
+  }
+  .clip-card.regenerating::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(96,165,250,0.12) 40%, rgba(96,165,250,0.25) 50%, rgba(96,165,250,0.12) 60%, transparent 100%);
+    animation: regenShimmer 2s ease-in-out infinite;
+  }
+  @keyframes regenPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  @keyframes regenShimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
   .clip-card.selected { background: rgba(124,106,239,0.12); border-color: var(--accent); }
   .clip-card.selected .clip-index { color: var(--accent); font-weight: 700; }
 

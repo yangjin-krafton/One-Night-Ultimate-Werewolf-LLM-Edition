@@ -61,6 +61,35 @@ function findAudioUrl(scenarioId, episodeId, clipType, roleId) {
   return null;
 }
 
+function _renderRegenButton(idx, clip) {
+  // Currently being regenerated
+  if (queueCurrentIdx === idx) {
+    return `<button class="btn btn-sm" disabled style="color:var(--blue);border-color:var(--blue);animation:regenPulse 1.5s infinite">
+      &#9889; 생성 중...
+    </button>`;
+  }
+
+  // Waiting in queue
+  const queuePos = regenQueue.findIndex(q => q.clipIdx === idx);
+  if (queuePos >= 0) {
+    return `<button class="btn btn-sm" disabled style="color:var(--blue);border-color:var(--blue)">
+      &#9201; 대기 #${queuePos + 1}
+    </button>`;
+  }
+
+  // Already generated
+  if (clip.regenBlobUrl) {
+    return `<button class="btn btn-sm primary" onclick="queueAndRun(${idx})">
+      &#9889; 재생성
+    </button><span style="font-size:10px;color:var(--green);margin-left:4px">&#10003; 저장됨</span>`;
+  }
+
+  // Default
+  return `<button class="btn btn-sm primary" onclick="queueAndRun(${idx})">
+    &#9889; 재생성 &amp; 저장
+  </button>`;
+}
+
 function renderClipList() {
   const container = $('clipContainer');
   container.innerHTML = '';
@@ -99,10 +128,7 @@ function renderClipList() {
         <button class="btn btn-sm" onclick="playClip(${idx})" ${!hasAudio ? 'disabled title="오디오 파일 없음"' : ''}>
           &#9654; 재생
         </button>
-        <button class="btn btn-sm primary" onclick="queueAndRun(${idx})" title="큐에 추가 후 자동 시작">
-          &#9889; 재생성 & 저장
-        </button>
-        ${clip.regenBlobUrl ? `<span style="font-size:10px;color:var(--green)">&#10003; 저장됨</span>` : ''}
+        ${_renderRegenButton(idx, clip)}
       </div>
     `;
     // Click to select (but not on buttons/inputs/textareas)

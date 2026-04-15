@@ -16,6 +16,7 @@ let isPlayAll = false;
 let regenQueue = [];
 let regenRunning = false;
 let selectedClips = new Set(); // indices of selected clips
+let queueCurrentIdx = -1;     // clip index currently being regenerated (-1 = none)
 let voiceMapDirty = false;
 let voiceMapOriginal = null;
 

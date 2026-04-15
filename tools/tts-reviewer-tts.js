@@ -81,11 +81,7 @@ function regenAllClips() {
   let added = 0;
   for (let idx = 0; idx < currentClips.length; idx++) {
     if (!regenQueue.some(q => q.clipIdx === idx)) {
-      const clip = currentClips[idx];
-      regenQueue.push({
-        clipIdx: idx, text: clip.text, speakerId: clip.speakerId,
-        roleId: clip.roleId, tagOverride: null
-      });
+      regenQueue.push({ clipIdx: idx });
       added++;
     }
   }
@@ -97,20 +93,44 @@ function regenAllClips() {
 
 // ── Regen Queue (unified, auto-start) ──
 let queueDoneCount = 0;
+// queueCurrentIdx is declared in tts-reviewer-state.js
 
 function queueAndRun(idx) {
-  const clip = currentClips[idx];
   if (regenQueue.some(q => q.clipIdx === idx)) { toast('이미 큐에 있습니다'); return; }
-  regenQueue.push({
-    clipIdx: idx, text: clip.text, speakerId: clip.speakerId,
-    roleId: clip.roleId, tagOverride: getTagOverride(idx)
-  });
+  // Flush any pending edit from selection (textarea → clip.text)
+  const editEl = $(`edit-${idx}`);
+  if (editEl && editEl.style.display === 'block') {
+    const val = editEl.value.trim();
+    if (val && val !== currentClips[idx].text) {
+      currentClips[idx].text = val;
+      if (typeof _autoSaveClipText === 'function') _autoSaveClipText(idx, val);
+    }
+  }
+  // Only store clipIdx — text is read at execution time (always latest)
+  regenQueue.push({ clipIdx: idx });
   updateQueuePanel();
+  _updateQueueButtons();
   renderStats();
   if (!regenRunning) runQueue();
 }
 
-function clearRegenQueue() { regenQueue = []; regenRunning = false; queueDoneCount = 0; updateQueuePanel(); renderStats(); }
+function clearRegenQueue() { regenQueue = []; regenRunning = false; queueDoneCount = 0; queueCurrentIdx = -1; updateQueuePanel(); renderStats(); }
+
+// Lightweight update of regen buttons without full re-render
+function _updateQueueButtons() {
+  currentClips.forEach((clip, idx) => {
+    const actionsEl = $(`clip-${idx}`)?.querySelector('.clip-actions');
+    if (!actionsEl) return;
+    // Find the regen button area (2nd child onward, after play button)
+    const playBtn = actionsEl.querySelector('button');
+    // Remove old regen elements after play button
+    while (playBtn && playBtn.nextSibling) playBtn.nextSibling.remove();
+    // Re-insert
+    const tmp = document.createElement('div');
+    tmp.innerHTML = _renderRegenButton(idx, clip);
+    while (tmp.firstChild) actionsEl.appendChild(tmp.firstChild);
+  });
+}
 
 function updateQueuePanel() {
   const panel = $('queuePanel');
@@ -147,14 +167,23 @@ async function runQueue() {
   while (regenQueue.length > 0) {
     const item = regenQueue.shift();
     const idx = item.clipIdx;
+    const clip = currentClips[idx];
+    if (!clip) { queueDoneCount++; continue; }
+
+    // Read latest text & tag at execution time (not enqueue time)
+    const text = clip.text;
+    const speakerId = clip.speakerId || clip.roleId;
+    const tagOverride = getTagOverride(idx);
     const card = $(`clip-${idx}`);
 
-    log.textContent += `[${new Date().toLocaleTimeString()}] #${idx + 1} ${roleDisplayName(item.roleId)} 재생성 시작...\n`;
+    queueCurrentIdx = idx;
+    log.textContent += `[${new Date().toLocaleTimeString()}] #${idx + 1} ${roleDisplayName(clip.roleId)} 재생성 시작...\n`;
     log.scrollTop = log.scrollHeight;
     if (card) card.classList.add('regenerating');
+    _updateQueueButtons();
 
     try {
-      const { blob, blobUrl } = await generateTts(item.text, item.speakerId, item.tagOverride);
+      const { blob, blobUrl } = await generateTts(text, speakerId, tagOverride);
       currentClips[idx].regenBlobUrl = blobUrl;
 
       const audioPath = getExpectedAudioPath(currentClips[idx]);
@@ -175,7 +204,9 @@ async function runQueue() {
     }
 
     queueDoneCount++;
+    queueCurrentIdx = -1;
     if (card) card.classList.remove('regenerating');
+    _updateQueueButtons();
 
     $('queueDone').textContent = queueDoneCount;
     $('queueCount').textContent = regenQueue.length;
