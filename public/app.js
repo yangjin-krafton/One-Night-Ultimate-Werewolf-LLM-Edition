@@ -903,7 +903,13 @@ const radioFx = {
 };
 
 function makeDistortionCurve(amount) {
-  const k = amount, n = 44100, curve = new Float32Array(n);
+  const n = 44100, curve = new Float32Array(n);
+  if (amount <= 0) {
+    // Linear pass-through (no distortion)
+    for (let i = 0; i < n; i++) curve[i] = i * 2 / n - 1;
+    return curve;
+  }
+  const k = amount;
   for (let i = 0; i < n; i++) {
     const x = i * 2 / n - 1;
     curve[i] = (3 + k) * Math.atan(Math.sinh(x * 0.25) * 5) / (Math.PI + k * Math.abs(x));
@@ -952,6 +958,12 @@ function buildRadioChain() {
 // Lerp helper: interpolates between a (intensity=0, clean) and b (intensity=1, full radio)
 function rfxLerp(clean, radio, t) { return clean + (radio - clean) * t; }
 
+// Anchor current value then ramp — required for reliable cross-browser linearRamp
+function rfxRamp(param, target, rampTime) {
+  param.setValueAtTime(param.value, audioCtx.currentTime);
+  param.linearRampToValueAtTime(target, rampTime);
+}
+
 // Update all radio chain parameters based on current intensity (0→clean, 1→full radio)
 function updateRadioIntensity(intensity) {
   radioFx.intensity = Math.max(0, Math.min(1, intensity));
@@ -962,29 +974,38 @@ function updateRadioIntensity(intensity) {
   const rampTime = audioCtx.currentTime + 0.05; // smooth 50ms transition
 
   // Highpass: 300Hz (radio) → 20Hz (clean, effectively off)
-  c.highpass.frequency.linearRampToValueAtTime(rfxLerp(20, 300, t), rampTime);
+  rfxRamp(c.highpass.frequency, rfxLerp(20, 300, t), rampTime);
   // Lowpass: 3500Hz (radio) → 20000Hz (clean, effectively off)
-  c.lowpass.frequency.linearRampToValueAtTime(rfxLerp(20000, 3500, t), rampTime);
+  rfxRamp(c.lowpass.frequency, rfxLerp(20000, 3500, t), rampTime);
   // Mid boost: 8dB (radio) → 0dB (clean)
-  c.midBoost.gain.linearRampToValueAtTime(rfxLerp(0, 8, t), rampTime);
+  rfxRamp(c.midBoost.gain, rfxLerp(0, 8, t), rampTime);
   // Distortion curve: 150 (radio) → 0 (clean, linear pass-through)
   c.distortion.curve = makeDistortionCurve(Math.round(rfxLerp(0, 150, t)));
   // Compressor ratio: 12 (radio) → 1 (clean, no compression)
-  c.compressor.ratio.linearRampToValueAtTime(rfxLerp(1, 12, t), rampTime);
-  c.compressor.threshold.linearRampToValueAtTime(rfxLerp(0, -30, t), rampTime);
+  rfxRamp(c.compressor.ratio, rfxLerp(1, 12, t), rampTime);
+  rfxRamp(c.compressor.threshold, rfxLerp(0, -30, t), rampTime);
   // Output gain: 0.6 (radio, compensate distortion) → 1.0 (clean)
-  c.gain.gain.linearRampToValueAtTime(rfxLerp(1.0, 0.6, t), rampTime);
+  rfxRamp(c.gain.gain, rfxLerp(1.0, 0.6, t), rampTime);
 
   // Static noise volume scales with intensity
   if (radioFx.staticNoise) {
-    radioFx.staticNoise.gain.gain.linearRampToValueAtTime(0.015 * t, rampTime);
+    rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * t, rampTime);
   }
 }
 
-// Calculate intensity based on playlist progress (1.0 at start → 0.0 at end)
+// Calculate intensity based on role-clip progress only (ignores opening/outro narration)
 function calcRadioIntensity() {
   if (!state.playlist || state.playlist.length <= 1) return 1.0;
-  const progress = state.playlistIndex / (state.playlist.length - 1); // 0→1
+  // Collect indices of role clips (non-narration)
+  const roleIndices = [];
+  for (let i = 0; i < state.playlist.length; i++) {
+    const p = state.playlist[i].phase;
+    if (p !== 'opening' && p !== 'outro') roleIndices.push(i);
+  }
+  if (roleIndices.length <= 1) return 1.0;
+  const pos = roleIndices.indexOf(state.playlistIndex);
+  if (pos < 0) return 1.0; // current clip is narration, shouldn't reach here
+  const progress = pos / (roleIndices.length - 1); // 0→1 across role clips only
   // Quadratic ease-out: effect lingers early, fades faster at end
   return Math.max(0, 1 - progress * progress);
 }
@@ -1161,7 +1182,7 @@ function togglePause() {
       const cfg = resolveCurrentConfig();
       if (cfg.scenarioId === 'rust_orbit') { ensureMediaSource(); enableRadioEffect(); }
       else { disableRadioEffect(); ensureDirectRouting(); }
-      audioEl.onended = async () => { if (radioFx.active) await playSquelchOut(); playNext(); };
+      audioEl.onended = async () => { const ec = state.playlist[state.playlistIndex]; const nr = ec && (ec.phase === 'opening' || ec.phase === 'outro'); if (radioFx.active && !nr) await playSquelchOut(); playNext(); };
       audioEl.onerror = () => { console.warn('Audio error, fallback to speech:', state.playlist[state.playlistIndex]?.url); fallbackToSpeech(state.playlist[state.playlistIndex]); };
       playClip(curClip);
     } else if (state._pausedDelay) {
@@ -1412,7 +1433,9 @@ async function startPlayback() {
 
   // Event-driven chain: ended → playNext (no async gaps that break mobile)
   audioEl.onended = async () => {
-    if (radioFx.active) await playSquelchOut();
+    const endedClip = state.playlist[state.playlistIndex];
+    const narration = endedClip && (endedClip.phase === 'opening' || endedClip.phase === 'outro');
+    if (radioFx.active && !narration) await playSquelchOut();
     playNext();
   };
   audioEl.onerror = () => {
