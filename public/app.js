@@ -922,7 +922,7 @@ function stopPlayback() {
   audioEl.pause();
   disableRadioEffect();
   disablePhoneEffect();
-  disableCavernEffect();
+  disableCavernEffect(); disablePAEffect(); disablePalaceEffect();
   stopBgm();
   releaseWakeLock();
   audioEl.removeAttribute('src');
@@ -945,12 +945,14 @@ function togglePause() {
       requestWakeLock();
       // Re-enable scenario effect if needed
       const cfg = resolveCurrentConfig();
-      disableRadioEffect(); disablePhoneEffect(); disableCavernEffect();
+      disableRadioEffect(); disablePhoneEffect(); disableCavernEffect(); disablePAEffect(); disablePalaceEffect();
       if (cfg.scenarioId === 'rust_orbit') { ensureMediaSource(); enableRadioEffect(); }
       else if (cfg.scenarioId === 'school_broadcast_prayer') { ensureMediaSource(); enablePhoneEffect(); }
       else if (cfg.scenarioId === 'dark_citadel') { ensureMediaSource(); enableCavernEffect(); }
+      else if (cfg.scenarioId === 'salgol_ward') { ensureMediaSource(); enablePAEffect(); }
+      else if (cfg.scenarioId === 'floodgate_nameplates') { ensureMediaSource(); enablePalaceEffect(); }
       else { ensureDirectRouting(); }
-      audioEl.onended = async () => { if (radioFx.clipHasRadio) await playSquelchOut(); if (phoneFx.clipHasPhone) await playPhoneHangUp(); if (cavernFx.clipHasCavern) await playCavernOutro(); playNext(); };
+      audioEl.onended = async () => { if (radioFx.clipHasRadio) await playSquelchOut(); if (phoneFx.clipHasPhone) await playPhoneHangUp(); if (cavernFx.clipHasCavern) await playCavernOutro(); if (paFx.clipHasPA) await playPAChimeOut(); if (palaceFx.clipHasPalace) await playPalaceOutro(); playNext(); };
       audioEl.onerror = () => { console.warn('Audio error, fallback to speech:', state.playlist[state.playlistIndex]?.url); fallbackToSpeech(state.playlist[state.playlistIndex]); };
       playClip(curClip);
     } else if (state._pausedDelay) {
@@ -995,7 +997,7 @@ function playNext() {
     state.playing = false;
     disableRadioEffect();
     disablePhoneEffect();
-    disableCavernEffect();
+    disableCavernEffect(); disablePAEffect(); disablePalaceEffect();
     fadeOutBgm(3000);
     releaseWakeLock();
     clearGameSession();
@@ -1027,9 +1029,6 @@ async function playClip(clip) {
   renderPlayingOverlay();
   cancelSpeechPlayback();
   audioEl.pause();
-  detachRadioTimeUpdate();
-  detachPhoneTimeUpdate();
-  detachCavernTimeUpdate();
 
   // Decide if this clip gets scenario-specific audio effect
   const isNarration = clip.phase === 'opening' || clip.phase === 'outro';
@@ -1040,7 +1039,6 @@ async function playClip(clip) {
     if (isPreRecorded && Math.random() < RADIO_CLIP_CHANCE) {
       radioFx.clipHasRadio = true;
       updateRadioIntensity(1);
-      attachRadioTimeUpdate();
     } else {
       radioFx.clipHasRadio = false;
       updateRadioIntensity(0);
@@ -1051,7 +1049,6 @@ async function playClip(clip) {
     if (isPreRecorded && Math.random() < PHONE_CLIP_CHANCE) {
       phoneFx.clipHasPhone = true;
       updatePhoneIntensity(1);
-      attachPhoneTimeUpdate();
     } else {
       phoneFx.clipHasPhone = false;
       updatePhoneIntensity(0);
@@ -1062,10 +1059,29 @@ async function playClip(clip) {
     if (isPreRecorded && Math.random() < CAVERN_CLIP_CHANCE) {
       cavernFx.clipHasCavern = true;
       updateCavernIntensity(1);
-      attachCavernTimeUpdate();
     } else {
       cavernFx.clipHasCavern = false;
       updateCavernIntensity(0);
+    }
+  }
+  // PA effect (salgol_ward)
+  if (paFx.active) {
+    if (isPreRecorded && Math.random() < PA_CLIP_CHANCE) {
+      paFx.clipHasPA = true;
+      updatePAIntensity(1);
+    } else {
+      paFx.clipHasPA = false;
+      updatePAIntensity(0);
+    }
+  }
+  // [EXPERIMENTAL] Palace effect (floodgate_nameplates)
+  if (palaceFx.active) {
+    if (isPreRecorded && Math.random() < PALACE_CLIP_CHANCE) {
+      palaceFx.clipHasPalace = true;
+      updatePalaceIntensity(1);
+    } else {
+      palaceFx.clipHasPalace = false;
+      updatePalaceIntensity(0);
     }
   }
 
@@ -1105,6 +1121,8 @@ async function playClip(clip) {
   if (radioFx.clipHasRadio) await playSquelchIn();
   if (phoneFx.clipHasPhone) await playPhoneCallIn();
   if (cavernFx.clipHasCavern) await playCavernIntro();
+  if (paFx.clipHasPA) await playPAChime();
+  if (palaceFx.clipHasPalace) await playPalaceIntro();
   audioEl.src = clip.url;
   audioEl.load();
   audioEl.play().catch((err) => {
@@ -1118,13 +1136,12 @@ function fallbackToSpeech(clip) {
     cancelSpeechPlayback();
     audioEl.pause();
     audioEl.removeAttribute('src');
-    detachRadioTimeUpdate();
-    detachPhoneTimeUpdate();
-    detachCavernTimeUpdate();
     // Falling back to TTS — mute effect chains since TTS bypasses Web Audio
     if (radioFx.active) { radioFx.clipHasRadio = false; updateRadioIntensity(0); }
     if (phoneFx.active) { phoneFx.clipHasPhone = false; updatePhoneIntensity(0); }
     if (cavernFx.active) { cavernFx.clipHasCavern = false; updateCavernIntensity(0); }
+    if (paFx.active) { paFx.clipHasPA = false; updatePAIntensity(0); }
+    if (palaceFx.active) { palaceFx.clipHasPalace = false; updatePalaceIntensity(0); }
     const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
     utter.lang = 'ko-KR';
     utter.rate = 1;
@@ -1237,7 +1254,7 @@ async function startPlayback() {
   // Setup scenario-specific audio effects
   disableRadioEffect();
   disablePhoneEffect();
-  disableCavernEffect();
+  disableCavernEffect(); disablePAEffect(); disablePalaceEffect();
   if (scenarioId === 'rust_orbit') {
     ensureMediaSource();
     enableRadioEffect();
@@ -1247,6 +1264,12 @@ async function startPlayback() {
   } else if (scenarioId === 'dark_citadel') {
     ensureMediaSource();
     enableCavernEffect();
+  } else if (scenarioId === 'salgol_ward') {
+    ensureMediaSource();
+    enablePAEffect();
+  } else if (scenarioId === 'floodgate_nameplates') {
+    ensureMediaSource();
+    enablePalaceEffect();
   } else {
     ensureDirectRouting();
   }

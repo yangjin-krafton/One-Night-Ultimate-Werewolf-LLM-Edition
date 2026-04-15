@@ -47,7 +47,6 @@ const radioFx = {
   mediaSource: null,      // shared MediaElementAudioSourceNode
   chain: null,
   staticNoise: null,
-  _onTimeUpdate: null,
 };
 const RADIO_CLIP_CHANCE = 0.5;
 
@@ -93,25 +92,6 @@ function updateRadioIntensity(intensity) {
   }
 }
 
-function radioTimeUpdate() {
-  if (!radioFx.clipHasRadio || !audioEl.duration || audioEl.paused) return;
-  const progress = audioEl.currentTime / audioEl.duration;
-  updateRadioIntensity(Math.max(0, 1 - progress * progress));
-}
-
-function attachRadioTimeUpdate() {
-  detachRadioTimeUpdate();
-  radioFx._onTimeUpdate = radioTimeUpdate;
-  audioEl.addEventListener('timeupdate', radioFx._onTimeUpdate);
-}
-
-function detachRadioTimeUpdate() {
-  if (radioFx._onTimeUpdate) {
-    audioEl.removeEventListener('timeupdate', radioFx._onTimeUpdate);
-    radioFx._onTimeUpdate = null;
-  }
-}
-
 function startStaticNoise(volume) {
   const bufLen = 2 * audioCtx.sampleRate;
   const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
@@ -150,7 +130,6 @@ function enableRadioEffect() {
 
 function disableRadioEffect() {
   if (!radioFx.active) return;
-  detachRadioTimeUpdate();
   stopStaticNoise();
   if (radioFx.chain) {
     Object.values(radioFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
@@ -221,7 +200,6 @@ const phoneFx = {
   intensity: 0,
   clipHasPhone: false,
   chain: null,
-  _onTimeUpdate: null,
 };
 const PHONE_CLIP_CHANCE = 0.5;
 
@@ -259,25 +237,6 @@ function updatePhoneIntensity(intensity) {
   rfxRamp(c.gain.gain, rfxLerp(1.0, 0.75, t), rt);
 }
 
-function phoneTimeUpdate() {
-  if (!phoneFx.clipHasPhone || !audioEl.duration || audioEl.paused) return;
-  const progress = audioEl.currentTime / audioEl.duration;
-  updatePhoneIntensity(Math.max(0, 1 - progress * progress));
-}
-
-function attachPhoneTimeUpdate() {
-  detachPhoneTimeUpdate();
-  phoneFx._onTimeUpdate = phoneTimeUpdate;
-  audioEl.addEventListener('timeupdate', phoneFx._onTimeUpdate);
-}
-
-function detachPhoneTimeUpdate() {
-  if (phoneFx._onTimeUpdate) {
-    audioEl.removeEventListener('timeupdate', phoneFx._onTimeUpdate);
-    phoneFx._onTimeUpdate = null;
-  }
-}
-
 function enablePhoneEffect() {
   if (phoneFx.active) return;
   const src = ensureMediaSource();
@@ -291,7 +250,6 @@ function enablePhoneEffect() {
 
 function disablePhoneEffect() {
   if (!phoneFx.active) return;
-  detachPhoneTimeUpdate();
   if (phoneFx.chain) {
     Object.values(phoneFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
     phoneFx.chain = null;
@@ -416,7 +374,6 @@ const cavernFx = {
   clipHasCavern: false,
   chain: null,
   dripNoise: null,
-  _onTimeUpdate: null,
 };
 const CAVERN_CLIP_CHANCE = 0.5;
 
@@ -433,21 +390,32 @@ function makeCaveIR(duration, decay) {
 }
 
 function buildCavernChain() {
+  // Low-frequency resonance (sewer rumble)
   const lowBoost = audioCtx.createBiquadFilter();
-  lowBoost.type = 'peaking'; lowBoost.frequency.value = 200; lowBoost.Q.value = 0.8; lowBoost.gain.value = 0;
+  lowBoost.type = 'peaking'; lowBoost.frequency.value = 150; lowBoost.Q.value = 0.6; lowBoost.gain.value = 0;
+
+  // Highcut — dampens high freqs to sound distant/muffled
+  const highcut = audioCtx.createBiquadFilter();
+  highcut.type = 'lowpass'; highcut.frequency.value = 20000; highcut.Q.value = 0.5;
+
+  // Long reverb for large wet space
   const convolver = audioCtx.createConvolver();
-  convolver.buffer = makeCaveIR(2.5, 0.6);
+  convolver.buffer = makeCaveIR(4.0, 1.0); // 4s reverb, slow 1s decay — large damp space
+
+  // Dry/wet mix
   const dryGain = audioCtx.createGain(); dryGain.gain.value = 1.0;
   const wetGain = audioCtx.createGain(); wetGain.gain.value = 0;
   const output = audioCtx.createGain(); output.gain.value = 1.0;
 
-  lowBoost.connect(dryGain);
-  lowBoost.connect(convolver);
+  // Routing: source → lowBoost → highcut → [dry → output, convolver → wet → output] → destination
+  lowBoost.connect(highcut);
+  highcut.connect(dryGain);
+  highcut.connect(convolver);
   convolver.connect(wetGain);
   dryGain.connect(output);
   wetGain.connect(output);
   output.connect(audioCtx.destination);
-  return { lowBoost, convolver, dryGain, wetGain, output };
+  return { lowBoost, highcut, convolver, dryGain, wetGain, output };
 }
 
 function updateCavernIntensity(intensity) {
@@ -456,30 +424,17 @@ function updateCavernIntensity(intensity) {
   const c = cavernFx.chain;
   if (!c) return;
   const rt = audioCtx.currentTime + 0.05;
-  rfxRamp(c.lowBoost.gain, rfxLerp(0, 6, t), rt);
-  rfxRamp(c.wetGain.gain, rfxLerp(0, 0.45, t), rt);
-  rfxRamp(c.dryGain.gain, rfxLerp(1.0, 0.7, t), rt);
+  // Low boost: 0→8dB (deeper rumble)
+  rfxRamp(c.lowBoost.gain, rfxLerp(0, 8, t), rt);
+  // Highcut: 20kHz (clean) → 2800Hz (distant/muffled)
+  rfxRamp(c.highcut.frequency, rfxLerp(20000, 2800, t), rt);
+  // Wet reverb: 0 → 0.6 (heavy, damp echo)
+  rfxRamp(c.wetGain.gain, rfxLerp(0, 0.6, t), rt);
+  // Dry lowered more to emphasize reverb (distant feel)
+  rfxRamp(c.dryGain.gain, rfxLerp(1.0, 0.55, t), rt);
+  // Drip noise louder
   if (cavernFx.dripNoise) {
-    rfxRamp(cavernFx.dripNoise.gain.gain, 0.06 * t, rt);
-  }
-}
-
-function cavernTimeUpdate() {
-  if (!cavernFx.clipHasCavern || !audioEl.duration || audioEl.paused) return;
-  const progress = audioEl.currentTime / audioEl.duration;
-  updateCavernIntensity(Math.max(0, 1 - progress * progress));
-}
-
-function attachCavernTimeUpdate() {
-  detachCavernTimeUpdate();
-  cavernFx._onTimeUpdate = cavernTimeUpdate;
-  audioEl.addEventListener('timeupdate', cavernFx._onTimeUpdate);
-}
-
-function detachCavernTimeUpdate() {
-  if (cavernFx._onTimeUpdate) {
-    audioEl.removeEventListener('timeupdate', cavernFx._onTimeUpdate);
-    cavernFx._onTimeUpdate = null;
+    rfxRamp(cavernFx.dripNoise.gain.gain, 0.08 * t, rt);
   }
 }
 
@@ -501,10 +456,15 @@ function startDripNoise() {
   const src = audioCtx.createBufferSource();
   src.buffer = buf; src.loop = true;
   const gain = audioCtx.createGain(); gain.gain.value = 0;
+  // Longer, wetter reverb on drips for dampness
   const dripReverb = audioCtx.createConvolver();
-  dripReverb.buffer = makeCaveIR(1.5, 0.4);
+  dripReverb.buffer = makeCaveIR(3.0, 0.8);
+  // Lowpass on drip reverb tail — muffled, distant drips
+  const dripLp = audioCtx.createBiquadFilter();
+  dripLp.type = 'lowpass'; dripLp.frequency.value = 3000; dripLp.Q.value = 0.5;
   src.connect(dripReverb);
-  dripReverb.connect(gain);
+  dripReverb.connect(dripLp);
+  dripLp.connect(gain);
   gain.connect(audioCtx.destination);
   src.start(0);
   return { source: src, gain };
@@ -532,7 +492,6 @@ function enableCavernEffect() {
 
 function disableCavernEffect() {
   if (!cavernFx.active) return;
-  detachCavernTimeUpdate();
   stopDripNoise();
   if (cavernFx.chain) {
     Object.values(cavernFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
@@ -590,3 +549,258 @@ function playCavernOutro() {
     setTimeout(resolve, 550);
   });
 }
+
+// ===== HOSPITAL PA (PUBLIC ADDRESS) EFFECT — salgol_ward =====
+// Tinny speaker + hall reverb + chime intro/outro.
+const paFx = {
+  active: false,
+  intensity: 0,
+  clipHasPA: false,
+  chain: null,  // { highpass, lowpass, midBoost, compressor, gain, convolver, dryGain, wetGain, output }
+};
+const PA_CLIP_CHANCE = 0.5;
+
+function buildPAChain() {
+  // Aggressive highpass — no bass at all, like a horn speaker
+  const highpass = audioCtx.createBiquadFilter();
+  highpass.type = 'highpass'; highpass.frequency.value = 20; highpass.Q.value = 0.8;
+  // Harsh lowpass — ceiling speaker can't reproduce highs
+  const lowpass = audioCtx.createBiquadFilter();
+  lowpass.type = 'lowpass'; lowpass.frequency.value = 20000; lowpass.Q.value = 0.8;
+  // Aggressive mid resonance — megaphone/horn character
+  const midBoost = audioCtx.createBiquadFilter();
+  midBoost.type = 'peaking'; midBoost.frequency.value = 2000; midBoost.Q.value = 1.8; midBoost.gain.value = 0;
+  // Secondary upper-mid peak — adds "tinny" harshness
+  const midBoost2 = audioCtx.createBiquadFilter();
+  midBoost2.type = 'peaking'; midBoost2.frequency.value = 3200; midBoost2.Q.value = 2.0; midBoost2.gain.value = 0;
+  // Speaker distortion/clipping — overdriven amp character
+  const distortion = audioCtx.createWaveShaper();
+  distortion.curve = makeDistortionCurve(0);
+  distortion.oversample = '4x';
+  // Hard compression — PA systems are heavily limited
+  const compressor = audioCtx.createDynamicsCompressor();
+  compressor.threshold.value = 0; compressor.ratio.value = 1; compressor.knee.value = 5;
+  // Hall reverb (hospital corridor)
+  const convolver = audioCtx.createConvolver();
+  convolver.buffer = makeCaveIR(2.5, 0.5);
+  const dryGain = audioCtx.createGain(); dryGain.gain.value = 1.0;
+  const wetGain = audioCtx.createGain(); wetGain.gain.value = 0;
+  const output = audioCtx.createGain(); output.gain.value = 1.0;
+
+  highpass.connect(lowpass);
+  lowpass.connect(midBoost);
+  midBoost.connect(midBoost2);
+  midBoost2.connect(distortion);
+  distortion.connect(compressor);
+  compressor.connect(dryGain);
+  compressor.connect(convolver);
+  convolver.connect(wetGain);
+  dryGain.connect(output);
+  wetGain.connect(output);
+  output.connect(audioCtx.destination);
+  return { highpass, lowpass, midBoost, midBoost2, distortion, compressor, convolver, dryGain, wetGain, output };
+}
+
+function updatePAIntensity(intensity) {
+  paFx.intensity = Math.max(0, Math.min(1, intensity));
+  const t = paFx.intensity;
+  const c = paFx.chain;
+  if (!c) return;
+  const rt = audioCtx.currentTime + 0.05;
+  // Highpass: 20→600Hz (kills all bass — horn speaker)
+  rfxRamp(c.highpass.frequency, rfxLerp(20, 600, t), rt);
+  // Lowpass: 20kHz→3800Hz (harsh ceiling speaker rolloff)
+  rfxRamp(c.lowpass.frequency, rfxLerp(20000, 3800, t), rt);
+  // Mid boost: 0→12dB (extreme megaphone resonance)
+  rfxRamp(c.midBoost.gain, rfxLerp(0, 12, t), rt);
+  // Upper-mid: 0→8dB (tinny harshness)
+  rfxRamp(c.midBoost2.gain, rfxLerp(0, 8, t), rt);
+  // Distortion: 0→80 (speaker clipping)
+  c.distortion.curve = makeDistortionCurve(Math.round(rfxLerp(0, 80, t)));
+  // Hard compression
+  rfxRamp(c.compressor.ratio, rfxLerp(1, 15, t), rt);
+  rfxRamp(c.compressor.threshold, rfxLerp(0, -28, t), rt);
+  // Corridor reverb: 0→0.35
+  rfxRamp(c.wetGain.gain, rfxLerp(0, 0.35, t), rt);
+  rfxRamp(c.dryGain.gain, rfxLerp(1.0, 0.22, t), rt);
+  rfxRamp(c.output.gain, rfxLerp(1.0, 0.21, t), rt);
+}
+
+function enablePAEffect() {
+  if (paFx.active) return;
+  const src = ensureMediaSource();
+  src.disconnect();
+  paFx.chain = buildPAChain();
+  src.connect(paFx.chain.highpass);
+  updatePAIntensity(0);
+  paFx.clipHasPA = false;
+  paFx.active = true;
+}
+
+function disablePAEffect() {
+  if (!paFx.active) return;
+  if (paFx.chain) {
+    Object.values(paFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
+    paFx.chain = null;
+  }
+  if (radioFx.mediaSource) {
+    try { radioFx.mediaSource.disconnect(); } catch (_) {}
+    radioFx.mediaSource.connect(audioCtx.destination);
+  }
+  paFx.intensity = 0;
+  paFx.clipHasPA = false;
+  paFx.active = false;
+}
+
+// Hospital chime: 띵-똥 (two-tone descending, classic Korean hospital PA)
+function playPAChime() {
+  if (!paFx.active || !audioCtx || !paFx.clipHasPA) return Promise.resolve();
+  return new Promise(resolve => {
+    const now = audioCtx.currentTime;
+    // First tone: G5 (783Hz)
+    const osc1 = audioCtx.createOscillator(); osc1.type = 'sine'; osc1.frequency.value = 783;
+    const g1 = audioCtx.createGain();
+    g1.gain.setValueAtTime(0, now);
+    g1.gain.linearRampToValueAtTime(0.054, now + 0.02);
+    g1.gain.setValueAtTime(0.054, now + 0.25);
+    g1.gain.linearRampToValueAtTime(0, now + 0.35);
+    osc1.connect(g1); g1.connect(audioCtx.destination);
+    osc1.start(now); osc1.stop(now + 0.4);
+
+    // Second tone: E5 (659Hz)
+    const osc2 = audioCtx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 659;
+    const g2 = audioCtx.createGain();
+    g2.gain.setValueAtTime(0, now + 0.35);
+    g2.gain.linearRampToValueAtTime(0.054, now + 0.37);
+    g2.gain.setValueAtTime(0.054, now + 0.6);
+    g2.gain.linearRampToValueAtTime(0, now + 0.7);
+    osc2.connect(g2); g2.connect(audioCtx.destination);
+    osc2.start(now + 0.35); osc2.stop(now + 0.75);
+
+    setTimeout(resolve, 800);
+  });
+}
+
+// PA outro: reverse chime (똥-띵, ascending)
+function playPAChimeOut() {
+  if (!paFx.active || !audioCtx || !paFx.clipHasPA) return Promise.resolve();
+  return new Promise(resolve => {
+    const now = audioCtx.currentTime;
+    // E5 → G5 (ascending)
+    const osc1 = audioCtx.createOscillator(); osc1.type = 'sine'; osc1.frequency.value = 659;
+    const g1 = audioCtx.createGain();
+    g1.gain.setValueAtTime(0, now);
+    g1.gain.linearRampToValueAtTime(0.045, now + 0.02);
+    g1.gain.setValueAtTime(0.045, now + 0.2);
+    g1.gain.linearRampToValueAtTime(0, now + 0.3);
+    osc1.connect(g1); g1.connect(audioCtx.destination);
+    osc1.start(now); osc1.stop(now + 0.35);
+
+    const osc2 = audioCtx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 783;
+    const g2 = audioCtx.createGain();
+    g2.gain.setValueAtTime(0, now + 0.3);
+    g2.gain.linearRampToValueAtTime(0.045, now + 0.32);
+    g2.gain.setValueAtTime(0.045, now + 0.55);
+    g2.gain.linearRampToValueAtTime(0, now + 0.65);
+    osc2.connect(g2); g2.connect(audioCtx.destination);
+    osc2.start(now + 0.3); osc2.stop(now + 0.7);
+
+    setTimeout(resolve, 700);
+  });
+}
+
+// ===== [EXPERIMENTAL] PALACE HALL EFFECT — floodgate_nameplates =====
+// 궁전 전각 — 하수도(cavern)보다 건조하고 밝은 리버브. 제거 시 이 블록 전체 삭제 + app.js에서 palaceFx 참조 제거.
+// >>> EXPERIMENTAL START — floodgate_nameplates palace-hall <<<
+const palaceFx = {
+  active: false,
+  intensity: 0,
+  clipHasPalace: false,
+  chain: null, // { lowcut, presence, convolver, dryGain, wetGain, output }
+};
+const PALACE_CLIP_CHANCE = 0.5;
+
+// Dry palace IR — shorter decay, brighter than cave (stone floor + wooden ceiling)
+function makePalaceIR(duration, decay) {
+  const len = Math.floor(audioCtx.sampleRate * duration);
+  const buf = audioCtx.createBuffer(2, len, audioCtx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * decay));
+    }
+  }
+  return buf;
+}
+
+function buildPalaceChain() {
+  // Low cut — removes muddy room rumble (dry stone floor)
+  const lowcut = audioCtx.createBiquadFilter();
+  lowcut.type = 'highpass'; lowcut.frequency.value = 20; lowcut.Q.value = 0.5;
+  // Presence — voice clarity bouncing off hard surfaces
+  const presence = audioCtx.createBiquadFilter();
+  presence.type = 'peaking'; presence.frequency.value = 2800; presence.Q.value = 0.8; presence.gain.value = 0;
+  // Palace reverb — shorter & drier than cave, brighter tail
+  const convolver = audioCtx.createConvolver();
+  convolver.buffer = makePalaceIR(2.0, 0.35); // 2s, fast decay — hard surfaces, open space
+  // Dry/wet
+  const dryGain = audioCtx.createGain(); dryGain.gain.value = 1.0;
+  const wetGain = audioCtx.createGain(); wetGain.gain.value = 0;
+  const output = audioCtx.createGain(); output.gain.value = 1.0;
+
+  lowcut.connect(presence);
+  presence.connect(dryGain);
+  presence.connect(convolver);
+  convolver.connect(wetGain);
+  dryGain.connect(output);
+  wetGain.connect(output);
+  output.connect(audioCtx.destination);
+  return { lowcut, presence, convolver, dryGain, wetGain, output };
+}
+
+function updatePalaceIntensity(intensity) {
+  palaceFx.intensity = Math.max(0, Math.min(1, intensity));
+  const t = palaceFx.intensity;
+  const c = palaceFx.chain;
+  if (!c) return;
+  const rt = audioCtx.currentTime + 0.05;
+  // Low cut: 20→100Hz (clean, not boomy)
+  rfxRamp(c.lowcut.frequency, rfxLerp(20, 100, t), rt);
+  // Presence: 0→4dB (bright clarity — stone/wood reflections)
+  rfxRamp(c.presence.gain, rfxLerp(0, 4, t), rt);
+  // Wet: 0→0.3 (noticeable echo but dry, not washy)
+  rfxRamp(c.wetGain.gain, rfxLerp(0, 0.3, t), rt);
+  // Dry stays strong
+  rfxRamp(c.dryGain.gain, rfxLerp(1.0, 0.8, t), rt);
+}
+
+function enablePalaceEffect() {
+  if (palaceFx.active) return;
+  const src = ensureMediaSource();
+  src.disconnect();
+  palaceFx.chain = buildPalaceChain();
+  src.connect(palaceFx.chain.lowcut);
+  updatePalaceIntensity(0);
+  palaceFx.clipHasPalace = false;
+  palaceFx.active = true;
+}
+
+function disablePalaceEffect() {
+  if (!palaceFx.active) return;
+  if (palaceFx.chain) {
+    Object.values(palaceFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
+    palaceFx.chain = null;
+  }
+  if (radioFx.mediaSource) {
+    try { radioFx.mediaSource.disconnect(); } catch (_) {}
+    radioFx.mediaSource.connect(audioCtx.destination);
+  }
+  palaceFx.intensity = 0;
+  palaceFx.clipHasPalace = false;
+  palaceFx.active = false;
+}
+
+// No intro/outro sound — just the reverb on the voice is the effect
+function playPalaceIntro() { return Promise.resolve(); }
+function playPalaceOutro() { return Promise.resolve(); }
+// >>> EXPERIMENTAL END — floodgate_nameplates palace-hall <<<
