@@ -1278,6 +1278,11 @@ async function playClip(clip) {
       return;
     }
 
+    // Mute static noise during TTS — it bypasses Web Audio chain
+    if (radioFx.active && radioFx.staticNoise) {
+      rfxRamp(radioFx.staticNoise.gain.gain, 0, audioCtx.currentTime + 0.03);
+    }
+
     const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
     utter.lang = 'ko-KR';
     utter.rate = 1;
@@ -1285,11 +1290,18 @@ async function playClip(clip) {
     utter.onend = () => {
       if (state._speechUtterance !== utter) return;
       state._speechUtterance = null;
+      // Restore static noise for next clip
+      if (radioFx.active && radioFx.staticNoise) {
+        rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * radioFx.intensity, audioCtx.currentTime + 0.03);
+      }
       playNext();
     };
     utter.onerror = () => {
       if (state._speechUtterance !== utter) return;
       state._speechUtterance = null;
+      if (radioFx.active && radioFx.staticNoise) {
+        rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * radioFx.intensity, audioCtx.currentTime + 0.03);
+      }
       playNext();
     };
     state._speechUtterance = utter;
@@ -1297,6 +1309,10 @@ async function playClip(clip) {
     return;
   }
 
+  // Ensure static noise is audible for pre-recorded audio clips
+  if (radioFx.active && radioFx.staticNoise && !isNarration) {
+    rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * radioFx.intensity, audioCtx.currentTime + 0.03);
+  }
   if (radioFx.active && !isNarration) await playSquelchIn();
   audioEl.src = clip.url;
   audioEl.load();
@@ -1311,6 +1327,10 @@ function fallbackToSpeech(clip) {
     cancelSpeechPlayback();
     audioEl.pause();
     audioEl.removeAttribute('src');
+    // Mute static noise during TTS fallback
+    if (radioFx.active && radioFx.staticNoise && audioCtx) {
+      rfxRamp(radioFx.staticNoise.gain.gain, 0, audioCtx.currentTime + 0.03);
+    }
     const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
     utter.lang = 'ko-KR';
     utter.rate = 1;
@@ -1318,11 +1338,17 @@ function fallbackToSpeech(clip) {
     utter.onend = () => {
       if (state._speechUtterance !== utter) return;
       state._speechUtterance = null;
+      if (radioFx.active && radioFx.staticNoise && audioCtx) {
+        rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * radioFx.intensity, audioCtx.currentTime + 0.03);
+      }
       playNext();
     };
     utter.onerror = () => {
       if (state._speechUtterance !== utter) return;
       state._speechUtterance = null;
+      if (radioFx.active && radioFx.staticNoise && audioCtx) {
+        rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * radioFx.intensity, audioCtx.currentTime + 0.03);
+      }
       playNext();
     };
     state._speechUtterance = utter;
