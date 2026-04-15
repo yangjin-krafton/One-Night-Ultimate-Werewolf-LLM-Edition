@@ -12,7 +12,7 @@
       "roleClips": {
         "doppelganger": "[surprised][excited] 방금 누구 목소리 따라 한 거, 진짜 티 안 나더라. [pause] 도플갱어 전학생, 조용히 눈을 떠. [pause] 한 사람의 카드를 보고 그 역할을 복제해. [pause] 복제한 역할이 밤에 행동하면 그 규칙대로 이어서 움직여. [pause] 낮에는 네 말투가 누구 거랑 겹치는지부터 걸릴 수 있어. [pause] 들킨 티 내지 말고 눈 감아. [pause]",
         "werewolf": "[excited][shocked] 복도 공기만 맡아도 누가 약한지 딱 보인다. [pause] 늑대인간 담임쌤, 눈 떠. [pause] 다른 늑대가 있으면 서로 확인하고, [short pause] 혼자면 중앙 카드 한 장 봐. [pause] 낮에는 먼저 아무나 범인처럼 찍는 애를 따라가면 돼. [pause] 표정 정리하고 눈 감아. [pause]",
-        "alpha_wolf": "[excited][emphasis] 한 번 밀어 넣으면 분위기 자체가 바뀌는 거 알지. [pause] 태초의 늑대인간 학생부장 선생님, 바로 눈 떠. [pause] 중앙 카드 한 장을 늑대가 아닌 다른 플레이어 한 명과 반드시 바꿔. [pause] 누구를 밀었는지 똑바로 기억해. [pause] 낮에는 왜 걔를 골랐는지 바로 물린다. [pause] 아무 일 없던 척 눈 감아. [pause]",
+        "alpha_wolf": "[excited][emphasis] 한 번 밀어 넣으면 분위기 자체가 바뀌는 거 알지. [pause] 태초의 늑대인간 학생부장 선생님, 바로 눈 떠. [pause] 태초의 늑대인간 전용 뒷면 늑대인간 카드 한 장을 늑대가 아닌 다른 플레이어 한 명과 반드시 바꿔. [pause] 누구를 밀었는지 똑바로 기억해. [pause] 그 카드는 이번 행동에서만 써. [pause] 낮에는 왜 걔를 골랐는지 바로 물린다. [pause] 아무 일 없던 척 눈 감아. [pause]",
         "mystic_wolf": "[whisper][surprised][excited] 애들 눈 흔들리는 거 보면 대충 답 나오잖아. [pause] 신비한 늑대인간 상담선생님, 살짝 눈 떠. [pause] 원한다면 다른 플레이어 한 명의 카드를 확인해. [pause] 누구를 봤는지는 숨겨. [pause] 낮에는 그 애가 왜 어떤 단어에서 멈췄는지 찔러. [pause] 시선 거두고 눈 감아. [pause]",
         "dream_wolf": "[low volume][shocked] 자는 애가 오히려 덜 티 날 때도 있다. [pause] 잠자는 늑대인간 보건쌤은 오늘도 눈 뜨지 마. [pause] 끝까지 아무것도 모르는 척 버텨. [pause] 낮에는 정보 없다는 말 너무 빨리 꺼내는 애를 먼저 봐. [pause]",
         "minion": "[whisper][surprised][excited] 앞에서 막 감싸면 그것도 너무 티 난다. [pause] 하수인 부담임쌤, 눈 떠. [pause] 늑대인간은 엄지를 들어. [pause] 하수인은 그들을 확인하고 늑대는 엄지를 내려. [pause] 낮에는 누가 대신 변명부터 하는지 찍어 둬. [pause] 그림자처럼 빠지고 눈 감아. [pause]",
@@ -39,7 +39,7 @@
       "roleClips": {
         "doppelganger": "[surprised][excited] 목소리 하나만 비슷해도 애들 은근 잘 속아. [pause] 도플갱어 전학생, 눈 떠. [pause] 한 사람을 보고 복제하고 복제한 역할이 밤에 행동하면 그대로 이어. [pause] 낮에는 네 목소리가 닮은 방송 주인을 먼저 짚어. [pause] 티 감추고 눈 감아. [pause]",
         "werewolf": "[excited][shocked] 딱 분위기 약한 쪽부터 보인다. [pause] 늑대인간 담임쌤, 눈 떠. [pause] 서로 확인하고 혼자면 중앙 카드 한 장 봐. [pause] 낮에는 누가 이름 지목을 제일 빨리 시작했는지 확인해. [pause] 조용히 눈 감아. [pause]",
-        "alpha_wolf": "[excited][emphasis] 한 명만 밀어도 판이 확 기운다. [pause] 태초의 늑대인간 학생부장 선생님, 눈 떠. [pause] 중앙 카드 한 장을 늑대가 아닌 플레이어 한 명과 반드시 바꿔. [pause] 낮에는 네가 문 앞으로 민 대상의 이유를 설명해. [pause] 침착하게 눈 감아. [pause]",
+        "alpha_wolf": "[excited][emphasis] 한 명만 밀어도 판이 확 기운다. [pause] 태초의 늑대인간 학생부장 선생님, 눈 떠. [pause] 전용 뒷면 늑대인간 카드 한 장을 늑대가 아닌 플레이어 한 명과 반드시 바꿔. [pause] 그 카드는 태초의 늑대인간 행동에만 써. [pause] 낮에는 네가 문 앞으로 민 대상의 이유를 설명해. [pause] 침착하게 눈 감아. [pause]",
         "mystic_wolf": "[whisper][surprised][excited] 멈칫한 순간은 생각보다 잘 안 숨겨져. [pause] 신비한 늑대인간 상담선생님, 눈 떠. [pause] 원하면 다른 플레이어 한 명의 카드를 확인해. [pause] 낮에는 그 사람이 왜 특정 단어에서 멈췄는지 찔러. [pause] 시선 거두고 눈 감아. [pause]",
         "dream_wolf": "[low volume][shocked] 모른다는 얼굴 유지하는 것도 은근 중요해. [pause] 잠자는 늑대인간 보건쌤은 눈 뜨지 마. [pause] 낮에는 질문 회피 빠른 사람을 봐. [pause]",
         "minion": "[whisper][surprised][excited] 대신 변명부터 해 주는 애가 진짜 티 난다. [pause] 하수인 부담임쌤, 눈 떠. [pause] 늑대의 엄지를 확인해. [pause] 낮에는 대신 변명부터 시작하는 사람을 찍어. [pause] 빠지고 눈 감아. [pause]",
@@ -66,7 +66,7 @@
       "roleClips": {
         "doppelganger": "[surprised][excited] 목소리 겹치면 바로 티 난다. [pause] 도플갱어 전학생, 눈 떠. [pause] 한 명 카드 보고 복제해. [pause] 방송 톤 겹치는 둘부터 붙여. [pause] 다시 눈 감아. [pause]",
         "werewolf": "[excited][shocked] 약한 쪽은 진짜 금방 보여. [pause] 늑대인간 담임쌤, 눈 떠. [pause] 서로 확인하고 혼자면 중앙 한 장 봐. [pause] 먼저 이름 박은 입을 추적해. [pause] 눈 감아. [pause]",
-        "alpha_wolf": "[excited][emphasis] 한 명 밀면 판이 확 꺾여. [pause] 태초의 늑대인간 학생부장 선생님, 눈 떠. [pause] 중앙 한 장을 늑대 아닌 한 명과 반드시 바꿔. [pause] 왜 골랐는지 낮에 답해. [pause] 눈 감아. [pause]",
+        "alpha_wolf": "[excited][emphasis] 한 명 밀면 판이 확 꺾여. [pause] 태초의 늑대인간 학생부장 선생님, 눈 떠. [pause] 전용 늑대인간 카드 한 장을 늑대 아닌 한 명과 반드시 바꿔. [pause] 왜 골랐는지 낮에 답해. 그 카드는 이 행동에서만 써. [pause] 눈 감아. [pause]",
         "mystic_wolf": "[whisper][surprised][excited] 먼저 굳는 얼굴은 못 숨겨. [pause] 신비한 늑대인간 상담선생님, 눈 떠. [pause] 원하면 한 명 카드만 봐. [pause] 시선 먼저 굳은 사람 찔러. [pause] 눈 감아. [pause]",
         "dream_wolf": "[low volume][shocked] 모른다는 말 너무 빠르면 더 수상해. [pause] 잠자는 늑대인간 보건쌤은 계속 자. [pause] 먼저 모른다 꺼내는 쪽부터 의심해. [pause]",
         "minion": "[whisper][surprised][excited] 변호부터 뛰는 애만 잘 봐도 된다. [pause] 하수인 부담임쌤, 눈 떠. [pause] 늑대 엄지 확인해. [pause] 변호부터 뛰는 쪽만 표시해 둬. [pause] 눈 감아. [pause]",
