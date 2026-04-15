@@ -86,8 +86,17 @@
   .mode-badge.local { border-color: var(--green); color: var(--green); }
   .mode-badge.http { border-color: var(--blue); color: var(--blue); }
 
-  /* ── Main ── */
-  main { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  /* ── Main (split layout) ── */
+  .app-body { display: flex; height: calc(100vh - 60px); overflow: hidden; }
+  .app-body main { flex: 1; min-width: 0; overflow-y: auto; padding: 24px; }
+  .app-body .lm-sidebar {
+    width: 420px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    background: var(--bg); border-left: 1px solid var(--border);
+    transition: width 0.25s, opacity 0.25s;
+    overflow: hidden;
+  }
+  .app-body .lm-sidebar.collapsed { width: 0; opacity: 0; pointer-events: none; }
 
   .stats-bar { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
   .stat-chip {
@@ -112,9 +121,12 @@
     gap: 12px; align-items: start; transition: background 0.15s;
   }
   .clip-card:hover { background: var(--surface2); }
+  .clip-card { cursor: pointer; user-select: none; }
   .clip-card.playing { border-left: 3px solid var(--accent); }
   .clip-card.modified { border-left: 3px solid var(--orange); }
   .clip-card.regenerating { border-left: 3px solid var(--blue); opacity: 0.7; }
+  .clip-card.selected { background: rgba(124,106,239,0.12); border-color: var(--accent); }
+  .clip-card.selected .clip-index { color: var(--accent); font-weight: 700; }
 
   .clip-index { font-size: 12px; color: var(--text-dim); text-align: center; padding-top: 2px; }
   .clip-speaker { display: flex; flex-direction: column; gap: 2px; }
@@ -418,6 +430,199 @@
   .confirm-box p { font-size: 13px; color: var(--text-dim); margin-bottom: 18px; line-height: 1.5; }
   .confirm-box .actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+  /* ── LM Studio Chat Panel (inline sidebar) ── */
+  .lm-panel {
+    display: flex; flex-direction: column;
+    height: 100%; width: 100%;
+  }
+  .lm-panel-header {
+    padding: 8px 12px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  }
+  .lm-panel-header h2 { font-size: 14px; flex: 1; }
+
+  .lm-config {
+    padding: 8px 12px; background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;
+  }
+  .lm-config-row { display: flex; align-items: center; gap: 8px; }
+  .lm-config-row label { font-size: 12px; color: var(--text-dim); min-width: 50px; }
+  .lm-config-row input {
+    flex: 1; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 13px; outline: none;
+  }
+  .lm-config-row input:focus { border-color: var(--accent); }
+  .lm-config-row select {
+    flex: 1; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 13px; outline: none;
+  }
+
+  .lm-skill-info {
+    padding: 6px 12px; background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; color: var(--text-dim);
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  }
+  .lm-skill-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+
+  .lm-messages {
+    flex: 1; overflow-y: auto; padding: 12px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .lm-msg {
+    max-width: 90%; padding: 10px 14px;
+    border-radius: 12px; font-size: 13px; line-height: 1.6;
+    word-break: break-word; white-space: pre-wrap;
+  }
+  .lm-msg.user {
+    align-self: flex-end; background: var(--accent); color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .lm-msg.assistant {
+    align-self: flex-start; background: var(--surface);
+    border: 1px solid var(--border); border-bottom-left-radius: 4px;
+  }
+  .lm-msg.system-msg {
+    align-self: center; background: transparent;
+    color: var(--text-dim); font-size: 11px; text-align: center;
+    padding: 4px 8px;
+  }
+  .lm-msg .lm-edits {
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .lm-edit-item {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px; margin-top: 6px;
+    font-size: 12px;
+  }
+  .lm-edit-item .clip-label { color: var(--accent); font-weight: 600; margin-bottom: 4px; }
+  .lm-edit-item .edit-text { color: var(--text); white-space: pre-wrap; }
+  .lm-edit-item .lm-apply-btn {
+    margin-top: 6px; padding: 3px 10px; font-size: 11px;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 4px; cursor: pointer;
+  }
+  .lm-edit-item .lm-apply-btn:hover { background: var(--accent-hover); }
+  .lm-edit-item .lm-apply-btn.applied { background: var(--green); cursor: default; }
+
+  .lm-input-area {
+    padding: 8px 12px; background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+  }
+  .lm-input-area textarea {
+    flex: 1; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; font-size: 13px; font-family: inherit;
+    resize: none; outline: none; min-height: 40px; max-height: 120px;
+    line-height: 1.5;
+  }
+  .lm-input-area textarea:focus { border-color: var(--accent); }
+  .lm-input-area textarea:disabled { opacity: 0.5; }
+  .lm-send-btn {
+    padding: 8px 16px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+  }
+  .lm-send-btn:hover { background: var(--accent-hover); }
+  .lm-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .lm-typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+  .lm-typing span {
+    width: 6px; height: 6px; background: var(--text-dim);
+    border-radius: 50%; animation: lmBounce 1.2s infinite;
+  }
+  .lm-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .lm-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes lmBounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  .lm-think {
+    font-size: 11px; color: var(--text-dim);
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; margin-bottom: 6px; overflow: hidden;
+  }
+  .lm-think summary {
+    padding: 4px 8px; cursor: pointer; user-select: none;
+    font-style: italic;
+  }
+  .lm-think summary:hover { color: var(--text); }
+  .lm-think pre {
+    padding: 6px 8px; white-space: pre-wrap; word-break: break-word;
+    max-height: 200px; overflow-y: auto; margin: 0;
+    border-top: 1px solid var(--border);
+  }
+  .lm-msg .lm-explanation { margin-bottom: 4px; white-space: pre-wrap; }
+  .lm-streaming-status {
+    color: var(--text-dim); font-style: italic; font-size: 12px;
+  }
+
+  .lm-skill-tag {
+    display: inline-block; font-size: 10px; padding: 1px 6px;
+    border-radius: 3px; font-weight: 600; margin-right: 4px;
+  }
+  .lm-skill-tag.edit { background: var(--accent); color: #fff; }
+  .lm-skill-tag.find_replace { background: var(--orange); color: #fff; }
+  .lm-skill-tag.rename_roles { background: #d946ef; color: #fff; }
+  .lm-skill-tag.chat { background: var(--border); color: var(--text-dim); }
+
+  .lm-scope-tag {
+    display: inline-block; font-size: 10px; padding: 1px 6px;
+    border-radius: 3px; background: var(--surface2); color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .lm-ops-list { margin-top: 6px; }
+  .lm-op-item {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 5px 8px; margin-top: 4px; font-size: 11px; font-family: 'Consolas', monospace;
+  }
+  .lm-op-find { color: var(--red); }
+  .lm-op-replace { color: var(--green); }
+  .lm-op-arrow { color: var(--text-dim); margin: 0 4px; }
+
+  .lm-preview { margin-top: 8px; }
+  .lm-preview-summary {
+    font-size: 11px; color: var(--text-dim); margin-bottom: 4px;
+  }
+  .lm-preview-item {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 6px 8px; margin-top: 4px; font-size: 11px;
+  }
+  .lm-preview-item .label { color: var(--accent); font-weight: 600; margin-bottom: 2px; }
+  .lm-diff-old { color: var(--red); text-decoration: line-through; }
+  .lm-diff-new { color: var(--green); }
+  .lm-preview-toggle {
+    font-size: 11px; color: var(--accent); cursor: pointer;
+    background: none; border: none; padding: 2px 0; text-decoration: underline;
+  }
+
+  .lm-rename-item {
+    display: grid; grid-template-columns: 100px 1fr; gap: 6px;
+    padding: 4px 8px; font-size: 12px; align-items: center;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    margin-top: 4px;
+  }
+  .lm-rename-item .old-name { color: var(--text-dim); }
+  .lm-rename-item .new-name { color: var(--accent); font-weight: 600; }
+  .lm-apply-all-btn {
+    margin-top: 8px; padding: 6px 14px; font-size: 12px;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 6px; cursor: pointer; font-weight: 600;
+  }
+  .lm-apply-all-btn:hover { background: var(--accent-hover); }
+  .lm-apply-all-btn:disabled { opacity: 0.4; cursor: default; }
+  .lm-apply-all-btn.applied { background: var(--green); }
+
   @media (max-width: 800px) {
     .clip-card { grid-template-columns: 1fr; gap: 8px; }
     .clip-actions { flex-direction: row; flex-wrap: wrap; min-width: unset; }
@@ -426,6 +631,9 @@
     .server-config input { width: 100%; }
     .vmpanel { width: 100vw; }
     .vm-role-row { grid-template-columns: 1fr; }
+    .app-body { flex-direction: column; }
+    .app-body .lm-sidebar { width: 100%; height: 50vh; border-left: none; border-top: 1px solid var(--border); }
+    .app-body .lm-sidebar.collapsed { height: 0; }
   }
 </style>
 </head>
@@ -448,6 +656,7 @@
     <button class="btn primary" id="btnRegenAll" onclick="regenAllClips()" disabled>&#9889; 전체 재생성</button>
     <button class="btn" id="btnBatch" onclick="openBatchPanel()" style="background:var(--accent);color:#fff;border-color:var(--accent)">&#9881; 배치 생성</button>
     <button class="btn" id="btnVoiceMap" onclick="openVoiceMapPanel()">Voice Map</button>
+    <button class="btn" id="btnLmChat" onclick="toggleLmPanel()" style="background:#1a7f37;color:#fff;border-color:#1a7f37">LM Chat</button>
   </div>
   <div class="server-config">
     <span class="status-dot" id="serverStatus" title="TTS 서버 상태"></span>
@@ -457,6 +666,7 @@
   </div>
 </header>
 
+<div class="app-body" id="appBody">
 <main>
   <div class="stats-bar" id="statsBar"></div>
   <div id="clipContainer">
@@ -476,7 +686,6 @@
     재생성 큐: <strong id="queueCount">0</strong>개 대기 / <strong id="queueDone">0</strong>개 완료
   </div>
   <div class="queue-progress"><div class="queue-progress-bar" id="queueProgressBar"></div></div>
-  <button class="btn primary btn-sm" id="btnRunQueue" disabled>큐 실행</button>
   <button class="btn danger btn-sm" id="btnClearQueue">큐 초기화</button>
   <div class="queue-log" id="queueLog"></div>
 </div>
@@ -557,1634 +766,62 @@
 <!-- Role Picker Popup (for voice chip click) -->
 <div class="vb-role-picker" id="vbRolePicker" style="display:none"></div>
 
+<!-- LM Studio Chat Sidebar -->
+<div class="lm-sidebar" id="lmSidebar">
+  <div class="lm-panel" id="lmPanel">
+    <div class="lm-panel-header">
+      <h2>LM Chat</h2>
+      <span style="font-size:11px;color:var(--text-dim)" id="lmStatus">--</span>
+      <button class="btn btn-sm" onclick="lmClearChat()" title="대화 초기화">&#8634;</button>
+      <button class="btn btn-sm" onclick="toggleLmPanel()" title="패널 접기">&#10005;</button>
+    </div>
+    <div class="lm-config" id="lmConfig">
+      <div class="lm-config-row">
+        <label>서버</label>
+        <input id="lmServerUrl" type="text" placeholder="LM Studio URL" value="http://100.66.10.225:1234">
+        <span class="status-dot" id="lmServerDot"></span>
+        <button class="btn btn-sm" onclick="lmConnect()">연결</button>
+      </div>
+      <div class="lm-config-row">
+        <label>모델</label>
+        <select id="lmModelSelect" disabled>
+          <option value="">-- 연결 필요 --</option>
+        </select>
+      </div>
+      <div class="lm-config-row">
+        <label>Max</label>
+        <input id="lmMaxTokens" type="number" value="8192" min="512" max="32768" step="512"
+               style="width:80px;flex:none">
+        <span style="font-size:11px;color:var(--text-dim)">tok</span>
+        <span style="font-size:11px;color:var(--text-dim);margin-left:auto" id="lmCtxEstimate">--</span>
+      </div>
+    </div>
+    <div class="lm-skill-info" id="lmSkillInfo">
+      <span class="lm-skill-badge">SKILL</span>
+      <span id="lmSkillDesc">시나리오를 선택하면 컨텍스트가 전달됩니다</span>
+    </div>
+    <div class="lm-messages" id="lmMessages">
+      <div class="lm-msg system-msg">LM Studio 서버에 연결하고 모델을 선택하세요</div>
+    </div>
+    <div class="lm-input-area">
+      <textarea id="lmInput" placeholder="대본 수정 요청... (Shift+Enter: 줄바꿈, ↑↓: 히스토리)" rows="2" disabled></textarea>
+      <button class="lm-send-btn" id="lmSendBtn" onclick="lmSendMessage()" disabled>전송</button>
+    </div>
+  </div>
+</div>
+</div><!-- /app-body -->
+
 <div class="toast-container" id="toastContainer"></div>
 
+<script src="tts-reviewer-state.js"></script>
+<script src="tts-reviewer-data.js"></script>
+<script src="tts-reviewer-ui.js"></script>
+<script src="tts-reviewer-tts.js"></script>
+<script src="tts-reviewer-voicemap.js"></script>
+<script src="tts-reviewer-batch.js"></script>
+<script src="tts-reviewer-lm.js"></script>
 <script>
-// ============================================================================
-// State
-// ============================================================================
-const SCENARIOS = [
-  'beginner_dark_fantasy','dark_citadel','floodgate_nameplates',
-  'rust_orbit','salgol_ward','school_broadcast_prayer',
-];
-
-let scenarioData = null;
-let manifestData = null;
-let voiceMap = null;
-let currentClips = [];
-let playingIdx = -1;
-let isPlayAll = false;
-let regenQueue = [];
-let regenRunning = false;
-let voiceMapDirty = false;    // voice map changed since last save?
-let voiceMapOriginal = null;  // snapshot for dirty detection
-
-// ── File System Access API (local mode) ──
-let projectDirHandle = null;  // FileSystemDirectoryHandle
-let voiceLibDirHandle = null; // FileSystemDirectoryHandle for voice library
-let voicesJsonData = [];      // parsed voices.json entries
-const audioBlobCache = {};    // url → blobUrl
-
-const isFileProtocol = location.protocol === 'file:';
-
-// ── localStorage persistence ──
-const LS_PREFIX = 'tts-reviewer:';
-function lsGet(key, fallback) { try { const v = localStorage.getItem(LS_PREFIX + key); return v !== null ? v : fallback; } catch { return fallback; } }
-function lsSet(key, val) { try { localStorage.setItem(LS_PREFIX + key, val); } catch {} }
-function lsGetJson(key, fallback) { try { const v = localStorage.getItem(LS_PREFIX + key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } }
-function lsSetJson(key, val) { try { localStorage.setItem(LS_PREFIX + key, JSON.stringify(val)); } catch {} }
-
-// ── IndexedDB for FileSystemDirectoryHandle persistence ──
-const IDB_NAME = 'tts-reviewer-handles';
-const IDB_STORE = 'handles';
-
-function idbOpen() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbSave(key, handle) {
-  try {
-    const db = await idbOpen();
-    const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).put(handle, key);
-    await new Promise((r, j) => { tx.oncomplete = r; tx.onerror = j; });
-    db.close();
-  } catch {}
-}
-
-async function idbLoad(key) {
-  try {
-    const db = await idbOpen();
-    const tx = db.transaction(IDB_STORE, 'readonly');
-    const req = tx.objectStore(IDB_STORE).get(key);
-    const result = await new Promise((r, j) => { req.onsuccess = () => r(req.result); req.onerror = j; });
-    db.close();
-    return result || null;
-  } catch { return null; }
-}
-
-async function reRequestPermission(handle, mode) {
-  if (!handle) return false;
-  try {
-    if ((await handle.queryPermission({ mode })) === 'granted') return true;
-    return (await handle.requestPermission({ mode })) === 'granted';
-  } catch { return false; }
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-function $(id) { return document.getElementById(id); }
-
-function basePath() {
-  const loc = window.location.pathname;
-  if (loc.includes('/tools/')) return loc.substring(0, loc.lastIndexOf('/tools/'));
-  return '..';
-}
-
-function toast(msg, type = 'info') {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
-  $('toastContainer').appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-
-function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function roleDisplayName(roleId) {
-  if (voiceMap && voiceMap._roles && voiceMap._roles[roleId]) return voiceMap._roles[roleId].name;
-  const names = {
-    'Narrator':'Narrator','doppelganger':'도플갱어','villager':'마을주민','werewolf':'늑대인간',
-    'minion':'하수인','mason':'프리메이슨','seer':'예언자','robber':'강도',
-    'troublemaker':'말썽쟁이','tanner':'무두장이','drunk':'주정뱅이','hunter':'사냥꾼',
-    'insomniac':'불면증환자','alpha_wolf':'태초의 늑대인간','mystic_wolf':'신비한 늑대인간',
-    'dream_wolf':'잠자는 늑대인간','apprentice_seer':'견습 예언자',
-    'paranormal_investigator':'심령 수사관','witch':'마녀','village_idiot':'동네 얼간이',
-    'revealer':'계시자','aura_seer':'영기 예언자','prince':'왕자','cursed':'저주받은 자',
-    'apprentice_tanner':'견습 무두장이','thing':'어떤것','squire':'종자','beholder':'주시자',
-  };
-  return names[roleId] || roleId;
-}
-
-function getVoiceTag(roleId) {
-  return voiceMap ? (voiceMap[roleId] || voiceMap['Narrator'] || '--') : '--';
-}
-
-// ============================================================================
-// File System Access API helpers (for file:// mode)
-// ============================================================================
-async function getSubDir(dirHandle, pathParts) {
-  let h = dirHandle;
-  for (const part of pathParts) {
-    h = await h.getDirectoryHandle(part);
-  }
-  return h;
-}
-
-async function readJsonFromDir(dirHandle, relativePath) {
-  const parts = relativePath.replace(/\\/g, '/').split('/').filter(Boolean);
-  const fileName = parts.pop();
-  const dir = parts.length > 0 ? await getSubDir(dirHandle, parts) : dirHandle;
-  const fileHandle = await dir.getFileHandle(fileName);
-  const file = await fileHandle.getFile();
-  const text = await file.text();
-  return JSON.parse(text);
-}
-
-async function readFileBlobUrl(dirHandle, relativePath) {
-  if (audioBlobCache[relativePath]) return audioBlobCache[relativePath];
-  try {
-    const parts = relativePath.replace(/\\/g, '/').split('/').filter(Boolean);
-    const fileName = parts.pop();
-    const dir = parts.length > 0 ? await getSubDir(dirHandle, parts) : dirHandle;
-    const fileHandle = await dir.getFileHandle(fileName);
-    const file = await fileHandle.getFile();
-    const url = URL.createObjectURL(file);
-    audioBlobCache[relativePath] = url;
-    return url;
-  } catch {
-    return null;
-  }
-}
-
-// ============================================================================
-// Data Loading (dual mode: fetch vs FileSystemAccess)
-// ============================================================================
-async function loadVoiceMap() {
-  try {
-    if (projectDirHandle) {
-      voiceMap = await readJsonFromDir(projectDirHandle, 'characters/voice_map.json');
-    } else {
-      const resp = await fetch(`${basePath()}/characters/voice_map.json`);
-      if (resp.ok) voiceMap = await resp.json();
-    }
-    voiceMapOriginal = voiceMap ? JSON.stringify(voiceMap) : null;
-    voiceMapDirty = false;
-  } catch { /* ignore */ }
-}
-
-async function loadScenario(scenarioId) {
-  if (projectDirHandle) {
-    return readJsonFromDir(projectDirHandle, `public/assets/scenarios_tts/${scenarioId}.tts.json`);
-  }
-  const resp = await fetch(`${basePath()}/public/assets/scenarios_tts/${scenarioId}.tts.json`);
-  if (!resp.ok) throw new Error(`Failed to load scenario: ${resp.status}`);
-  return resp.json();
-}
-
-async function loadManifest(scenarioId) {
-  try {
-    if (projectDirHandle) {
-      return await readJsonFromDir(projectDirHandle, `public/assets/voices/${scenarioId}/_manifest.json`);
-    }
-    const resp = await fetch(`${basePath()}/public/assets/voices/${scenarioId}/_manifest.json`);
-    if (resp.ok) return resp.json();
-  } catch { /* no manifest */ }
-  return null;
-}
-
-async function resolveAudioSrc(clip) {
-  if (clip.regenBlobUrl) return clip.regenBlobUrl;
-  if (!clip.audioUrl) return null;
-
-  if (projectDirHandle) {
-    // audioUrl is like "/assets/voices/scenario/ep1/.../voice.m4a"
-    const relPath = 'public' + clip.audioUrl;
-    return readFileBlobUrl(projectDirHandle, relPath);
-  }
-  return `${basePath()}/public${clip.audioUrl}`;
-}
-
-// ============================================================================
-// UI: Init & Selectors
-// ============================================================================
-function showSelectors() {
-  $('selectorGroup').style.display = '';
-  $('episodeGroup').style.display = '';
-  $('playGroup').style.display = '';
-}
-
-function initSelectors() {
-  const selScenario = $('selScenario');
-  selScenario.innerHTML = '<option value="">-- 시나리오 선택 --</option>';
-  for (const s of SCENARIOS) {
-    const opt = document.createElement('option');
-    opt.value = s;
-    opt.textContent = s.replace(/_/g, ' ');
-    selScenario.appendChild(opt);
-  }
-  selScenario.addEventListener('change', onScenarioChange);
-  $('selEpisode').addEventListener('change', onEpisodeChange);
-  showSelectors();
-}
-
-async function onScenarioChange() {
-  const scenarioId = $('selScenario').value;
-  if (!scenarioId) return;
-  lsSet('scenario', scenarioId);
-
-  $('clipContainer').innerHTML = '<div class="loading"><div class="spinner"></div>로딩 중...</div>';
-
-  try {
-    [scenarioData, manifestData] = await Promise.all([
-      loadScenario(scenarioId),
-      loadManifest(scenarioId),
-    ]);
-
-    const selEp = $('selEpisode');
-    selEp.innerHTML = '';
-    const eps = Object.keys(scenarioData.episodes || {});
-    for (const ep of eps) {
-      const opt = document.createElement('option');
-      opt.value = ep;
-      opt.textContent = ep.toUpperCase();
-      selEp.appendChild(opt);
-    }
-    if (eps.length > 0) {
-      selEp.value = eps[0];
-      renderEpisode(eps[0]);
-    }
-  } catch (e) {
-    $('clipContainer').innerHTML = `<div class="loading" style="color:var(--red)">${e.message}</div>`;
-  }
-}
-
-function onEpisodeChange() {
-  const ep = $('selEpisode').value;
-  if (ep) { lsSet('episode', ep); renderEpisode(ep); }
-}
-
-// ============================================================================
-// Render
-// ============================================================================
-function renderEpisode(episodeId) {
-  stopAll();
-  clearRegenQueue();
-
-  const ep = scenarioData.episodes[episodeId];
-  if (!ep) return;
-
-  const scenarioId = scenarioData.scenarioId;
-  currentClips = [];
-
-  if (ep.openingClips) {
-    currentClips.push({
-      type: 'opening', speakerId: 'Narrator', roleId: 'Narrator',
-      text: ep.openingClips, originalText: ep.openingClips,
-      audioUrl: findAudioUrl(scenarioId, episodeId, 'opening', null)
-            || `/assets/voices/${scenarioId}/${episodeId}/pall/opening/001/voice.m4a`,
-    });
-  }
-  if (ep.roleClips) {
-    for (const [roleId, text] of Object.entries(ep.roleClips)) {
-      currentClips.push({
-        type: 'role', speakerId: roleId, roleId,
-        text, originalText: text,
-        audioUrl: findAudioUrl(scenarioId, episodeId, 'role', roleId)
-              || `/assets/voices/${scenarioId}/${episodeId}/pall/role/${roleId}/during/001/voice.m4a`,
-      });
-    }
-  }
-  if (ep.nightOutroClips) {
-    currentClips.push({
-      type: 'outro', speakerId: 'Narrator', roleId: 'Narrator',
-      text: ep.nightOutroClips, originalText: ep.nightOutroClips,
-      audioUrl: findAudioUrl(scenarioId, episodeId, 'outro', null)
-            || `/assets/voices/${scenarioId}/${episodeId}/pall/outro/001/voice.m4a`,
-    });
-  }
-
-  renderClipList();
-  renderStats();
-  $('btnPlayAll').disabled = false;
-  $('btnStopAll').disabled = false;
-  $('btnRegenAll').disabled = false;
-}
-
-function findAudioUrl(scenarioId, episodeId, clipType, roleId) {
-  if (!manifestData || !manifestData.clips) return null;
-  for (const c of manifestData.clips) {
-    const id = c.clipId || '';
-    if (!id.includes(`/${episodeId}/`)) continue;
-    if (clipType === 'opening' && id.includes('/opening/')) return c.url;
-    if (clipType === 'outro' && id.includes('/outro/')) return c.url;
-    if (clipType === 'role' && roleId && id.includes(`/role/${roleId}/`)) return c.url;
-  }
-  return null;
-}
-
-function renderClipList() {
-  const container = $('clipContainer');
-  container.innerHTML = '';
-  let lastType = '';
-
-  currentClips.forEach((clip, idx) => {
-    if (clip.type !== lastType) {
-      const header = document.createElement('div');
-      header.className = 'clip-section-header';
-      header.textContent = clip.type === 'opening' ? 'Opening' : clip.type === 'outro' ? 'Night Outro' : 'Role Clips';
-      container.appendChild(header);
-      lastType = clip.type;
-    }
-
-    const card = document.createElement('div');
-    card.className = 'clip-card';
-    card.id = `clip-${idx}`;
-    if (clip.text !== clip.originalText) card.classList.add('modified');
-
-    const voiceTag = getVoiceTag(clip.roleId);
-    const hasAudio = !!clip.audioUrl || !!clip.regenBlobUrl;
-
-    card.innerHTML = `
-      <div class="clip-index">#${idx + 1}</div>
-      <div class="clip-speaker">
-        <span class="role-name">${roleDisplayName(clip.roleId)}</span>
-        <span class="voice-tag" title="Voice Tag">${escapeHtml(voiceTag)}</span>
-        <input class="voice-tag-input" id="vtag-${idx}" type="text" value="${escapeHtml(voiceTag)}"
-               placeholder="voice tag" title="재생성 시 사용할 voice tag (수정 가능)">
-      </div>
-      <div class="clip-body">
-        <div class="clip-text" id="text-${idx}">${escapeHtml(clip.text)}</div>
-        <textarea class="clip-text-edit" id="edit-${idx}">${escapeHtml(clip.text)}</textarea>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-sm" onclick="toggleEdit(${idx})">&#9998; 편집</button>
-          <button class="btn btn-sm" id="saveBtn-${idx}" style="display:none" onclick="saveEdit(${idx})">저장</button>
-          <button class="btn btn-sm" id="cancelBtn-${idx}" style="display:none" onclick="cancelEdit(${idx})">취소</button>
-          <button class="btn btn-sm" id="revertBtn-${idx}" style="display:none" onclick="revertEdit(${idx})">원본 복원</button>
-        </div>
-      </div>
-      <div class="clip-actions">
-        <button class="btn btn-sm" onclick="playClip(${idx})" ${!hasAudio ? 'disabled title="오디오 파일 없음"' : ''}>
-          &#9654; 재생
-        </button>
-        <button class="btn btn-sm" onclick="addToQueue(${idx})" title="TTS 재생성 큐에 추가">
-          &#8635; 큐 추가
-        </button>
-        <button class="btn btn-sm primary" onclick="regenNow(${idx})" title="즉시 TTS 재생성 → M4A 변환 → 자동 저장">
-          &#9889; 재생성 & 저장
-        </button>
-        ${clip.regenBlobUrl ? `<span style="font-size:10px;color:var(--green)">&#10003; 저장됨</span>` : ''}
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-// ============================================================================
-// Edit
-// ============================================================================
-function toggleEdit(idx) {
-  const textEl = $(`text-${idx}`), editEl = $(`edit-${idx}`);
-  if (editEl.style.display !== 'none') { cancelEdit(idx); return; }
-  textEl.style.display = 'none';
-  editEl.style.display = 'block';
-  editEl.value = currentClips[idx].text;
-  $(`saveBtn-${idx}`).style.display = '';
-  $(`cancelBtn-${idx}`).style.display = '';
-  $(`revertBtn-${idx}`).style.display = currentClips[idx].text !== currentClips[idx].originalText ? '' : 'none';
-  editEl.focus();
-}
-
-async function saveEdit(idx) {
-  const newText = $(`edit-${idx}`).value.trim();
-  if (!newText) return;
-  currentClips[idx].text = newText;
-  $(`text-${idx}`).textContent = newText;
-  $(`text-${idx}`).style.display = '';
-  $(`edit-${idx}`).style.display = 'none';
-  $(`saveBtn-${idx}`).style.display = 'none';
-  $(`cancelBtn-${idx}`).style.display = 'none';
-  $(`revertBtn-${idx}`).style.display = 'none';
-  const card = $(`clip-${idx}`);
-  if (newText !== currentClips[idx].originalText) card.classList.add('modified');
-  else card.classList.remove('modified');
-  renderStats();
-
-  // Update scenarioData and persist to .tts.json
-  const clip = currentClips[idx];
-  const episodeId = $('selEpisode').value;
-  const ep = scenarioData?.episodes?.[episodeId];
-  if (ep) {
-    if (clip.type === 'opening') ep.openingClips = newText;
-    else if (clip.type === 'outro') ep.nightOutroClips = newText;
-    else if (clip.type === 'role' && clip.roleId) ep.roleClips[clip.roleId] = newText;
-    await saveTtsJson();
-  }
-}
-
-async function saveTtsJson() {
-  if (!scenarioData) return;
-  const scenarioId = scenarioData.scenarioId;
-  if (projectDirHandle) {
-    try {
-      const parts = `public/assets/scenarios_tts/${scenarioId}.tts.json`.split('/');
-      const fileName = parts.pop();
-      const dir = await getSubDir(projectDirHandle, parts);
-      const fileHandle = await dir.getFileHandle(fileName, { create: false });
-      const writable = await fileHandle.createWritable();
-      await writable.write(JSON.stringify(scenarioData, null, 2) + '\n');
-      await writable.close();
-      toast(`${scenarioId}.tts.json 저장 완료`, 'success');
-    } catch (e) {
-      toast(`tts.json 저장 실패: ${e.message}`, 'error');
-    }
-  } else {
-    // HTTP mode: download as file
-    const blob = new Blob([JSON.stringify(scenarioData, null, 2) + '\n'], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `${scenarioId}.tts.json`;
-    a.click(); URL.revokeObjectURL(url);
-    toast(`${scenarioId}.tts.json 다운로드됨`, 'success');
-  }
-}
-
-function cancelEdit(idx) {
-  $(`text-${idx}`).style.display = '';
-  $(`edit-${idx}`).style.display = 'none';
-  $(`saveBtn-${idx}`).style.display = 'none';
-  $(`cancelBtn-${idx}`).style.display = 'none';
-  $(`revertBtn-${idx}`).style.display = 'none';
-}
-
-function revertEdit(idx) {
-  currentClips[idx].text = currentClips[idx].originalText;
-  $(`text-${idx}`).textContent = currentClips[idx].originalText;
-  $(`edit-${idx}`).value = currentClips[idx].originalText;
-  cancelEdit(idx);
-  $(`clip-${idx}`).classList.remove('modified');
-  renderStats();
-}
-
-// ============================================================================
-// Audio Playback
-// ============================================================================
-const audioPlayer = document.getElementById('audioPlayer');
-
-function playClip(idx) { stopAll(); isPlayAll = false; _play(idx); }
-
-async function _play(idx) {
-  if (idx < 0 || idx >= currentClips.length) { stopAll(); return; }
-
-  const clip = currentClips[idx];
-  const src = await resolveAudioSrc(clip);
-  if (!src) {
-    if (isPlayAll) { _play(idx + 1); } else { toast('오디오 파일이 없습니다', 'error'); }
-    return;
-  }
-
-  playingIdx = idx;
-
-  document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
-  const card = $(`clip-${idx}`);
-  if (card) { card.classList.add('playing'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
-
-  $('playbackBar').classList.add('visible');
-  $('pbNowPlaying').innerHTML = `<span class="role">${roleDisplayName(clip.roleId)}</span> &mdash; ${escapeHtml(clip.text.substring(0, 80))}...`;
-
-  audioPlayer.src = src;
-  audioPlayer.play().catch(() => {});
-}
-
-// Native audio ended → advance in play-all mode
-audioPlayer.addEventListener('ended', () => {
-  document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
-  if (isPlayAll) { _play(playingIdx + 1); }
-  else { playingIdx = -1; $('playbackBar').classList.remove('visible'); }
-});
-audioPlayer.addEventListener('error', () => {
-  toast(`오디오 재생 실패: clip #${playingIdx + 1}`, 'error');
-  if (isPlayAll) _play(playingIdx + 1);
-});
-
-function stopAll() {
-  isPlayAll = false;
-  audioPlayer.pause();
-  audioPlayer.removeAttribute('src');
-  playingIdx = -1;
-  document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
-  $('playbackBar').classList.remove('visible');
-}
-
-$('btnPlayAll').addEventListener('click', () => { stopAll(); isPlayAll = true; _play(0); });
-$('btnStopAll').addEventListener('click', stopAll);
-$('pbPrev').addEventListener('click', () => { if (playingIdx > 0) { const p = playingIdx; stopAll(); _play(p - 1); } });
-$('pbNext').addEventListener('click', () => { if (playingIdx < currentClips.length - 1) { const p = playingIdx; stopAll(); _play(p + 1); } });
-
-// ============================================================================
-// TTS Regeneration (Fish Speech API)
-// ============================================================================
-function getApiBase() {
-  const val = $('ttsApiBase').value.trim().replace(/\/+$/, '');
-  lsSet('apiBase', val);
-  return val;
-}
-
-// Find voice entry from voicesJsonData by tag name
-function findVoiceEntry(tag) {
-  if (!tag || voicesJsonData.length === 0) return null;
-  return voicesJsonData.find(v => v.tag === tag) || null;
-}
-
-async function generateTts(text, speakerId, overrideTag) {
-  const base = getApiBase();
-  const tag = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : null);
-
-  const body = {
-    text,
-    format: 'm4a',
-    temperature: 0.8,
-    top_p: 0.8,
-    repetition_penalty: 1.1,
-    max_new_tokens: 1024,
-    normalize: true,
-  };
-  if (tag) body.reference_id = tag;
-
-  const resp = await fetch(`${base}/v1/tts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  if (!resp.ok) {
-    const errText = await resp.text().catch(() => resp.statusText);
-    throw new Error(`TTS 실패 (${resp.status}): ${errText}`);
-  }
-
-  const blob = await resp.blob();
-  return { blob, blobUrl: URL.createObjectURL(blob) };
-}
-
-function getTagOverride(idx) {
-  const el = $(`vtag-${idx}`);
-  if (!el) return null;
-  const val = el.value.trim();
-  const defaultTag = getVoiceTag(currentClips[idx].roleId);
-  return (val && val !== defaultTag) ? val : null;
-}
-
-async function regenNow(idx) {
-  const clip = currentClips[idx];
-  const card = $(`clip-${idx}`);
-  card.classList.add('regenerating');
-  try {
-    toast(`재생성 중: ${roleDisplayName(clip.roleId)}...`);
-    const { blob, blobUrl } = await generateTts(clip.text, clip.speakerId, getTagOverride(idx));
-    clip.regenBlobUrl = blobUrl;
-
-    // Auto-save M4A
-    const audioPath = getExpectedAudioPath(clip);
-    if (projectDirHandle && audioPath) {
-      try {
-        await autoSaveClip(audioPath, blob);
-        clip.audioUrl = audioPath;
-        delete audioBlobCache['public' + audioPath];
-        toast(`저장 완료: ${roleDisplayName(clip.roleId)}`, 'success');
-      } catch (e) {
-        toast(`저장 실패: ${e.message}`, 'error');
-        console.error('M4A save error:', e);
-      }
-    } else {
-      toast(`재생성 완료: ${roleDisplayName(clip.roleId)}`, 'success');
-    }
-
-    card.classList.remove('regenerating');
-    renderClipList();
-    renderStats();
-    stopAll(); _play(idx);
-  } catch (e) {
-    card.classList.remove('regenerating');
-    toast(`재생성 실패: ${e.message}`, 'error');
-    console.error(e);
-  }
-}
-
-// ============================================================================
-// M4A File Save (TTS 서버에서 직접 m4a 반환)
-// ============================================================================
-
-function getExpectedAudioPath(clip) {
-  if (clip.audioUrl) return clip.audioUrl;
-  if (!scenarioData) return null;
-  const sid = scenarioData.scenarioId;
-  const eid = $('selEpisode').value;
-  if (clip.type === 'opening') return `/assets/voices/${sid}/${eid}/pall/opening/001/voice.m4a`;
-  if (clip.type === 'outro') return `/assets/voices/${sid}/${eid}/pall/outro/001/voice.m4a`;
-  if (clip.type === 'role' && clip.roleId) return `/assets/voices/${sid}/${eid}/pall/role/${clip.roleId}/during/001/voice.m4a`;
-  return null;
-}
-
-async function getOrCreateSubDir(dirHandle, pathParts) {
-  let h = dirHandle;
-  for (const part of pathParts) h = await h.getDirectoryHandle(part, { create: true });
-  return h;
-}
-
-async function autoSaveClip(audioPath, m4aBlob) {
-  const relPath = ('public' + audioPath).replace(/\\/g, '/');
-  const parts = relPath.split('/').filter(Boolean);
-  const fileName = parts.pop();
-  const dir = await getOrCreateSubDir(projectDirHandle, parts);
-  const fileHandle = await dir.getFileHandle(fileName, { create: true });
-  const writable = await fileHandle.createWritable();
-  await writable.write(m4aBlob);
-  await writable.close();
-}
-
-// ── Regenerate All Clips ──
-let regenAllRunning = false;
-
-async function regenAllClips() {
-  if (!projectDirHandle) { toast('프로젝트 폴더가 연결되지 않았습니다', 'error'); return; }
-  if (currentClips.length === 0 || regenAllRunning) return;
-
-  regenAllRunning = true;
-  $('btnRegenAll').disabled = true;
-  $('btnRegenAll').textContent = '재생성 중...';
-
-  const total = currentClips.length;
-  let done = 0, failed = 0;
-
-  // Show progress in queue panel
-  $('queuePanel').classList.add('visible');
-  const log = $('queueLog');
-  log.textContent = `[${new Date().toLocaleTimeString()}] === 전체 재생성 시작 (${total}개) ===\n`;
-  $('queueCount').textContent = total;
-  $('queueDone').textContent = '0';
-  $('queueProgressBar').style.width = '0%';
-
-  for (let idx = 0; idx < currentClips.length; idx++) {
-    const clip = currentClips[idx];
-    const card = $(`clip-${idx}`);
-    if (card) card.classList.add('regenerating');
-
-    log.textContent += `[${new Date().toLocaleTimeString()}] #${idx + 1} ${roleDisplayName(clip.roleId)} 재생성 중...\n`;
-    log.scrollTop = log.scrollHeight;
-
-    try {
-      const { blob, blobUrl } = await generateTts(clip.text, clip.speakerId, null);
-      clip.regenBlobUrl = blobUrl;
-
-      const audioPath = getExpectedAudioPath(clip);
-      if (audioPath) {
-        await autoSaveClip(audioPath, blob);
-        clip.audioUrl = audioPath;
-        delete audioBlobCache['public' + audioPath];
-        log.textContent += `  → M4A 저장 완료\n`;
-      }
-      done++;
-    } catch (e) {
-      log.textContent += `  → 실패: ${e.message}\n`;
-      failed++;
-    }
-
-    if (card) card.classList.remove('regenerating');
-    $('queueDone').textContent = done + failed;
-    $('queueProgressBar').style.width = `${((done + failed) / total) * 100}%`;
-    $('queueCount').textContent = total - done - failed;
-    log.scrollTop = log.scrollHeight;
-  }
-
-  log.textContent += `[${new Date().toLocaleTimeString()}] === 완료: 성공 ${done}, 실패 ${failed} ===\n`;
-  toast(`전체 재생성 완료: 성공 ${done}개, 실패 ${failed}개`, done > 0 ? 'success' : 'error');
-
-  regenAllRunning = false;
-  $('btnRegenAll').disabled = false;
-  $('btnRegenAll').innerHTML = '&#9889; 전체 재생성';
-  renderClipList();
-  renderStats();
-}
-
-function renderStats() {
-  const total = currentClips.length;
-  const withAudio = currentClips.filter(c => c.audioUrl).length;
-  const missing = total - withAudio;
-  const regenCount = currentClips.filter(c => c.regenBlobUrl).length;
-  const modifiedCount = currentClips.filter(c => c.text !== c.originalText).length;
-  $('statsBar').innerHTML = `
-    <div class="stat-chip"><span class="num">${total}</span> 전체 클립</div>
-    <div class="stat-chip" style="color:var(--green)"><span class="num">${withAudio}</span> 오디오 있음</div>
-    ${missing > 0 ? `<div class="stat-chip" style="color:var(--red)"><span class="num">${missing}</span> 오디오 없음</div>` : ''}
-    <div class="stat-chip"><span class="num">${regenQueue.length}</span> 재생성 큐</div>
-    ${regenCount > 0 ? `<div class="stat-chip" style="color:var(--orange)"><span class="num">${regenCount}</span> 재생성됨 (자동저장)</div>` : ''}
-    ${modifiedCount > 0 ? `<div class="stat-chip" style="color:var(--orange)"><span class="num">${modifiedCount}</span> 텍스트 수정됨</div>` : ''}
-  `;
-}
-
-// ============================================================================
-// Regen Queue
-// ============================================================================
-function addToQueue(idx) {
-  const clip = currentClips[idx];
-  if (regenQueue.some(q => q.clipIdx === idx)) { toast('이미 큐에 있습니다'); return; }
-  regenQueue.push({ clipIdx: idx, text: clip.text, speakerId: clip.speakerId, roleId: clip.roleId, tagOverride: getTagOverride(idx) });
-  renderStats(); updateQueuePanel();
-  toast(`큐에 추가됨: #${idx + 1} ${roleDisplayName(clip.roleId)}`);
-}
-
-function clearRegenQueue() { regenQueue = []; regenRunning = false; updateQueuePanel(); renderStats(); }
-
-function updateQueuePanel() {
-  const panel = $('queuePanel');
-  if (regenQueue.length > 0 || regenRunning) {
-    panel.classList.add('visible');
-    $('playbackBar').style.bottom = '60px';
-  } else {
-    panel.classList.remove('visible');
-    $('playbackBar').style.bottom = '0';
-  }
-  $('queueCount').textContent = regenQueue.length;
-  $('btnRunQueue').disabled = regenQueue.length === 0 || regenRunning;
-}
-
-$('btnRunQueue').addEventListener('click', runQueue);
-$('btnClearQueue').addEventListener('click', () => {
-  clearRegenQueue();
-  $('queueLog').textContent = '';
-  $('queueDone').textContent = '0';
-  $('queueProgressBar').style.width = '0%';
-});
-
-async function runQueue() {
-  if (regenQueue.length === 0 || regenRunning) return;
-  regenRunning = true;
-  $('btnRunQueue').disabled = true;
-  const total = regenQueue.length;
-  let done = 0;
-  const log = $('queueLog');
-
-  while (regenQueue.length > 0) {
-    const item = regenQueue.shift();
-    const idx = item.clipIdx;
-    const card = $(`clip-${idx}`);
-    log.textContent += `[${new Date().toLocaleTimeString()}] #${idx + 1} ${roleDisplayName(item.roleId)} 재생성 시작...\n`;
-    log.scrollTop = log.scrollHeight;
-    if (card) card.classList.add('regenerating');
-
-    try {
-      const { blob, blobUrl } = await generateTts(item.text, item.speakerId, item.tagOverride);
-      currentClips[idx].regenBlobUrl = blobUrl;
-
-      // Auto-save M4A
-      const audioPath = getExpectedAudioPath(currentClips[idx]);
-      if (projectDirHandle && audioPath) {
-        try {
-          await autoSaveClip(audioPath, blob);
-          currentClips[idx].audioUrl = audioPath;
-          delete audioBlobCache['public' + audioPath];
-          log.textContent += `  -> M4A 저장 완료\n`;
-        } catch (e2) {
-          log.textContent += `  -> TTS 완료, 저장 실패: ${e2.message}\n`;
-        }
-      } else {
-        log.textContent += `  -> 완료\n`;
-      }
-      done++;
-    } catch (e) {
-      log.textContent += `  -> 실패: ${e.message}\n`;
-      done++;
-    }
-
-    if (card) card.classList.remove('regenerating');
-    $('queueDone').textContent = done;
-    $('queueProgressBar').style.width = `${(done / total) * 100}%`;
-    $('queueCount').textContent = regenQueue.length;
-    log.scrollTop = log.scrollHeight;
-  }
-
-  regenRunning = false;
-  $('btnRunQueue').disabled = true;
-  toast(`큐 처리 완료: ${done}/${total}`, 'success');
-  renderStats();
-}
-
-// ============================================================================
-// Server Ping
-// ============================================================================
-async function pingServer() {
-  const dot = $('serverStatus');
-  try {
-    const resp = await fetch(getApiBase() + '/v1/health', { method: 'GET' });
-    if (resp.ok) {
-      dot.className = 'status-dot ok'; dot.title = '연결됨 (Fish Speech)';
-    } else {
-      dot.className = 'status-dot err'; dot.title = `서버 응답: ${resp.status}`;
-    }
-  } catch {
-    dot.className = 'status-dot err'; dot.title = '연결 실패';
-  }
-}
-
-$('btnPing').addEventListener('click', async () => {
-  $('serverStatus').className = 'status-dot';
-  await pingServer();
-  toast($('serverStatus').classList.contains('ok') ? 'TTS 서버 연결됨' : 'TTS 서버 연결 실패',
-        $('serverStatus').classList.contains('ok') ? 'success' : 'error');
-});
-
-// ============================================================================
-// Keyboard shortcuts
-// ============================================================================
-document.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
-  if (e.key === ' ') { e.preventDefault(); audioPlayer.paused ? audioPlayer.play() : audioPlayer.pause(); }
-  if (e.key === 'Escape') {
-    if ($('vbRolePicker').style.display !== 'none') { hideRolePicker(); return; }
-    const confirmEl = document.querySelector('.confirm-overlay');
-    if (confirmEl) { confirmEl.remove(); return; }
-    closeVoiceMapPanel(false); stopAll();
-  }
-  if (e.key === 'ArrowRight' && playingIdx >= 0) _play(playingIdx + 1);
-  if (e.key === 'ArrowLeft' && playingIdx > 0) _play(playingIdx - 1);
-});
-
-// ============================================================================
-// Voice Map Panel
-// ============================================================================
-let serverVoices = [];      // reference IDs from Fish Speech server
-const voicePreviewCache = {}; // refId → blobUrl
-
-function openVoiceMapPanel() {
-  $('vmOverlay').classList.add('open');
-  $('vmPanel').classList.add('open');
-  renderVoiceMapList();
-  renderVoiceBrowser();
-  if (serverVoices.length === 0 && !voiceLibDirHandle) fetchServerVoices();
-}
-
-function hideRolePicker() {
-  const picker = $('vbRolePicker');
-  if (picker) picker.style.display = 'none';
-  const backdrop = document.querySelector('.vb-role-picker-backdrop');
-  if (backdrop) backdrop.style.display = 'none';
-}
-
-function closeVoiceMapPanel(force) {
-  if (!force && voiceMapDirty) {
-    showConfirm(
-      'Voice Map 변경사항',
-      '저장하지 않은 변경사항이 있습니다. 저장하시겠습니까?',
-      [
-        { label: '저장 후 닫기', cls: 'primary', action: async () => { await saveVoiceMap(); doCloseVmPanel(); } },
-        { label: '저장 안 함', cls: 'danger', action: () => { revertVoiceMap(); doCloseVmPanel(); } },
-        { label: '취소', cls: '', action: () => {} },
-      ]
-    );
-    return;
-  }
-  doCloseVmPanel();
-}
-
-function doCloseVmPanel() {
-  $('vmOverlay').classList.remove('open');
-  $('vmPanel').classList.remove('open');
-  hideRolePicker();
-}
-
-function revertVoiceMap() {
-  if (voiceMapOriginal) {
-    try { voiceMap = JSON.parse(voiceMapOriginal); } catch {}
-  }
-  voiceMapDirty = false;
-  updateVmSaveBtn();
-  if (currentClips.length > 0) renderClipList();
-}
-
-function showConfirm(title, message, buttons) {
-  const existing = document.querySelector('.confirm-overlay');
-  if (existing) existing.remove();
-
-  const overlay = document.createElement('div');
-  overlay.className = 'confirm-overlay';
-  overlay.innerHTML = `
-    <div class="confirm-box">
-      <h3>${escapeHtml(title)}</h3>
-      <p>${escapeHtml(message)}</p>
-      <div class="actions" id="confirmActions"></div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  const actionsEl = overlay.querySelector('#confirmActions');
-  for (const b of buttons) {
-    const btn = document.createElement('button');
-    btn.className = `btn ${b.cls}`;
-    btn.textContent = b.label;
-    btn.addEventListener('click', () => { overlay.remove(); b.action(); });
-    actionsEl.appendChild(btn);
-  }
-}
-
-async function fetchServerVoices() {
-  // Load from local voice library directory (voices.json)
-  if (!voiceLibDirHandle) {
-    try {
-      voiceLibDirHandle = await window.showDirectoryPicker({ mode: 'read' });
-    } catch (e) {
-      if (e.name !== 'AbortError') toast(`폴더 선택 실패: ${e.message}`, 'error');
-      return;
-    }
-  }
-
-  try {
-    const fileHandle = await voiceLibDirHandle.getFileHandle('voices.json');
-    const file = await fileHandle.getFile();
-    const data = JSON.parse(await file.text());
-    voicesJsonData = data.voices || [];
-    serverVoices = voicesJsonData.map(v => v.tag).sort();
-    lsSetJson('serverVoices', serverVoices);
-    lsSet('voiceLibName', voiceLibDirHandle.name);
-    idbSave('voiceLibDir', voiceLibDirHandle);
-    $('vmVoiceCount').textContent = `${serverVoices.length}개 음성`;
-    renderVoiceMapList();
-    toast(`음성 라이브러리 ${serverVoices.length}개 로드됨 (${voiceLibDirHandle.name})`, 'success');
-  } catch (e) {
-    toast(`voices.json 로드 실패: ${e.message}. data/voices/ref 폴더를 선택하세요.`, 'error');
-    voiceLibDirHandle = null;
-  }
-}
-
-function getRoleEntries() {
-  if (!voiceMap) return [];
-  const skip = new Set(['_comment','_voicesSource','_note','_roles']);
-  return Object.entries(voiceMap).filter(([k]) => !skip.has(k) && !k.startsWith('_'));
-}
-
-function renderVoiceMapList() {
-  const container = $('vmRoleList');
-  const entries = getRoleEntries();
-  if (entries.length === 0) {
-    container.innerHTML = '<div class="loading">voice_map.json을 먼저 로드하세요</div>';
-    return;
-  }
-
-  const filter = ($('vmSearch').value || '').toLowerCase();
-
-  let html = '';
-  for (const [roleId, currentVoice] of entries) {
-    const displayName = roleDisplayName(roleId);
-    if (filter && !displayName.toLowerCase().includes(filter) && !roleId.toLowerCase().includes(filter) && !currentVoice.toLowerCase().includes(filter)) continue;
-
-    let options;
-    if (serverVoices.length > 0) {
-      options = serverVoices.map(v => {
-        const sel = v === currentVoice ? 'selected' : '';
-        return `<option value="${escapeHtml(v)}" ${sel}>${escapeHtml(v)}</option>`;
-      }).join('');
-      // Ensure current voice is in the list even if not found in library
-      if (currentVoice && !serverVoices.includes(currentVoice)) {
-        options = `<option value="${escapeHtml(currentVoice)}" selected>${escapeHtml(currentVoice)} (unknown)</option>` + options;
-      }
-    } else {
-      options = `<option value="${escapeHtml(currentVoice)}" selected>${escapeHtml(currentVoice)}</option>`;
-    }
-
-    html += `
-      <div class="vm-role-row">
-        <div>
-          <div class="vm-role-name">${displayName}</div>
-          <div class="vm-role-id">${roleId}</div>
-        </div>
-        <select class="vm-voice-select" data-role="${roleId}" onchange="onVoiceMapChange(this)">
-          ${options}
-        </select>
-        <button class="vm-preview-btn" data-role="${roleId}" onclick="previewVoice(this)">
-          &#9654; 미리듣기
-        </button>
-      </div>`;
-  }
-  container.innerHTML = html || '<div style="color:var(--text-dim);padding:20px;text-align:center">검색 결과 없음</div>';
-}
-
-$('vmSearch').addEventListener('input', renderVoiceMapList);
-
-function onVoiceMapChange(selectEl) {
-  const roleId = selectEl.dataset.role;
-  const newVoice = selectEl.value;
-  if (voiceMap) voiceMap[roleId] = newVoice;
-  voiceMapDirty = true;
-  updateVmSaveBtn();
-  if (currentClips.length > 0) renderClipList();
-}
-
-function updateVmSaveBtn() {
-  const btn = $('btnVmSave');
-  if (voiceMapDirty) {
-    btn.innerHTML = '&#128190; voice_map.json 저장 <span style="color:var(--orange);font-size:10px">(변경됨)</span>';
-    btn.classList.add('primary');
-  } else {
-    btn.innerHTML = 'voice_map.json 저장';
-    btn.classList.remove('primary');
-  }
-}
-
-async function previewVoice(btn) {
-  const selectEl = btn.parentElement.querySelector('.vm-voice-select');
-  const tag = selectEl.value;
-  if (!tag) return;
-
-  // Check cache
-  if (voicePreviewCache[tag]) {
-    audioPlayer.src = voicePreviewCache[tag];
-    audioPlayer.play().catch(() => {});
-    $('playbackBar').classList.add('visible');
-    $('pbNowPlaying').innerHTML = `<span class="role">미리듣기</span> &mdash; ${escapeHtml(tag)}`;
-    return;
-  }
-
-  if (!voiceLibDirHandle) {
-    toast('음성 라이브러리 폴더를 먼저 선택하세요 (새로고침 버튼)', 'error');
-    return;
-  }
-
-  const entry = findVoiceEntry(tag);
-  if (!entry) { toast(`"${tag}" 음성 정보를 찾을 수 없습니다`, 'error'); return; }
-
-  btn.disabled = true;
-  btn.textContent = '로딩...';
-
-  try {
-    const fileHandle = await voiceLibDirHandle.getFileHandle(entry.audio_filename);
-    const file = await fileHandle.getFile();
-    const blobUrl = URL.createObjectURL(file);
-    voicePreviewCache[tag] = blobUrl;
-
-    audioPlayer.src = blobUrl;
-    audioPlayer.play().catch(() => {});
-    $('playbackBar').classList.add('visible');
-    const promptPreview = (entry.prompt_text || '').substring(0, 50);
-    $('pbNowPlaying').innerHTML = `<span class="role">${escapeHtml(tag)}</span> &mdash; ${escapeHtml(promptPreview)}...`;
-  } catch (e) {
-    toast(`미리듣기 실패: ${e.message}`, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '&#9654; 미리듣기';
-  }
-}
-
-// ============================================================================
-// Voice Browser (hover-to-play)
-// ============================================================================
-let vbHoverTimer = null;
-let vbPlayingTag = null;
-
-function chipGradient(str) {
-  let h1 = 0, h2 = 0;
-  for (let i = 0; i < str.length; i++) {
-    h1 = (h1 * 31 + str.charCodeAt(i)) & 0xFFFFFF;
-    h2 = (h2 * 37 + str.charCodeAt(str.length - 1 - i)) & 0xFFFFFF;
-  }
-  const hue1 = h1 % 360, hue2 = (h2 % 360);
-  return `linear-gradient(135deg, hsl(${hue1},55%,38%), hsl(${hue2},55%,32%))`;
-}
-
-function renderVoiceBrowser() {
-  const grid = $('vbGrid');
-  if (!grid) return;
-  if (serverVoices.length === 0) {
-    grid.innerHTML = '<span style="color:var(--text-dim);font-size:12px;padding:8px">음성 라이브러리를 먼저 로드하세요</span>';
-    const countEl = $('vbCount'); if (countEl) countEl.textContent = '0';
-    return;
-  }
-
-  const searchEl = $('vbSearch');
-  const filter = (searchEl ? searchEl.value : '').toLowerCase();
-  const filtered = filter ? serverVoices.filter(v => v.toLowerCase().includes(filter)) : serverVoices;
-  const countEl = $('vbCount'); if (countEl) countEl.textContent = `${filtered.length}/${serverVoices.length}`;
-
-  grid.innerHTML = filtered.map(tag =>
-    `<span class="vb-chip ${tag === vbPlayingTag ? 'playing' : ''}" data-tag="${escapeHtml(tag)}" style="background:${chipGradient(tag)}">${escapeHtml(tag)}</span>`
-  ).join('');
-
-  // Attach hover + click events
-  grid.querySelectorAll('.vb-chip').forEach(chip => {
-    chip.addEventListener('mouseenter', onVbChipEnter);
-    chip.addEventListener('mouseleave', onVbChipLeave);
-    chip.addEventListener('click', onVbChipClick);
-  });
-}
-
-async function onVbChipEnter(e) {
-  const tag = e.target.dataset.tag;
-  clearTimeout(vbHoverTimer);
-  // 200ms debounce to avoid rapid fire while scrolling
-  vbHoverTimer = setTimeout(() => playVoicePreview(tag), 200);
-}
-
-function onVbChipLeave() {
-  clearTimeout(vbHoverTimer);
-}
-
-function onVbChipClick(e) {
-  const tag = e.target.dataset.tag;
-  if (!tag || !voiceMap) return;
-
-  // Position the picker near the chip
-  const rect = e.target.getBoundingClientRect();
-  showRolePicker(tag, rect.right + 8, rect.top);
-}
-
-function showRolePicker(tag, x, y) {
-  const picker = $('vbRolePicker');
-  const entries = getRoleEntries();
-  if (entries.length === 0) return;
-
-  // Clamp position to viewport
-  const vw = window.innerWidth, vh = window.innerHeight;
-  if (x + 260 > vw) x = vw - 270;
-  if (y + 360 > vh) y = Math.max(10, vh - 370);
-
-  picker.style.left = x + 'px';
-  picker.style.top = y + 'px';
-  picker.style.display = 'flex';
-
-  picker.innerHTML = `
-    <div class="vb-role-picker-header">
-      <span>${escapeHtml(tag)}</span>
-      <button class="close-btn" onclick="hideRolePicker()">&#10005;</button>
-    </div>
-    <div class="vb-role-picker-list">
-      ${entries.map(([rid, curVoice]) => {
-        const isSame = curVoice === tag;
-        return `<div class="vb-role-picker-item ${isSame ? 'same-voice' : ''}"
-                     data-role="${rid}" data-tag="${escapeHtml(tag)}">
-          <span class="role-label">${roleDisplayName(rid)}</span>
-          <span class="cur-voice" title="${escapeHtml(curVoice)}">${isSame ? '&#10003; 현재' : escapeHtml(curVoice)}</span>
-        </div>`;
-      }).join('')}
-    </div>
-  `;
-
-  // Add backdrop to close on outside click
-  let backdrop = document.querySelector('.vb-role-picker-backdrop');
-  if (!backdrop) {
-    backdrop = document.createElement('div');
-    backdrop.className = 'vb-role-picker-backdrop';
-    backdrop.addEventListener('click', hideRolePicker);
-    document.body.appendChild(backdrop);
-  }
-  backdrop.style.display = 'block';
-
-  // Click handler for role items
-  picker.querySelectorAll('.vb-role-picker-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const roleId = item.dataset.role;
-      const voiceTag = item.dataset.tag;
-      voiceMap[roleId] = voiceTag;
-      voiceMapDirty = true;
-      updateVmSaveBtn();
-      toast(`${roleDisplayName(roleId)} → ${voiceTag}`, 'success');
-      hideRolePicker();
-      renderVoiceMapList();
-      if (currentClips.length > 0) renderClipList();
-    });
-  });
-}
-
-async function playVoicePreview(tag) {
-  if (!voiceLibDirHandle) return;
-
-  // Mark playing chip
-  document.querySelectorAll('.vb-chip.playing').forEach(c => c.classList.remove('playing'));
-  const chip = document.querySelector(`.vb-chip[data-tag="${CSS.escape(tag)}"]`);
-  if (chip) chip.classList.add('playing');
-  vbPlayingTag = tag;
-  $('vbNowPlaying').textContent = tag;
-
-  // Use cache if available
-  if (voicePreviewCache[tag]) {
-    audioPlayer.src = voicePreviewCache[tag];
-    audioPlayer.play().catch(() => {});
-    return;
-  }
-
-  const entry = findVoiceEntry(tag);
-  if (!entry) return;
-
-  try {
-    const fileHandle = await voiceLibDirHandle.getFileHandle(entry.audio_filename);
-    const file = await fileHandle.getFile();
-    const blobUrl = URL.createObjectURL(file);
-    voicePreviewCache[tag] = blobUrl;
-    audioPlayer.src = blobUrl;
-    audioPlayer.play().catch(() => {});
-  } catch {}
-}
-
-async function saveVoiceMap() {
-  if (!voiceMap) { toast('voice_map 데이터 없음', 'error'); return; }
-
-  if (projectDirHandle) {
-    // Local mode: write via FileSystem Access API
-    try {
-      const parts = 'characters/voice_map.json'.split('/');
-      const fileName = parts.pop();
-      const dir = await getSubDir(projectDirHandle, parts);
-      const fileHandle = await dir.getFileHandle(fileName, { create: false });
-      const writable = await fileHandle.createWritable();
-      await writable.write(JSON.stringify(voiceMap, null, 2) + '\n');
-      await writable.close();
-      voiceMapDirty = false;
-      voiceMapOriginal = JSON.stringify(voiceMap);
-      updateVmSaveBtn();
-      toast('voice_map.json 저장 완료', 'success');
-    } catch (e) {
-      toast(`저장 실패: ${e.message}`, 'error');
-    }
-  } else {
-    // HTTP mode: can't write to server, download as file
-    const blob = new Blob([JSON.stringify(voiceMap, null, 2) + '\n'], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'voice_map.json';
-    a.click(); URL.revokeObjectURL(url);
-    voiceMapDirty = false;
-    voiceMapOriginal = JSON.stringify(voiceMap);
-    updateVmSaveBtn();
-    toast('voice_map.json 다운로드됨 (수동으로 교체하세요)', 'success');
-  }
-}
-
-// ============================================================================
-// Folder Picker (for file:// mode)
-// ============================================================================
-function showFolderPicker(savedName) {
-  const hint = savedName ? `<br><small style="color:var(--green)">이전 폴더: ${escapeHtml(savedName)}</small>` : '';
-  $('clipContainer').innerHTML = `
-    <div class="folder-banner">
-      <h2>프로젝트 폴더 선택</h2>
-      <p>
-        file:// 프로토콜에서는 보안 제한으로 직접 파일을 읽을 수 없습니다.<br>
-        아래 버튼을 클릭해서 프로젝트 루트 폴더를 선택해주세요.<br>
-        <small style="color:var(--text-dim)">
-          (One-Night-Ultimate-Werewolf-LLM-Edition 폴더)
-        </small>
-        ${hint}
-      </p>
-      <button class="btn primary" onclick="pickProjectFolder()">폴더 선택</button>
-    </div>
-  `;
-}
-
-async function pickProjectFolder() {
-  try {
-    projectDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-
-    // Verify it's the right folder by checking a known file
-    try {
-      await readJsonFromDir(projectDirHandle, 'characters/voice_map.json');
-    } catch {
-      toast('올바른 프로젝트 폴더가 아닙니다. One-Night-Ultimate-Werewolf-LLM-Edition 폴더를 선택해주세요.', 'error');
-      projectDirHandle = null;
-      return;
-    }
-
-    lsSet('folderName', projectDirHandle.name);
-    idbSave('projectDir', projectDirHandle);
-    $('modeBadge').textContent = 'LOCAL';
-    $('modeBadge').className = 'mode-badge local';
-    toast('프로젝트 폴더 연결됨', 'success');
-
-    await loadVoiceMap();
-    initSelectors();
-    $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
-    restoreSelection();
-  } catch (e) {
-    if (e.name !== 'AbortError') {
-      toast(`폴더 선택 실패: ${e.message}`, 'error');
-    }
-  }
-}
-
-// ============================================================================
-// Init
-// ============================================================================
-function restoreFromCache() {
-  // Restore API base URL
-  const savedApi = lsGet('apiBase', '');
-  if (savedApi) $('ttsApiBase').value = savedApi;
-
-  // Restore server voices cache
-  const cachedVoices = lsGetJson('serverVoices', []);
-  if (cachedVoices.length > 0) serverVoices = cachedVoices;
-}
-
-function restoreSelection() {
-  // Restore last scenario & episode
-  const savedScenario = lsGet('scenario', '');
-  const savedEpisode = lsGet('episode', '');
-  if (savedScenario && $('selScenario').querySelector(`option[value="${savedScenario}"]`)) {
-    $('selScenario').value = savedScenario;
-    onScenarioChange().then(() => {
-      if (savedEpisode && $('selEpisode').querySelector(`option[value="${savedEpisode}"]`)) {
-        $('selEpisode').value = savedEpisode;
-        renderEpisode(savedEpisode);
-      }
-    });
-  }
-}
-
-async function tryRestoreHandles() {
-  // Try restoring project dir handle from IndexedDB
-  const savedProjectHandle = await idbLoad('projectDir');
-  if (savedProjectHandle) {
-    $('clipContainer').innerHTML = '<div class="loading"><div class="spinner"></div>이전 폴더 권한 확인 중...</div>';
-    const granted = await reRequestPermission(savedProjectHandle, 'readwrite');
-    if (granted) {
-      // Verify it's still valid
-      try {
-        await readJsonFromDir(savedProjectHandle, 'characters/voice_map.json');
-        projectDirHandle = savedProjectHandle;
-        $('modeBadge').textContent = 'LOCAL';
-        $('modeBadge').className = 'mode-badge local';
-        await loadVoiceMap();
-        initSelectors();
-        $('clipContainer').innerHTML = '<div class="loading">시나리오를 선택하세요</div>';
-        restoreSelection();
-        toast('프로젝트 폴더 자동 연결됨', 'success');
-      } catch {
-        // Handle invalid, show picker
-        showFolderPicker(lsGet('folderName', ''));
-      }
-    } else {
-      showFolderPicker(lsGet('folderName', ''));
-    }
-  } else {
-    showFolderPicker(lsGet('folderName', ''));
-  }
-
-  // Try restoring voice lib handle
-  const savedVoiceLibHandle = await idbLoad('voiceLibDir');
-  if (savedVoiceLibHandle) {
-    const granted = await reRequestPermission(savedVoiceLibHandle, 'read');
-    if (granted) {
-      try {
-        const fh = await savedVoiceLibHandle.getFileHandle('voices.json');
-        const file = await fh.getFile();
-        const data = JSON.parse(await file.text());
-        voiceLibDirHandle = savedVoiceLibHandle;
-        voicesJsonData = data.voices || [];
-        serverVoices = voicesJsonData.map(v => v.tag).sort();
-        lsSetJson('serverVoices', serverVoices);
-      } catch {
-        voiceLibDirHandle = null;
-      }
-    }
-  }
-}
-
-// ============================================================================
-// Batch TTS Generation Panel
-// ============================================================================
-let batchRunning = false;
-let batchCancelRequested = false;
-
-function cancelBatchGeneration() {
-  if (!batchRunning) return;
-  batchCancelRequested = true;
-  $('btnBatchCancel').disabled = true;
-  $('btnBatchCancel').textContent = '중단 중...';
-  batchLog('⚠ 중단 요청됨 — 현재 클립 완료 후 중단합니다.');
-}
-
-function openBatchPanel() {
-  if (!projectDirHandle) { toast('프로젝트 폴더를 먼저 연결하세요', 'error'); return; }
-  $('batchOverlay').classList.add('open');
-  $('batchPanel').classList.add('open');
-  loadBatchScenarios();
-}
-
-function closeBatchPanel() {
-  if (batchRunning) { toast('배치 생성 중에는 닫을 수 없습니다', 'error'); return; }
-  $('batchOverlay').classList.remove('open');
-  $('batchPanel').classList.remove('open');
-}
-
-async function loadBatchScenarios() {
-  const list = $('batchScenarioList');
-  list.innerHTML = '<span style="color:var(--text-dim);font-size:12px">로딩 중...</span>';
-
-  const scenarios = [];
-  try {
-    const ttsDir = await getSubDir(projectDirHandle, ['public', 'assets', 'scenarios_tts']);
-    for await (const entry of ttsDir.values()) {
-      if (entry.kind === 'file' && entry.name.endsWith('.tts.json')) {
-        const file = await entry.getFile();
-        const data = JSON.parse(await file.text());
-        const sid = data.scenarioId || entry.name.replace('.tts.json', '');
-        const eps = Object.keys(data.episodes || {});
-        let clipCount = 0;
-        for (const ep of eps) {
-          const epData = data.episodes[ep];
-          if (epData.openingClips) clipCount++;
-          if (epData.roleClips) clipCount += Object.keys(epData.roleClips).length;
-          if (epData.nightOutroClips) clipCount++;
-        }
-        scenarios.push({ id: sid, fileName: entry.name, episodes: eps, clipCount, data });
-      }
-    }
-  } catch (e) {
-    list.innerHTML = `<span style="color:var(--red);font-size:12px">시나리오 로드 실패: ${e.message}</span>`;
-    return;
-  }
-
-  scenarios.sort((a, b) => a.id.localeCompare(b.id));
-
-  list.innerHTML = scenarios.map(s => `
-    <label class="batch-scenario-item">
-      <input type="checkbox" value="${s.id}" data-filename="${s.fileName}" checked>
-      <span class="name">${s.id.replace(/_/g, ' ')}</span>
-      <span class="meta">${s.episodes.length} eps, ${s.clipCount} clips</span>
-    </label>
-  `).join('');
-
-  const total = scenarios.reduce((sum, s) => sum + s.clipCount, 0);
-  $('batchFooterInfo').textContent = `${scenarios.length}개 시나리오, 총 ${total}개 클립`;
-
-  // Store for later use
-  window._batchScenarios = scenarios;
-}
-
-function batchSelectAll(checked) {
-  $('batchScenarioList').querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = checked);
-}
-
-function batchLog(msg) {
-  const log = $('batchLog');
-  log.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-  log.scrollTop = log.scrollHeight;
-}
-
-async function runBatchGeneration() {
-  if (batchRunning) return;
-  if (!projectDirHandle) { toast('프로젝트 폴더를 먼저 연결하세요', 'error'); return; }
-  if (!voiceMap) { toast('voice_map.json이 로드되지 않았습니다', 'error'); return; }
-
-  const selected = [...$('batchScenarioList').querySelectorAll('input:checked')].map(cb => cb.value);
-  if (selected.length === 0) { toast('시나리오를 선택하세요', 'error'); return; }
-
-  const skipExist = $('batchOptSkipExist').checked;
-  const cleanFirst = $('batchOptClean').checked;
-
-  batchRunning = true;
-  batchCancelRequested = false;
-  $('btnBatchStart').disabled = true;
-  $('btnBatchStart').style.display = 'none';
-  $('btnBatchCancel').style.display = '';
-  $('btnBatchCancel').disabled = false;
-  $('btnBatchCancel').innerHTML = '&#9632; 중단';
-  $('batchLog').style.display = 'block';
-  $('batchLog').textContent = '';
-  $('batchProgressBar').style.display = 'block';
-  $('batchProgressFill').style.width = '0%';
-
-  const allScenarios = window._batchScenarios || [];
-  const targets = allScenarios.filter(s => selected.includes(s.id));
-
-  // Count total clips
-  let totalClips = targets.reduce((sum, s) => sum + s.clipCount, 0);
-  let doneClips = 0, failedClips = 0, skippedClips = 0;
-
-  function updateStats() {
-    $('batchStats').innerHTML = `
-      <span style="color:var(--accent)">전체 ${totalClips}</span>
-      <span style="color:var(--green)">완료 ${doneClips}</span>
-      ${skippedClips > 0 ? `<span style="color:var(--text-dim)">건너뜀 ${skippedClips}</span>` : ''}
-      ${failedClips > 0 ? `<span style="color:var(--red)">실패 ${failedClips}</span>` : ''}
-    `;
-    $('batchProgressFill').style.width = `${((doneClips + failedClips + skippedClips) / totalClips) * 100}%`;
-  }
-  updateStats();
-
-  for (const scenario of targets) {
-    if (batchCancelRequested) break;
-    batchLog(`\n=== ${scenario.id} (${scenario.clipCount} clips) ===`);
-
-    // Clean if requested
-    if (cleanFirst) {
-      try {
-        const voicesDir = await getSubDir(projectDirHandle, ['public', 'assets', 'voices']);
-        try {
-          await voicesDir.removeEntry(scenario.id, { recursive: true });
-          batchLog(`[clean] 삭제됨: voices/${scenario.id}`);
-        } catch { /* doesn't exist */ }
-      } catch {}
-    }
-
-    const manifest = [];
-
-    for (const epId of scenario.episodes) {
-      if (batchCancelRequested) break;
-      const epData = scenario.data.episodes[epId];
-      const clips = [];
-
-      // Build clip list
-      if (epData.openingClips) {
-        clips.push({ type: 'opening', roleId: 'Narrator', text: epData.openingClips,
-          path: `/assets/voices/${scenario.id}/${epId}/pall/opening/001/voice` });
-      }
-      if (epData.roleClips) {
-        for (const [roleId, text] of Object.entries(epData.roleClips)) {
-          clips.push({ type: 'role', roleId, text,
-            path: `/assets/voices/${scenario.id}/${epId}/pall/role/${roleId}/during/001/voice` });
-        }
-      }
-      if (epData.nightOutroClips) {
-        clips.push({ type: 'outro', roleId: 'Narrator', text: epData.nightOutroClips,
-          path: `/assets/voices/${scenario.id}/${epId}/pall/outro/001/voice` });
-      }
-
-      for (const clip of clips) {
-        if (batchCancelRequested) break;
-        const m4aRelPath = `public${clip.path}.m4a`;
-
-        // Skip if exists
-        if (skipExist && !cleanFirst) {
-          try {
-            const parts = m4aRelPath.split('/').filter(Boolean);
-            const fname = parts.pop();
-            const dir = await getSubDir(projectDirHandle, parts);
-            const fh = await dir.getFileHandle(fname);
-            const f = await fh.getFile();
-            if (f.size > 0) {
-              skippedClips++;
-              manifest.push({ clipId: `${scenario.id}/${epId}/pall/${clip.type === 'role' ? 'role/' + clip.roleId + '/during' : clip.type}/001`,
-                speakerId: clip.roleId, url: clip.path + '.m4a', text: clip.text });
-              updateStats();
-              continue;
-            }
-          } catch { /* doesn't exist, proceed */ }
-        }
-
-        const voiceTag = voiceMap[clip.roleId] || voiceMap['Narrator'] || null;
-        batchLog(`${epId}/${clip.roleId} [${voiceTag || '?'}]`);
-
-        try {
-          // 1) Generate TTS (M4A directly from server)
-          const { blob } = await generateTts(clip.text, clip.roleId, null);
-
-          // 2) Save M4A to disk
-          const parts = m4aRelPath.split('/').filter(Boolean);
-          const fname = parts.pop();
-          const dir = await getOrCreateSubDir(projectDirHandle, parts);
-          const fh = await dir.getFileHandle(fname, { create: true });
-          const writable = await fh.createWritable();
-          await writable.write(blob);
-          await writable.close();
-
-          doneClips++;
-          manifest.push({ clipId: `${scenario.id}/${epId}/pall/${clip.type === 'role' ? 'role/' + clip.roleId + '/during' : clip.type}/001`,
-            speakerId: clip.roleId, url: clip.path + '.m4a', text: clip.text });
-        } catch (e) {
-          batchLog(`  → 실패: ${e.message}`);
-          failedClips++;
-        }
-        updateStats();
-      }
-    }
-
-    // Write _manifest.json (중단되어도 현재까지 결과 저장)
-    if (manifest.length > 0) {
-      try {
-        const manifestObj = { generatedFrom: scenario.fileName, clips: manifest };
-        const manifestJson = JSON.stringify(manifestObj, null, 2);
-        const manifestParts = ['public', 'assets', 'voices', scenario.id];
-        const manifestDir = await getOrCreateSubDir(projectDirHandle, manifestParts);
-        const fh = await manifestDir.getFileHandle('_manifest.json', { create: true });
-        const writable = await fh.createWritable();
-        await writable.write(manifestJson);
-        await writable.close();
-        batchLog(`[manifest] ${scenario.id}/_manifest.json 저장 (${manifest.length} clips)`);
-      } catch (e) {
-        batchLog(`[manifest] 저장 실패: ${e.message}`);
-      }
-    }
-  }
-
-  const cancelled = batchCancelRequested;
-  const statusMsg = cancelled
-    ? `배치 중단됨: 성공 ${doneClips}, 실패 ${failedClips}, 건너뜀 ${skippedClips}`
-    : `배치 완료: 성공 ${doneClips}, 실패 ${failedClips}, 건너뜀 ${skippedClips}`;
-  batchLog(`\n=== ${statusMsg} ===`);
-  toast(statusMsg, cancelled ? 'error' : (doneClips > 0 ? 'success' : 'error'));
-
-  batchRunning = false;
-  batchCancelRequested = false;
-  $('btnBatchCancel').style.display = 'none';
-  $('btnBatchStart').style.display = '';
-  $('btnBatchStart').disabled = false;
-  $('btnBatchStart').innerHTML = '&#9889; 생성 시작';
-}
-
+// Init entry point — all code is in external JS modules
 (async function init() {
   restoreFromCache();
 

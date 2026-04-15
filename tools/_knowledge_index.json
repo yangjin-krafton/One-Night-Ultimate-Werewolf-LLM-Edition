@@ -1,0 +1,61 @@
+{
+  "description": "LM Studio Chat에서 스킬 수행 전 참조할 수 있는 배경지식 문서 인덱스",
+  "docs": [
+    {
+      "id": "tts_writing_guide",
+      "title": "TTS 글 작성 간략 가이드",
+      "desc": "TTS 대본 작성 원칙, 클립별 구조, roleClips 포맷, 캐릭터 음성 원칙, 태그 사용법, 체크리스트",
+      "path": "docs/TTS 글 작성 간략 가이드.md",
+      "tags": ["tts", "writing", "guide", "tags", "format"]
+    },
+    {
+      "id": "tts_gen_guide",
+      "title": "TTS 생성 가이드",
+      "desc": "Qwen3-TTS 생성 가이드. 스크립트 수정, 태그 사용법, 감정/운율 지정, 빌드 명령, 기술 노트",
+      "path": "docs/TTS 생성 가이드.md",
+      "tags": ["tts", "generation", "qwen3", "prosody", "emotion", "technical"]
+    },
+    {
+      "id": "tts_revision_direction",
+      "title": "TTS 수정 방향성",
+      "desc": "TTS 대본 수정 전략. 설계 원칙(캐릭터 성격 > 줄거리), 포맷 템플릿, 역할별 분량 가이드, 구조 요구사항",
+      "path": "docs/TTS 수정 방향성.md",
+      "tags": ["tts", "revision", "strategy", "character", "template", "budget"]
+    },
+    {
+      "id": "scenario_spec",
+      "title": "시나리오 생성 규격",
+      "desc": "에피소드 정의(ep1/ep2/ep3=난이도/밀도), 역할 풀 요구사항, 덱 구성 규칙, 시나리오 분류체계",
+      "path": "docs/시나리오 생성 규격.md",
+      "tags": ["scenario", "episode", "roles", "deck", "spec"]
+    },
+    {
+      "id": "namuwiki_rules",
+      "title": "나무위키 규칙 레퍼런스",
+      "desc": "원나잇 늑대인간 전체 게임 규칙, 역할 설명, 진행 순서 등 상세 레퍼런스",
+      "path": "docs/나무위키.md",
+      "tags": ["rules", "roles", "reference", "gameplay"]
+    },
+    {
+      "id": "wiki_night_phase",
+      "title": "밤 단계 규칙",
+      "desc": "밤 단계 역할별 행동 순서와 규칙 상세",
+      "path": "public/assets/wiki/night_phase.md",
+      "tags": ["rules", "night", "phase", "order"]
+    },
+    {
+      "id": "wiki_special_rules",
+      "title": "특수 규칙",
+      "desc": "도플갱어, 엣지 케이스, 특수 상호작용 규칙",
+      "path": "public/assets/wiki/special_rules.md",
+      "tags": ["rules", "special", "doppelganger", "edge_cases"]
+    },
+    {
+      "id": "wiki_victory",
+      "title": "승리 조건",
+      "desc": "각 팀의 승리 조건 정리",
+      "path": "public/assets/wiki/victory.md",
+      "tags": ["rules", "victory", "winning"]
+    }
+  ]
+}
