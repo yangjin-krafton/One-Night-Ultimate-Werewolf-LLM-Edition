@@ -39,6 +39,66 @@ function ensureDirectRouting() {
   }
 }
 
+// ===== UNIFIED CONTROL — safe cleanup for all scenario effects =====
+
+// Reset all per-clip flags and set intensity to 0 (clean passthrough) without tearing down chains.
+// Use when interrupting playback mid-clip (pause, skip, stop).
+function scenarioFxResetClip() {
+  radioFx.clipHasRadio = false;
+  phoneFx.clipHasPhone = false;
+  cavernFx.clipHasCavern = false;
+  paFx.clipHasPA = false;
+  palaceFx.clipHasPalace = false;
+  if (radioFx.active) updateRadioIntensity(0);
+  if (phoneFx.active) updatePhoneIntensity(0);
+  if (cavernFx.active) updateCavernIntensity(0);
+  if (paFx.active) updatePAIntensity(0);
+  if (palaceFx.active) updatePalaceIntensity(0);
+}
+
+// Mute ambient loops (static noise, drip noise) — call on pause/stop
+function scenarioFxMuteAmbient() {
+  if (!audioCtx) return;
+  const rt = audioCtx.currentTime + 0.03;
+  if (radioFx.staticNoise) rfxRamp(radioFx.staticNoise.gain.gain, 0, rt);
+  if (cavernFx.dripNoise) rfxRamp(cavernFx.dripNoise.gain.gain, 0, rt);
+}
+
+// Restore ambient loops to current intensity — call on resume
+function scenarioFxResumeAmbient() {
+  if (!audioCtx) return;
+  const rt = audioCtx.currentTime + 0.03;
+  if (radioFx.active && radioFx.staticNoise) {
+    rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * radioFx.intensity, rt);
+  }
+  if (cavernFx.active && cavernFx.dripNoise) {
+    rfxRamp(cavernFx.dripNoise.gain.gain, 0.08 * cavernFx.intensity, rt);
+  }
+}
+
+// Tear down all effects completely — call on stopPlayback / end of playlist
+function scenarioFxDisableAll() {
+  disableRadioEffect();
+  disablePhoneEffect();
+  disableCavernEffect();
+  disablePAEffect();
+  disablePalaceEffect();
+}
+
+// Enable the correct effect for a scenario — single dispatch point
+function scenarioFxEnableFor(scenarioId) {
+  const map = {
+    'rust_orbit': enableRadioEffect,
+    'school_broadcast_prayer': enablePhoneEffect,
+    'dark_citadel': enableCavernEffect,
+    'salgol_ward': enablePAEffect,
+    'floodgate_nameplates': enablePalaceEffect,
+  };
+  const fn = map[scenarioId];
+  if (fn) { ensureMediaSource(); fn(); }
+  else { ensureDirectRouting(); }
+}
+
 // ===== RADIO (WALKIE-TALKIE) EFFECT — rust_orbit =====
 const radioFx = {
   active: false,

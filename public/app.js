@@ -920,9 +920,7 @@ function stopPlayback() {
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   cancelSpeechPlayback();
   audioEl.pause();
-  disableRadioEffect();
-  disablePhoneEffect();
-  disableCavernEffect(); disablePAEffect(); disablePalaceEffect();
+  scenarioFxDisableAll();
   stopBgm();
   releaseWakeLock();
   audioEl.removeAttribute('src');
@@ -945,13 +943,8 @@ function togglePause() {
       requestWakeLock();
       // Re-enable scenario effect if needed
       const cfg = resolveCurrentConfig();
-      disableRadioEffect(); disablePhoneEffect(); disableCavernEffect(); disablePAEffect(); disablePalaceEffect();
-      if (cfg.scenarioId === 'rust_orbit') { ensureMediaSource(); enableRadioEffect(); }
-      else if (cfg.scenarioId === 'school_broadcast_prayer') { ensureMediaSource(); enablePhoneEffect(); }
-      else if (cfg.scenarioId === 'dark_citadel') { ensureMediaSource(); enableCavernEffect(); }
-      else if (cfg.scenarioId === 'salgol_ward') { ensureMediaSource(); enablePAEffect(); }
-      else if (cfg.scenarioId === 'floodgate_nameplates') { ensureMediaSource(); enablePalaceEffect(); }
-      else { ensureDirectRouting(); }
+      scenarioFxDisableAll();
+      scenarioFxEnableFor(cfg.scenarioId);
       audioEl.onended = async () => { if (radioFx.clipHasRadio) await playSquelchOut(); if (phoneFx.clipHasPhone) await playPhoneHangUp(); if (cavernFx.clipHasCavern) await playCavernOutro(); if (paFx.clipHasPA) await playPAChimeOut(); if (palaceFx.clipHasPalace) await playPalaceOutro(); playNext(); };
       audioEl.onerror = () => { console.warn('Audio error, fallback to speech:', state.playlist[state.playlistIndex]?.url); fallbackToSpeech(state.playlist[state.playlistIndex]); };
       playClip(curClip);
@@ -971,11 +964,13 @@ function togglePause() {
         audioEl.play().catch(() => {});
       }
     }
+    scenarioFxResumeAmbient();
     bgmEl.play().catch(() => {});
   } else {
     // Pause
     state.paused = true;
     bgmEl.pause();
+    scenarioFxMuteAmbient();
     if (state._delayTimer) {
       // Pause during delay — save remaining time
       const elapsed = Date.now() - (state._delayStart || Date.now());
@@ -995,9 +990,7 @@ function playNext() {
   state.playlistIndex++;
   if (state.playlistIndex >= state.playlist.length) {
     state.playing = false;
-    disableRadioEffect();
-    disablePhoneEffect();
-    disableCavernEffect(); disablePAEffect(); disablePalaceEffect();
+    scenarioFxDisableAll();
     fadeOutBgm(3000);
     releaseWakeLock();
     clearGameSession();
@@ -1091,13 +1084,8 @@ async function playClip(clip) {
       playNext();
       return;
     }
-    // TTS bypasses Web Audio — mute any active noise
-    if (radioFx.active && radioFx.staticNoise) {
-      rfxRamp(radioFx.staticNoise.gain.gain, 0, audioCtx.currentTime + 0.03);
-    }
-    if (cavernFx.active && cavernFx.dripNoise) {
-      rfxRamp(cavernFx.dripNoise.gain.gain, 0, audioCtx.currentTime + 0.03);
-    }
+    // TTS bypasses Web Audio — mute ambient noise
+    scenarioFxMuteAmbient();
     const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
     utter.lang = 'ko-KR';
     utter.rate = 1;
@@ -1137,11 +1125,7 @@ function fallbackToSpeech(clip) {
     audioEl.pause();
     audioEl.removeAttribute('src');
     // Falling back to TTS — mute effect chains since TTS bypasses Web Audio
-    if (radioFx.active) { radioFx.clipHasRadio = false; updateRadioIntensity(0); }
-    if (phoneFx.active) { phoneFx.clipHasPhone = false; updatePhoneIntensity(0); }
-    if (cavernFx.active) { cavernFx.clipHasCavern = false; updateCavernIntensity(0); }
-    if (paFx.active) { paFx.clipHasPA = false; updatePAIntensity(0); }
-    if (palaceFx.active) { palaceFx.clipHasPalace = false; updatePalaceIntensity(0); }
+    scenarioFxResetClip();
     const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
     utter.lang = 'ko-KR';
     utter.rate = 1;
@@ -1170,6 +1154,7 @@ function skipToNext() {
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   cancelSpeechPlayback();
   audioEl.pause();
+  scenarioFxResetClip();
   // Jump to the next role's first clip (skip remaining clips of current role)
   const curClip = state.playlist[state.playlistIndex];
   let target = state.playlistIndex + 1;
@@ -1178,6 +1163,7 @@ function skipToNext() {
   }
   if (target >= state.playlist.length) {
     state.playing = false;
+    scenarioFxDisableAll();
     clearGameSession();
     render();
     showToast('밤이 끝났습니다. 토론을 시작하세요!');
@@ -1195,6 +1181,7 @@ function skipToPrev() {
   if (state._delayTimer) { clearTimeout(state._delayTimer); state._delayTimer = null; }
   cancelSpeechPlayback();
   audioEl.pause();
+  scenarioFxResetClip();
   // Jump to the start of current role, or previous role if already at start
   const curClip = state.playlist[state.playlistIndex];
   let target = state.playlistIndex;
@@ -1252,27 +1239,8 @@ async function startPlayback() {
   requestWakeLock();
 
   // Setup scenario-specific audio effects
-  disableRadioEffect();
-  disablePhoneEffect();
-  disableCavernEffect(); disablePAEffect(); disablePalaceEffect();
-  if (scenarioId === 'rust_orbit') {
-    ensureMediaSource();
-    enableRadioEffect();
-  } else if (scenarioId === 'school_broadcast_prayer') {
-    ensureMediaSource();
-    enablePhoneEffect();
-  } else if (scenarioId === 'dark_citadel') {
-    ensureMediaSource();
-    enableCavernEffect();
-  } else if (scenarioId === 'salgol_ward') {
-    ensureMediaSource();
-    enablePAEffect();
-  } else if (scenarioId === 'floodgate_nameplates') {
-    ensureMediaSource();
-    enablePalaceEffect();
-  } else {
-    ensureDirectRouting();
-  }
+  scenarioFxDisableAll();
+  scenarioFxEnableFor(scenarioId);
 
   render();
 
