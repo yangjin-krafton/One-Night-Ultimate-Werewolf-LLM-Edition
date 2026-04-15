@@ -142,6 +142,7 @@ function updateQueuePanel() {
     $('playbackBar').style.bottom = '0';
   }
   $('queueCount').textContent = regenQueue.length;
+  updateBottomPadding();
 }
 
 $('btnClearQueue').addEventListener('click', () => {
@@ -161,6 +162,7 @@ async function runQueue() {
 
   $('queuePanel').classList.add('visible');
   $('playbackBar').style.bottom = '60px';
+  updateBottomPadding();
   $('queueDone').textContent = '0';
   $('queueProgressBar').style.width = '0%';
 

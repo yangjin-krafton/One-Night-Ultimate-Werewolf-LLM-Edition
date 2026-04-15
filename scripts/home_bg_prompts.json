@@ -1,0 +1,58 @@
+{
+  "_comment": "홈 타이틀 배경 이미지 10장. taisho_roman 스타일. 9:16 세로 비율 (576x1024).",
+  "style_prefix": "Taisho Roman art nouveau illustration, ornate decorative frame border with cherry blossoms and vines, Japanese dark fantasy aesthetic, vertical portrait composition, ",
+  "style_suffix": ", art nouveau ornamental details, sakura petals, moonlit atmosphere, muted indigo and silver palette, masterpiece, best quality",
+  "resolution": { "width": 576, "height": 1024 },
+  "items": [
+    {
+      "id": "home_bg_01",
+      "title": "시계탑의 늑대",
+      "prompt": "wolf silhouette howling atop a gothic clock tower against an oversized full moon, dark tiled rooftops stretching below, cherry blossom petals drifting upward, misty mountain backdrop, deep midnight blue and silver"
+    },
+    {
+      "id": "home_bg_02",
+      "title": "대나무 숲길",
+      "prompt": "mysterious bamboo forest path at night with paper lanterns floating, glowing wolf eyes peering through bamboo stalks, thick mist rolling along a stone pathway, ethereal blue-green moonlight filtering through leaves"
+    },
+    {
+      "id": "home_bg_03",
+      "title": "마을의 밤",
+      "prompt": "aerial view of a moonlit village with traditional tiled rooftops at night, a central courtyard with scattered wooden tablets on a low table, hooded figures gathered in a circle, warm amber lantern glow contrasting cold moonlight"
+    },
+    {
+      "id": "home_bg_04",
+      "title": "청동 거울",
+      "prompt": "ornate bronze mirror reflecting a wolf face instead of the viewer, surrounded by burning incense and talisman papers, mystical purple and silver energy swirling around the mirror, dark lacquered shrine interior"
+    },
+    {
+      "id": "home_bg_05",
+      "title": "횃불 재판",
+      "prompt": "dramatic torchlit tribunal scene, accused figure kneeling in firelight surrounded by officials pointing fingers, dramatic shadows on wooden pillars, flames casting orange glow upward into darkness, tension and judgment"
+    },
+    {
+      "id": "home_bg_06",
+      "title": "폭풍의 성문",
+      "prompt": "fortress gate silhouette against dramatic storm clouds with lightning, wolf banners fluttering on ramparts, a lone cloaked figure holding a traditional lantern at the massive wooden gate, rain and wind, dark steel blue and white flash"
+    },
+    {
+      "id": "home_bg_07",
+      "title": "예언자의 비전",
+      "prompt": "mystical seer performing divination with a glowing crystal sphere, swirling cosmic vision of wolves and villagers inside the orb, scattered tarot cards and dried herbs on silk cloth, purple and gold supernatural glow"
+    },
+    {
+      "id": "home_bg_08",
+      "title": "묘지의 보름달",
+      "prompt": "ancient cemetery under a massive full moon, ornate stone monuments and iron crosses casting long shadows, a translucent ghostly wolf spirit rising from the ground, twisted cherry trees with falling petals, eerie silver moonlight and ground fog"
+    },
+    {
+      "id": "home_bg_09",
+      "title": "주막의 음모",
+      "prompt": "interior of a traditional tavern at midnight, cloaked figures whispering around a low table with face-down wooden tablets and sake cups, warm oil lamp glow against paper sliding doors, shadow of a wolf cast on the wall, intimate conspiratorial atmosphere"
+    },
+    {
+      "id": "home_bg_10",
+      "title": "새벽의 대치",
+      "prompt": "dramatic pre-dawn hilltop with pine and cherry trees, two silhouetted figures facing each other in a standoff, one human one casting a wolf shadow, first sunrise rays breaking through dark clouds, golden edge lighting against indigo sky"
+    }
+  ]
+}

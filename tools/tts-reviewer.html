@@ -86,6 +86,34 @@
   .mode-badge.local { border-color: var(--green); color: var(--green); }
   .mode-badge.http { border-color: var(--blue); color: var(--blue); }
 
+  /* ── Scenario Banner ── */
+  .scenario-banner {
+    position: relative; width: 100%;
+    max-height: 320px; overflow: hidden; flex-shrink: 0;
+    display: none;
+  }
+  .scenario-banner.visible { display: block; }
+  .scenario-banner img {
+    width: 100%; height: auto; display: block;
+    object-fit: cover; object-position: center 30%;
+    max-height: 320px;
+  }
+  .scenario-banner .banner-fade {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 60%;
+    background: linear-gradient(to bottom, transparent 0%, var(--bg) 100%);
+    pointer-events: none;
+  }
+  .scenario-banner .banner-title {
+    position: absolute; left: 24px; bottom: 16px;
+    font-size: 22px; font-weight: 700; color: #fff;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.7);
+    z-index: 1;
+  }
+  .scenario-banner .banner-ep {
+    font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.7);
+    margin-left: 8px;
+  }
+
   /* ── Main (split layout) ── */
   .app-body { display: flex; height: calc(100vh - 60px); overflow: hidden; }
   .app-body main { flex: 1; min-width: 0; overflow-y: auto; padding: 24px; }
@@ -648,9 +676,13 @@
     .server-config input { width: 100%; }
     .vmpanel { width: 100vw; }
     .vm-role-row { grid-template-columns: 1fr; }
-    .app-body { flex-direction: column; }
+    .app-body { flex-direction: column; height: auto; overflow: visible; }
+    .app-body main { overflow: visible; }
     .app-body .lm-sidebar { width: 100%; height: 50vh; border-left: none; border-top: 1px solid var(--border); }
     .app-body .lm-sidebar.collapsed { height: 0; }
+    .scenario-banner { max-height: none; }
+    .scenario-banner img { max-height: none; object-fit: contain; object-position: center; }
+    .scenario-banner .banner-title { font-size: 18px; left: 16px; bottom: 12px; }
   }
 </style>
 </head>
@@ -685,6 +717,11 @@
 
 <div class="app-body" id="appBody">
 <main>
+  <div class="scenario-banner" id="scenarioBanner">
+    <img id="bannerImg" src="" alt="">
+    <div class="banner-fade"></div>
+    <div class="banner-title" id="bannerTitle"></div>
+  </div>
   <div class="stats-bar" id="statsBar"></div>
   <div id="clipContainer">
     <!-- folder picker banner or clip list -->

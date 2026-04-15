@@ -2,7 +2,42 @@
 // tts-reviewer-ui.js — Render, edit, audio playback, keyboard, folder picker
 // ============================================================================
 
+// ── Bottom bar padding ──
+function updateBottomPadding() {
+  const main = document.querySelector('.app-body main');
+  if (!main) return;
+  const pb = $('playbackBar');
+  const qp = $('queuePanel');
+  let h = 0;
+  if (pb && pb.classList.contains('visible')) h += pb.offsetHeight;
+  if (qp && qp.classList.contains('visible')) h += qp.offsetHeight;
+  main.style.paddingBottom = h ? (h + 24) + 'px' : '';
+}
+
 // ── Render ──
+function updateScenarioBanner(scenarioId, episodeId) {
+  const banner = $('scenarioBanner');
+  const img = $('bannerImg');
+  const title = $('bannerTitle');
+  if (!banner || !img) return;
+
+  if (projectDirHandle) {
+    // Local mode: read via FileSystem Access API
+    readFileBlobUrl(projectDirHandle, `public/assets/images_web/taisho_roman/scenarios/${scenarioId}.webp`)
+      .then(url => {
+        if (url) { img.src = url; banner.classList.add('visible'); }
+        else { banner.classList.remove('visible'); }
+      });
+  } else {
+    // HTTP mode
+    const imgPath = `${basePath()}/public/assets/images_web/taisho_roman/scenarios/${scenarioId}.webp`;
+    img.src = imgPath;
+    img.onerror = () => { banner.classList.remove('visible'); };
+    img.onload = () => { banner.classList.add('visible'); };
+  }
+  title.innerHTML = `${scenarioId.replace(/_/g, ' ')}<span class="banner-ep">${(episodeId || '').toUpperCase()}</span>`;
+}
+
 function renderEpisode(episodeId) {
   stopAll();
   clearRegenQueue();
@@ -12,6 +47,7 @@ function renderEpisode(episodeId) {
   if (!ep) return;
 
   const scenarioId = scenarioData.scenarioId;
+  updateScenarioBanner(scenarioId, episodeId);
   currentClips = [];
 
   if (ep.openingClips) {
@@ -335,6 +371,7 @@ async function _play(idx) {
   if (card) { card.classList.add('playing'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
 
   $('playbackBar').classList.add('visible');
+  updateBottomPadding();
   $('pbNowPlaying').innerHTML = `<span class="role">${roleDisplayName(clip.roleId)}</span> &mdash; ${escapeHtml(clip.text.substring(0, 80))}...`;
 
   audioPlayer.src = src;
@@ -344,7 +381,7 @@ async function _play(idx) {
 audioPlayer.addEventListener('ended', () => {
   document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
   if (isPlayAll) { _play(playingIdx + 1); }
-  else { playingIdx = -1; $('playbackBar').classList.remove('visible'); }
+  else { playingIdx = -1; $('playbackBar').classList.remove('visible'); updateBottomPadding(); }
 });
 audioPlayer.addEventListener('error', () => {
   toast(`오디오 재생 실패: clip #${playingIdx + 1}`, 'error');
@@ -358,6 +395,7 @@ function stopAll() {
   playingIdx = -1;
   document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
   $('playbackBar').classList.remove('visible');
+  updateBottomPadding();
 }
 
 $('btnPlayAll').addEventListener('click', () => { stopAll(); isPlayAll = true; _play(0); });
