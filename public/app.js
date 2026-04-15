@@ -1662,7 +1662,10 @@ function renderLobbyHTML() {
         </div>
 
         <!-- 덱 정보 -->
-        <div class="lobby__deck-label">덱 ${variant.deck.length}장 · 플레이어 ${config.playerCount} + 센터 ${centerCount}</div>
+        <div class="lobby__deck-label">
+          <span>덱 ${variant.deck.length}장 · 플레이어 ${config.playerCount} + 센터 ${centerCount}</span>
+          <span class="lobby__deck-hint">길게 눌러 역할 교체</span>
+        </div>
 
         <!-- 역할 카드 그리드 -->
         <div class="role-icon-grid">
@@ -1672,7 +1675,12 @@ function renderLobbyHTML() {
             const tm = TEAM_META[role.team] || TEAM_META.village;
             const wakeIdx = wakeOrder.indexOf(roleId);
             return `
-              <button class="role-tile ${tm.css}" onclick="showRoleSheet('${roleId}')">
+              <button class="role-tile ${tm.css}" onclick="if(!_swapFired)showRoleSheet('${roleId}')"
+                data-role-swap="${roleId}"
+                onpointerdown="_swapPressStart(event,'${roleId}')"
+                onpointerup="_swapPressEnd(event)"
+                onpointerleave="_swapPressEnd(event)"
+                oncontextmenu="event.preventDefault()">
                 ${wakeIdx !== -1 ? `<span class="role-tile__order">${wakeIdx + 1}</span>` : ''}
                 ${count > 1 ? `<span class="role-tile__count">×${count}</span>` : ''}
                 <img class="role-tile__icon" data-role="${roleId}" src="${roleIconSrc(roleId)}" alt="" loading="lazy">
@@ -2091,6 +2099,139 @@ function _attachSheetSwipe(sheet) {
     else { panel.style.transform = ''; }
     currentY = 0;
   });
+}
+
+// ===== ROLE SWAP (길게 눌러 역할 교체) =====
+let _swapTimer = null;
+let _swapFired = false;
+
+function _swapPressStart(e, roleId) {
+  _swapFired = false;
+  _swapTimer = setTimeout(() => {
+    _swapFired = true;
+    e.target.closest('.role-tile')?.classList.add('role-tile--held');
+    // Haptic feedback if available
+    if (navigator.vibrate) navigator.vibrate(30);
+    openSwapSheet(roleId);
+  }, 500);
+}
+
+function _swapPressEnd(e) {
+  clearTimeout(_swapTimer);
+  _swapTimer = null;
+  if (_swapFired) {
+    e.preventDefault();
+    e.stopPropagation();
+    // Remove highlight
+    document.querySelectorAll('.role-tile--held').forEach(el => el.classList.remove('role-tile--held'));
+  }
+}
+
+function openSwapSheet(targetRoleId) {
+  closeSwapSheet();
+  const config = resolveCurrentConfig();
+  const variant = resolveVariant(config);
+  const currentDeck = variant.deck;
+  const roleCounts = countRoles(currentDeck);
+
+  // All roles from active expansions
+  const available = getActiveRoleIds();
+  const targetRole = ROLES[targetRoleId];
+  const targetTm = TEAM_META[targetRole.team] || TEAM_META.village;
+
+  const sheet = document.createElement('div');
+  sheet.className = 'swap-sheet';
+  sheet.setAttribute('onclick', 'if(event.target===this)closeSwapSheet()');
+
+  const gridHTML = available.map(roleId => {
+    const role = ROLES[roleId];
+    const tm = TEAM_META[role.team] || TEAM_META.village;
+    const inDeck = roleCounts[roleId] || 0;
+    const isCurrent = roleId === targetRoleId;
+    return `
+      <button class="swap-tile ${tm.css} ${isCurrent ? 'swap-tile--current' : ''}"
+        onclick="execSwapRole('${targetRoleId}','${roleId}')"
+        ${isCurrent ? 'disabled' : ''}>
+        <img class="swap-tile__icon" src="${roleIconSrc(roleId)}" alt="" loading="lazy">
+        <span class="swap-tile__name">${role.name}</span>
+        ${inDeck > 0 ? `<span class="swap-tile__in-deck">×${inDeck}</span>` : ''}
+      </button>`;
+  }).join('');
+
+  sheet.innerHTML = `
+    <div class="swap-sheet__panel">
+      <div class="swap-sheet__handle"></div>
+      <div class="swap-sheet__header">
+        <img class="swap-sheet__target-icon" src="${roleIconSrc(targetRoleId)}" alt="">
+        <div class="swap-sheet__target-info">
+          <span class="swap-sheet__target-name ${targetTm.css}">${targetRole.name}</span>
+          <span class="swap-sheet__target-hint">→ 교체할 역할을 선택하세요</span>
+        </div>
+      </div>
+      <div class="swap-sheet__scroll">
+        <div class="swap-sheet__grid">${gridHTML}</div>
+      </div>
+      <div class="swap-sheet__actions">
+        <button class="btn btn--ghost" onclick="closeSwapSheet()">취소</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(sheet);
+  requestAnimationFrame(() => sheet.classList.add('swap-sheet--open'));
+  _attachSwapSheetSwipe(sheet);
+}
+
+function closeSwapSheet() {
+  const sheet = document.querySelector('.swap-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('swap-sheet--open');
+  sheet.classList.add('swap-sheet--closing');
+  setTimeout(() => sheet.remove(), 250);
+}
+
+function _attachSwapSheetSwipe(sheet) {
+  const panel = sheet.querySelector('.swap-sheet__panel');
+  let startY = 0, currentY = 0, dragging = false;
+  panel.addEventListener('touchstart', e => {
+    const scroll = panel.querySelector('.swap-sheet__scroll');
+    if (scroll && scroll.scrollTop > 5) return;
+    startY = e.touches[0].clientY;
+    dragging = true;
+  }, { passive: true });
+  panel.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    currentY = e.touches[0].clientY - startY;
+    if (currentY > 0) panel.style.transform = `translateY(${currentY}px)`;
+  }, { passive: true });
+  panel.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    if (currentY > 100) closeSwapSheet();
+    else panel.style.transform = '';
+    currentY = 0;
+  });
+}
+
+function execSwapRole(oldRoleId, newRoleId) {
+  if (oldRoleId === newRoleId) return;
+  const config = resolveCurrentConfig();
+  const variant = resolveVariant(config);
+  const deck = [...variant.deck];
+
+  // Replace one instance of oldRoleId with newRoleId
+  const idx = deck.indexOf(oldRoleId);
+  if (idx !== -1) {
+    deck[idx] = newRoleId;
+  }
+
+  // Update room code and re-render
+  const code = encodeRoomCode(config.scenarioId, config.episodeId, config.playerCount, deck);
+  state.roomCode = code;
+  state.deck = deck;
+  try { history.replaceState(null, '', '?room=' + encodeURIComponent(code)); } catch {}
+  closeSwapSheet();
+  render();
+  showToast(`${ROLES[oldRoleId].name} → ${ROLES[newRoleId].name}`);
 }
 
 function openWikiRole(roleId) {
