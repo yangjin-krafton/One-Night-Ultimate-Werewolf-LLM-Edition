@@ -14,6 +14,13 @@ function scenarioBgSrc(scenarioId) { return imgPath('scenarios', scenarioId); }
 function episodeBgSrc(scenarioId, epId) { return imgPath('episodes', `${scenarioId}_${epId}`); }
 function uiImgSrc(uiId) { return imgPath('ui', uiId); }
 
+// Home background: random selection from bg_home_01~10 (fallback to bg_m_home)
+const HOME_BG_COUNT = 10;
+function randomHomeBgSrc() {
+  const idx = Math.floor(Math.random() * HOME_BG_COUNT) + 1;
+  return imgPath('ui', `bg_home_${String(idx).padStart(2, '0')}`);
+}
+
 // 역할 아이콘 <img> 태그. onerror시 이모지로 폴백.
 // 이미지 로드 실패 시 이모지 폴백 (글로벌 핸들러)
 document.addEventListener('error', function(e) {
@@ -1332,15 +1339,18 @@ function renderHomeHTML() {
   return `
     <div class="home">
       <div class="home__bg">
-        <img class="home__bg-img" src="${uiImgSrc('bg_m_home')}" alt="" loading="lazy">
+        <img class="home__bg-img" src="${randomHomeBgSrc()}" alt="" loading="lazy"
+             onerror="this.src='${uiImgSrc('bg_m_home')}'">
         <div class="home__bg-fade"></div>
+        <div class="home__bg-title">
+          <img class="home__logo" src="${uiImgSrc('logo_title')}" alt="한밤의 늑대인간" loading="lazy" onerror="this.style.display='none'">
+          <h1 class="home__title">한밤의<br>늑대인간</h1>
+          <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
+        </div>
       </div>
       <div class="home__content">
-        <img class="home__logo" src="${uiImgSrc('logo_title')}" alt="한밤의 늑대인간" loading="lazy" onerror="this.style.display='none'">
-        <h1 class="home__title">한밤의<br>늑대인간</h1>
-        <p class="home__subtitle">LLM Edition — 나레이션 플레이어</p>
         <button class="home__changelog-btn" onclick="goChangelog()">
-          <span class="home__changelog-ver">v${window.APP_VERSION || '1.6.0'}</span>
+          <span class="home__changelog-ver">v${window.APP_VERSION || '1.8.0'}</span>
           <span class="home__changelog-label">업데이트 로그 →</span>
         </button>
         <div class="home__actions">
