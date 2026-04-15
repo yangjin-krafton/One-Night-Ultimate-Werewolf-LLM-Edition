@@ -893,226 +893,7 @@ document.addEventListener('visibilitychange', () => {
 const audioEl = document.getElementById('audioPlayer');
 let audioCtx = null;
 
-// ===== RADIO (WALKIE-TALKIE) EFFECT for rust_orbit scenario =====
-// Design: 30% of role clips randomly get radio effect.
-// Within each affected clip, effect starts strong → fades to clean by clip end.
-const radioFx = {
-  active: false,          // true when rust_orbit scenario is playing
-  intensity: 0,           // current intensity (0=clean, 1=full radio) — driven per-clip
-  clipHasRadio: false,    // whether the CURRENT clip was selected for radio effect
-  mediaSource: null,      // MediaElementAudioSourceNode (created once per audioEl)
-  chain: null,            // { highpass, lowpass, midBoost, distortion, compressor, gain }
-  staticNoise: null,      // { source, gain }
-  _onTimeUpdate: null,    // bound timeupdate handler ref for cleanup
-};
-const RADIO_CLIP_CHANCE = 0.3; // 30% of role clips get radio effect
-
-function makeDistortionCurve(amount) {
-  const n = 44100, curve = new Float32Array(n);
-  if (amount <= 0) {
-    for (let i = 0; i < n; i++) curve[i] = i * 2 / n - 1;
-    return curve;
-  }
-  const k = amount;
-  for (let i = 0; i < n; i++) {
-    const x = i * 2 / n - 1;
-    curve[i] = (3 + k) * Math.atan(Math.sinh(x * 0.25) * 5) / (Math.PI + k * Math.abs(x));
-  }
-  return curve;
-}
-
-function ensureMediaSource() {
-  if (!radioFx.mediaSource) {
-    radioFx.mediaSource = audioCtx.createMediaElementSource(audioEl);
-  }
-  return radioFx.mediaSource;
-}
-
-function buildRadioChain() {
-  const highpass = audioCtx.createBiquadFilter();
-  highpass.type = 'highpass'; highpass.frequency.value = 20; highpass.Q.value = 0.5;
-  const lowpass = audioCtx.createBiquadFilter();
-  lowpass.type = 'lowpass'; lowpass.frequency.value = 20000; lowpass.Q.value = 0.5;
-  const midBoost = audioCtx.createBiquadFilter();
-  midBoost.type = 'peaking'; midBoost.frequency.value = 1500; midBoost.Q.value = 2; midBoost.gain.value = 0;
-  const distortion = audioCtx.createWaveShaper();
-  distortion.curve = makeDistortionCurve(0);
-  distortion.oversample = '4x';
-  const compressor = audioCtx.createDynamicsCompressor();
-  compressor.threshold.value = 0; compressor.ratio.value = 1; compressor.knee.value = 10;
-  const gain = audioCtx.createGain();
-  gain.gain.value = 1.0;
-
-  highpass.connect(lowpass);
-  lowpass.connect(midBoost);
-  midBoost.connect(distortion);
-  distortion.connect(compressor);
-  compressor.connect(gain);
-  gain.connect(audioCtx.destination);
-  return { highpass, lowpass, midBoost, distortion, compressor, gain };
-}
-
-function rfxLerp(clean, radio, t) { return clean + (radio - clean) * t; }
-
-function rfxRamp(param, target, rampTime) {
-  param.setValueAtTime(param.value, audioCtx.currentTime);
-  param.linearRampToValueAtTime(target, rampTime);
-}
-
-// Set all chain params to match intensity (0=clean passthrough, 1=full radio)
-function updateRadioIntensity(intensity) {
-  radioFx.intensity = Math.max(0, Math.min(1, intensity));
-  const t = radioFx.intensity;
-  const c = radioFx.chain;
-  if (!c) return;
-  const rt = audioCtx.currentTime + 0.05;
-  rfxRamp(c.highpass.frequency, rfxLerp(20, 300, t), rt);
-  rfxRamp(c.lowpass.frequency, rfxLerp(20000, 3500, t), rt);
-  rfxRamp(c.midBoost.gain, rfxLerp(0, 8, t), rt);
-  c.distortion.curve = makeDistortionCurve(Math.round(rfxLerp(0, 150, t)));
-  rfxRamp(c.compressor.ratio, rfxLerp(1, 12, t), rt);
-  rfxRamp(c.compressor.threshold, rfxLerp(0, -30, t), rt);
-  rfxRamp(c.gain.gain, rfxLerp(1.0, 0.6, t), rt);
-  if (radioFx.staticNoise) {
-    rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * t, rt);
-  }
-}
-
-// timeupdate handler: fade intensity from 1→0 within current clip
-function radioTimeUpdate() {
-  if (!radioFx.clipHasRadio || !audioEl.duration || audioEl.paused) return;
-  const progress = audioEl.currentTime / audioEl.duration; // 0→1
-  // Quadratic ease-out: strong at start, fades faster toward end
-  const t = Math.max(0, 1 - progress * progress);
-  updateRadioIntensity(t);
-}
-
-function attachRadioTimeUpdate() {
-  detachRadioTimeUpdate();
-  radioFx._onTimeUpdate = radioTimeUpdate;
-  audioEl.addEventListener('timeupdate', radioFx._onTimeUpdate);
-}
-
-function detachRadioTimeUpdate() {
-  if (radioFx._onTimeUpdate) {
-    audioEl.removeEventListener('timeupdate', radioFx._onTimeUpdate);
-    radioFx._onTimeUpdate = null;
-  }
-}
-
-function startStaticNoise(volume) {
-  const bufLen = 2 * audioCtx.sampleRate;
-  const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
-  const src = audioCtx.createBufferSource();
-  src.buffer = buf; src.loop = true;
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = 'bandpass'; filter.frequency.value = 3000; filter.Q.value = 0.5;
-  const gain = audioCtx.createGain();
-  gain.gain.value = volume;
-  src.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
-  src.start(0);
-  return { source: src, gain };
-}
-
-function stopStaticNoise() {
-  if (radioFx.staticNoise) {
-    try { radioFx.staticNoise.source.stop(); } catch (_) {}
-    try { radioFx.staticNoise.gain.disconnect(); } catch (_) {}
-    radioFx.staticNoise = null;
-  }
-}
-
-function enableRadioEffect() {
-  if (radioFx.active) return;
-  const src = ensureMediaSource();
-  src.disconnect();
-  radioFx.chain = buildRadioChain();
-  src.connect(radioFx.chain.highpass);
-  // Start chain in clean state — individual clips will activate it
-  updateRadioIntensity(0);
-  radioFx.staticNoise = startStaticNoise(0);
-  radioFx.clipHasRadio = false;
-  radioFx.active = true;
-}
-
-function disableRadioEffect() {
-  if (!radioFx.active) return;
-  detachRadioTimeUpdate();
-  stopStaticNoise();
-  if (radioFx.chain) {
-    Object.values(radioFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
-    radioFx.chain = null;
-  }
-  if (radioFx.mediaSource) {
-    try { radioFx.mediaSource.disconnect(); } catch (_) {}
-    radioFx.mediaSource.connect(audioCtx.destination);
-  }
-  radioFx.intensity = 0;
-  radioFx.clipHasRadio = false;
-  radioFx.active = false;
-}
-
-function ensureDirectRouting() {
-  if (radioFx.mediaSource && !radioFx.active) {
-    try { radioFx.mediaSource.disconnect(); } catch (_) {}
-    radioFx.mediaSource.connect(audioCtx.destination);
-  }
-}
-
-// Squelch burst + roger beep — only called for radio-selected clips
-function playSquelchIn() {
-  if (!radioFx.active || !audioCtx || !radioFx.clipHasRadio) return Promise.resolve();
-  return new Promise(resolve => {
-    const now = audioCtx.currentTime;
-    const bufLen = Math.floor(audioCtx.sampleRate * 0.12);
-    const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen);
-    const nSrc = audioCtx.createBufferSource(); nSrc.buffer = buf;
-    const nFilt = audioCtx.createBiquadFilter(); nFilt.type = 'bandpass'; nFilt.frequency.value = 2500; nFilt.Q.value = 1;
-    const nGain = audioCtx.createGain(); nGain.gain.value = 0.25;
-    nSrc.connect(nFilt); nFilt.connect(nGain); nGain.connect(audioCtx.destination);
-    nSrc.start(now);
-    const osc = audioCtx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 1800;
-    const bGain = audioCtx.createGain();
-    bGain.gain.setValueAtTime(0, now + 0.10);
-    bGain.gain.linearRampToValueAtTime(0.2, now + 0.105);
-    bGain.gain.setValueAtTime(0.2, now + 0.16);
-    bGain.gain.linearRampToValueAtTime(0, now + 0.17);
-    osc.connect(bGain); bGain.connect(audioCtx.destination);
-    osc.start(now + 0.10); osc.stop(now + 0.18);
-    setTimeout(resolve, 200);
-  });
-}
-
-// Squelch out — only for radio-selected clips, uses low intensity since clip faded
-function playSquelchOut() {
-  if (!radioFx.active || !audioCtx || !radioFx.clipHasRadio) return Promise.resolve();
-  return new Promise(resolve => {
-    const now = audioCtx.currentTime;
-    const vol = 0.3; // subtle — clip already faded to clean
-    const osc = audioCtx.createOscillator(); osc.type = 'sine'; osc.frequency.value = 1800;
-    const g = audioCtx.createGain();
-    g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(0.2 * vol, now + 0.005);
-    g.gain.setValueAtTime(0.2 * vol, now + 0.06);
-    g.gain.linearRampToValueAtTime(0, now + 0.07);
-    osc.connect(g); g.connect(audioCtx.destination);
-    osc.start(now); osc.stop(now + 0.08);
-    const bufLen = Math.floor(audioCtx.sampleRate * 0.08);
-    const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen) * 0.5;
-    const nSrc = audioCtx.createBufferSource(); nSrc.buffer = buf;
-    const nGain = audioCtx.createGain(); nGain.gain.value = 0.15 * vol;
-    nSrc.connect(nGain); nGain.connect(audioCtx.destination);
-    nSrc.start(now + 0.07);
-    setTimeout(resolve, 160);
-  });
-}
-
+// Scenario audio effects loaded from scenarioFx.js
 // Unlock audio on iOS/Android — must be called directly from user tap
 function unlockAudio() {
   // WebAudio unlock
@@ -1140,6 +921,8 @@ function stopPlayback() {
   cancelSpeechPlayback();
   audioEl.pause();
   disableRadioEffect();
+  disablePhoneEffect();
+  disableCavernEffect();
   stopBgm();
   releaseWakeLock();
   audioEl.removeAttribute('src');
@@ -1160,11 +943,14 @@ function togglePause() {
     if (isColdResume) {
       unlockAudio();
       requestWakeLock();
-      // Re-enable radio effect if needed (scenario info from session)
+      // Re-enable scenario effect if needed
       const cfg = resolveCurrentConfig();
+      disableRadioEffect(); disablePhoneEffect(); disableCavernEffect();
       if (cfg.scenarioId === 'rust_orbit') { ensureMediaSource(); enableRadioEffect(); }
-      else { disableRadioEffect(); ensureDirectRouting(); }
-      audioEl.onended = async () => { if (radioFx.clipHasRadio) await playSquelchOut(); playNext(); };
+      else if (cfg.scenarioId === 'school_broadcast_prayer') { ensureMediaSource(); enablePhoneEffect(); }
+      else if (cfg.scenarioId === 'dark_citadel') { ensureMediaSource(); enableCavernEffect(); }
+      else { ensureDirectRouting(); }
+      audioEl.onended = async () => { if (radioFx.clipHasRadio) await playSquelchOut(); if (phoneFx.clipHasPhone) await playPhoneHangUp(); if (cavernFx.clipHasCavern) await playCavernOutro(); playNext(); };
       audioEl.onerror = () => { console.warn('Audio error, fallback to speech:', state.playlist[state.playlistIndex]?.url); fallbackToSpeech(state.playlist[state.playlistIndex]); };
       playClip(curClip);
     } else if (state._pausedDelay) {
@@ -1208,6 +994,8 @@ function playNext() {
   if (state.playlistIndex >= state.playlist.length) {
     state.playing = false;
     disableRadioEffect();
+    disablePhoneEffect();
+    disableCavernEffect();
     fadeOutBgm(3000);
     releaseWakeLock();
     clearGameSession();
@@ -1240,19 +1028,44 @@ async function playClip(clip) {
   cancelSpeechPlayback();
   audioEl.pause();
   detachRadioTimeUpdate();
+  detachPhoneTimeUpdate();
+  detachCavernTimeUpdate();
 
-  // Decide if this clip gets radio effect
+  // Decide if this clip gets scenario-specific audio effect
   const isNarration = clip.phase === 'opening' || clip.phase === 'outro';
+  const isPreRecorded = !isNarration && !isSpeechClip(clip);
+
+  // Radio effect (rust_orbit)
   if (radioFx.active) {
-    if (!isNarration && !isSpeechClip(clip) && Math.random() < RADIO_CLIP_CHANCE) {
-      // 30% chance — this role clip gets radio treatment
+    if (isPreRecorded && Math.random() < RADIO_CLIP_CHANCE) {
       radioFx.clipHasRadio = true;
-      updateRadioIntensity(1); // start strong
-      attachRadioTimeUpdate(); // fade during playback
+      updateRadioIntensity(1);
+      attachRadioTimeUpdate();
     } else {
-      // No radio for this clip — clean passthrough
       radioFx.clipHasRadio = false;
       updateRadioIntensity(0);
+    }
+  }
+  // Phone effect (school_broadcast_prayer)
+  if (phoneFx.active) {
+    if (isPreRecorded && Math.random() < PHONE_CLIP_CHANCE) {
+      phoneFx.clipHasPhone = true;
+      updatePhoneIntensity(1);
+      attachPhoneTimeUpdate();
+    } else {
+      phoneFx.clipHasPhone = false;
+      updatePhoneIntensity(0);
+    }
+  }
+  // Cavern effect (dark_citadel)
+  if (cavernFx.active) {
+    if (isPreRecorded && Math.random() < CAVERN_CLIP_CHANCE) {
+      cavernFx.clipHasCavern = true;
+      updateCavernIntensity(1);
+      attachCavernTimeUpdate();
+    } else {
+      cavernFx.clipHasCavern = false;
+      updateCavernIntensity(0);
     }
   }
 
@@ -1262,9 +1075,12 @@ async function playClip(clip) {
       playNext();
       return;
     }
-    // TTS bypasses Web Audio — ensure static noise is silent
+    // TTS bypasses Web Audio — mute any active noise
     if (radioFx.active && radioFx.staticNoise) {
       rfxRamp(radioFx.staticNoise.gain.gain, 0, audioCtx.currentTime + 0.03);
+    }
+    if (cavernFx.active && cavernFx.dripNoise) {
+      rfxRamp(cavernFx.dripNoise.gain.gain, 0, audioCtx.currentTime + 0.03);
     }
     const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
     utter.lang = 'ko-KR';
@@ -1285,7 +1101,10 @@ async function playClip(clip) {
     return;
   }
 
+  // Pre-recorded audio: play intro effects then start playback
   if (radioFx.clipHasRadio) await playSquelchIn();
+  if (phoneFx.clipHasPhone) await playPhoneCallIn();
+  if (cavernFx.clipHasCavern) await playCavernIntro();
   audioEl.src = clip.url;
   audioEl.load();
   audioEl.play().catch((err) => {
@@ -1300,11 +1119,12 @@ function fallbackToSpeech(clip) {
     audioEl.pause();
     audioEl.removeAttribute('src');
     detachRadioTimeUpdate();
-    // Falling back to TTS — mute radio chain since TTS bypasses Web Audio
-    if (radioFx.active) {
-      radioFx.clipHasRadio = false;
-      updateRadioIntensity(0);
-    }
+    detachPhoneTimeUpdate();
+    detachCavernTimeUpdate();
+    // Falling back to TTS — mute effect chains since TTS bypasses Web Audio
+    if (radioFx.active) { radioFx.clipHasRadio = false; updateRadioIntensity(0); }
+    if (phoneFx.active) { phoneFx.clipHasPhone = false; updatePhoneIntensity(0); }
+    if (cavernFx.active) { cavernFx.clipHasCavern = false; updateCavernIntensity(0); }
     const utter = new SpeechSynthesisUtterance(stripEmotionTags(clip.text));
     utter.lang = 'ko-KR';
     utter.rate = 1;
@@ -1414,12 +1234,20 @@ async function startPlayback() {
   startBgm();
   requestWakeLock();
 
-  // Setup radio effect for rust_orbit scenario
+  // Setup scenario-specific audio effects
+  disableRadioEffect();
+  disablePhoneEffect();
+  disableCavernEffect();
   if (scenarioId === 'rust_orbit') {
     ensureMediaSource();
     enableRadioEffect();
+  } else if (scenarioId === 'school_broadcast_prayer') {
+    ensureMediaSource();
+    enablePhoneEffect();
+  } else if (scenarioId === 'dark_citadel') {
+    ensureMediaSource();
+    enableCavernEffect();
   } else {
-    disableRadioEffect();
     ensureDirectRouting();
   }
 
@@ -1428,6 +1256,8 @@ async function startPlayback() {
   // Event-driven chain: ended → playNext (no async gaps that break mobile)
   audioEl.onended = async () => {
     if (radioFx.clipHasRadio) await playSquelchOut();
+    if (phoneFx.clipHasPhone) await playPhoneHangUp();
+    if (cavernFx.clipHasCavern) await playCavernOutro();
     playNext();
   };
   audioEl.onerror = () => {
