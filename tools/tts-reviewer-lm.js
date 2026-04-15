@@ -68,28 +68,8 @@ function buildLoadedKnowledgePrompt() {
   return result;
 }
 
-// ── Structured output (json_schema, non-strict for thinking model compat) ──
-const LM_RESPONSE_FORMAT = {
-  type: 'json_schema',
-  json_schema: {
-    name: 'tts_skill',
-    strict: false,
-    schema: {
-      type: 'object',
-      properties: {
-        skill:       { type: 'string' },
-        scope:       { type: 'string' },
-        explanation: { type: 'string' },
-        requestDocs: { type: 'array', items: { type: 'string' } },
-        edits:       { type: 'array', items: { type: 'object' } },
-        operations:  { type: 'array', items: { type: 'object' } },
-        renames:     { type: 'array', items: { type: 'object' } }
-      },
-      required: ['skill', 'explanation'],
-      additionalProperties: true
-    }
-  }
-};
+// No response_format — json_schema conflicts with Gemma 4 <think> tokens.
+// JSON output is enforced via system prompt only.
 
 // ── Panel open/close ──
 function toggleLmPanel() {
@@ -281,23 +261,31 @@ function parseStructuredResponse(content) {
 function postProcessAssistantMsg(msgIdx) {
   const msg = lmChatHistory[msgIdx];
   if (!msg || msg.role !== 'assistant') return;
-  const { thinking, content } = stripThinking(msg.raw);
 
-  // Handle empty content after thinking (max_tokens exhausted by thinking)
+  // Always keep raw for debugging
+  msg._rawLength = (msg.raw || '').length;
+
+  const { thinking, content } = stripThinking(msg.raw || '');
+  msg.thinking = thinking;
+  msg._contentAfterThink = content; // for debug
+
+  // Handle empty content
   if (!content || content.trim() === '') {
-    msg.thinking = thinking;
     msg.skill = 'chat';
     msg.scope = 'current';
-    msg.explanation = thinking
-      ? '[thinking만 출력되고 JSON 응답 없음 — Max tokens를 늘려주세요 (현재 ' + ($('lmMaxTokens').value || '?') + ')]'
-      : '[빈 응답]';
+    if (thinking) {
+      msg.explanation = `[thinking ${thinking.length}자 출력 후 JSON 응답 없음 — Max tokens(${$('lmMaxTokens').value})를 늘리거나 질문을 간결하게]`;
+    } else if (msg._rawLength === 0) {
+      msg.explanation = '[서버 응답 없음 — LM Studio 로그를 확인하세요]';
+    } else {
+      msg.explanation = '[응답 파싱 실패]\n원문: ' + (msg.raw || '').substring(0, 500);
+    }
     msg.requestDocs = []; msg.edits = []; msg.operations = []; msg.renames = [];
     msg.parsed = true; msg.applied = false;
     return;
   }
 
   const parsed = parseStructuredResponse(content);
-  msg.thinking = thinking;
   msg.skill = parsed.skill || 'chat';
   msg.scope = parsed.scope || 'current';
   msg.explanation = parsed.explanation || '';
@@ -308,6 +296,11 @@ function postProcessAssistantMsg(msgIdx) {
   msg.preset = parsed.preset || '';
   msg.parsed = true;
   msg.applied = false;
+
+  // If explanation is empty but we have content, show it
+  if (!msg.explanation && msg.skill === 'chat' && content) {
+    msg.explanation = content;
+  }
 
   // Resolve preset → operations
   if (msg.skill === 'find_replace' && msg.preset && FR_PRESETS[msg.preset]) {
@@ -574,11 +567,21 @@ function renderLmMessages() {
     // ── Streaming (unparsed) ──
     if (!msg.parsed) {
       const { thinking, content, thinkingInProgress } = stripThinking(msg.raw);
+      const elapsed = msg._startTime ? ((Date.now() - msg._startTime) / 1000).toFixed(1) : '0';
+      const tokenEst = msg.raw ? Math.ceil(msg.raw.length / 3) : 0;
       let h = '<div class="lm-msg assistant">';
-      if (thinking) h += `<div class="lm-think"><details><summary>thinking${thinkingInProgress ? '...' : ''}</summary><pre>${escapeHtml(thinking)}</pre></details></div>`;
-      h += thinkingInProgress && !content ? '<span class="lm-streaming-status">thinking...</span>'
-         : content ? `<span class="lm-streaming-status">${escapeHtml(content)}</span>`
-         : '<span class="lm-streaming-status">generating...</span>';
+      if (thinking) {
+        h += `<div class="lm-think"><details ${thinkingInProgress ? 'open' : ''}><summary>thinking${thinkingInProgress ? '...' : ''} (${thinking.length}자)</summary><pre>${escapeHtml(thinking)}</pre></details></div>`;
+      }
+      if (thinkingInProgress && !content) {
+        h += `<span class="lm-streaming-status">thinking... ${elapsed}s ~${tokenEst}tok</span>`;
+      } else if (content) {
+        h += `<span class="lm-streaming-status">${escapeHtml(content.substring(0, 500))}${content.length > 500 ? '...' : ''}</span>`;
+      } else if (!msg.raw) {
+        h += `<span class="lm-streaming-status">대기 중... ${elapsed}s</span>`;
+      } else {
+        h += `<span class="lm-streaming-status">생성 중... ${elapsed}s ~${tokenEst}tok</span>`;
+      }
       return h + '</div>';
     }
 
@@ -653,7 +656,12 @@ function renderLmMessages() {
       h += `<div style="margin-top:6px;font-size:11px;color:var(--green)">&#128218; 첨부됨: ${msg._docsLoaded.join(', ')}</div>`;
     }
 
-    if (msg.skill === 'chat' && !msg.explanation) h += '<span style="color:var(--text-dim)">(빈 응답)</span>';
+    if (msg.skill === 'chat' && !msg.explanation) {
+      h += '<span style="color:var(--text-dim)">(빈 응답)</span>';
+      if (msg._rawLength > 0) {
+        h += `<div class="lm-think"><details><summary>raw (${msg._rawLength}자, finish:${msg._finishReason || '?'})</summary><pre>${escapeHtml((msg.raw || '').substring(0, 2000))}</pre></details></div>`;
+      }
+    }
     return h + '</div>';
   }).join('');
 
@@ -689,9 +697,15 @@ async function _lmExecuteRequest() {
   $('lmSendBtn').disabled = true;
   $('lmInput').disabled = true;
 
-  lmChatHistory.push({ role: 'assistant', raw: '', parsed: false });
+  lmChatHistory.push({ role: 'assistant', raw: '', parsed: false, _startTime: Date.now() });
   const aIdx = lmChatHistory.length - 1;
   renderLmMessages();
+
+  // Timer to update elapsed time display during long waits
+  const elapsedTimer = setInterval(() => {
+    if (lmChatHistory[aIdx]?.parsed) { clearInterval(elapsedTimer); return; }
+    renderLmMessages();
+  }, 1000);
 
   const url = $('lmServerUrl').value.trim().replace(/\/+$/, '');
   try {
@@ -704,7 +718,6 @@ async function _lmExecuteRequest() {
         stream: true,
         temperature: 0.7,
         max_tokens: maxTokens,
-        response_format: LM_RESPONSE_FORMAT,
       }),
     });
     if (!resp.ok) { const t = await resp.text().catch(() => resp.statusText); throw new Error(`HTTP ${resp.status}: ${t}`); }
@@ -721,11 +734,18 @@ async function _lmExecuteRequest() {
         const tr = line.trim();
         if (!tr || tr === 'data: [DONE]' || !tr.startsWith('data: ')) continue;
         try {
-          const delta = JSON.parse(tr.slice(6)).choices?.[0]?.delta?.content;
+          const chunk = JSON.parse(tr.slice(6));
+          const choice = chunk.choices?.[0];
+          // content: main text; reasoning_content: some servers put thinking here
+          const delta = choice?.delta?.content || choice?.delta?.reasoning_content || '';
           if (delta) {
             lmChatHistory[aIdx].raw += delta;
             const now = Date.now();
             if (now - lastRender > 100) { renderLmMessages(); lastRender = now; }
+          }
+          // Also capture finish_reason for debugging
+          if (choice?.finish_reason) {
+            lmChatHistory[aIdx]._finishReason = choice.finish_reason;
           }
         } catch {}
       }
@@ -761,6 +781,7 @@ async function _lmExecuteRequest() {
     renderLmMessages();
     toast(`LM Studio: ${e.message}`, 'error');
   } finally {
+    clearInterval(elapsedTimer);
     lmStreaming = false;
     $('lmSendBtn').disabled = false;
     $('lmInput').disabled = false;
