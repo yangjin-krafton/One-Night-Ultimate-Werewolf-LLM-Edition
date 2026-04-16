@@ -14,11 +14,94 @@ function scenarioBgSrc(scenarioId) { return imgPath('scenarios', scenarioId); }
 function episodeBgSrc(scenarioId, epId) { return imgPath('episodes', `${scenarioId}_${epId}`); }
 function uiImgSrc(uiId) { return imgPath('ui', uiId); }
 
-// Home background: random selection from bg_home_01~10 (fallback to bg_m_home)
+// Home background: random selection from bg_home_01~40 (fallback to bg_m_home)
 const HOME_BG_COUNT = 40;
 function randomHomeBgSrc() {
   const idx = Math.floor(Math.random() * HOME_BG_COUNT) + 1;
   return imgPath('ui', `bg_home_${String(idx).padStart(2, '0')}`);
+}
+
+// ===== IMAGE PRELOADER =====
+const _preloaded = new Set();
+const _preloadQueue = [];
+let _preloading = false;
+
+function preloadImage(src) {
+  if (_preloaded.has(src)) return Promise.resolve();
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = img.onerror = () => { _preloaded.add(src); resolve(); };
+    img.src = src;
+  });
+}
+
+function preloadImagesNow(srcs) {
+  // Priority: load these immediately (parallel)
+  return Promise.all(srcs.filter(s => !_preloaded.has(s)).map(preloadImage));
+}
+
+function preloadImagesIdle(srcs) {
+  // Background: queue for idle loading (sequential, non-blocking)
+  for (const src of srcs) {
+    if (!_preloaded.has(src) && !_preloadQueue.includes(src)) _preloadQueue.push(src);
+  }
+  _runIdlePreload();
+}
+
+function _runIdlePreload() {
+  if (_preloading || _preloadQueue.length === 0) return;
+  _preloading = true;
+  function next() {
+    if (_preloadQueue.length === 0) { _preloading = false; return; }
+    const src = _preloadQueue.shift();
+    if (_preloaded.has(src)) { next(); return; }
+    const ric = window.requestIdleCallback || (cb => setTimeout(cb, 50));
+    ric(() => preloadImage(src).then(next));
+  }
+  next();
+}
+
+// Page-specific images to preload
+function getPageImages(screen) {
+  const imgs = [];
+  switch (screen) {
+    case 'home':
+      // Current random bg already loading; preload a few more home bgs
+      for (let i = 1; i <= Math.min(HOME_BG_COUNT, 40); i++)
+        imgs.push(imgPath('ui', `bg_home_${String(i).padStart(2, '0')}`));
+      imgs.push(uiImgSrc('logo_title'), uiImgSrc('btn_play'));
+      break;
+    case 'setup':
+      imgs.push(uiImgSrc('bg_m_setup'));
+      // Preload all scenario thumbnails
+      for (const s of (window.SCENARIOS_DATA || []))
+        imgs.push(scenarioBgSrc(s.scenarioId || s.id));
+      break;
+    case 'join':
+      imgs.push(uiImgSrc('bg_m_join'));
+      break;
+    case 'lobby':
+      imgs.push(uiImgSrc('bg_m_lobby'));
+      break;
+  }
+  return imgs;
+}
+
+// Hook into render() — called after each page transition
+function onPageRendered(screen) {
+  // 1) Priority: load current page images NOW
+  const pageImgs = getPageImages(screen);
+  if (pageImgs.length > 0) preloadImagesNow(pageImgs);
+
+  // 2) Idle: preload other pages' common images
+  const idleImgs = [];
+  for (const s of ['home', 'setup', 'join', 'lobby']) {
+    if (s !== screen) idleImgs.push(...getPageImages(s));
+  }
+  // Also preload all UI bg images
+  for (const bg of ['bg_m_home', 'bg_m_setup', 'bg_m_join', 'bg_m_lobby', 'bg_m_night', 'bg_m_day', 'bg_m_vote'])
+    idleImgs.push(uiImgSrc(bg));
+  preloadImagesIdle(idleImgs);
 }
 
 // 역할 아이콘 <img> 태그. onerror시 이모지로 폴백.
@@ -1332,6 +1415,7 @@ function render() {
   }
 
   app.innerHTML = content + renderTabBarHTML();
+  onPageRendered(state.screen);
 }
 
 // -- Home
@@ -2392,8 +2476,8 @@ function renderWikiPageHTML() {
       </div>
     </div>`;
 
-  // 삽화 주입
-  html = injectRulesIllustrations(html, pageId);
+  // 삽화 주입: 역할 페이지면 역할 삽화, 규칙 페이지면 규칙 삽화
+  html = ROLES[pageId] ? injectRoleIllustrations(html, pageId) : injectRulesIllustrations(html, pageId);
 
   return `
     <div class="wiki wiki--page">
