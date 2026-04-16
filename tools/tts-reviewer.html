@@ -709,8 +709,14 @@
   </div>
   <div class="server-config">
     <span class="status-dot" id="serverStatus" title="TTS 서버 상태"></span>
-    <input id="ttsApiBase" type="text" placeholder="TTS API Base URL"
+    <select id="ttsBackend" style="width:120px">
+      <option value="fish">Fish Speech</option>
+      <option value="qwen3">Qwen3-TTS</option>
+    </select>
+    <input id="ttsApiBase" type="text" placeholder="Fish Speech API Base URL"
            value="http://100.66.68.140:8080">
+    <input id="ttsQwen3ApiBase" type="text" placeholder="Qwen3-TTS API Base URL"
+           value="http://100.66.10.225:3000/tools/qwen3-tts" style="display:none">
     <button class="btn btn-sm" id="btnPing">연결 확인</button>
   </div>
 </header>
@@ -753,7 +759,7 @@
   </div>
   <div class="batch-panel-body">
     <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px">
-      시나리오를 선택하고 전체 TTS를 생성합니다. Fish Speech → M4A 변환 → 파일 저장 → Manifest 업데이트.
+      시나리오를 선택하고 전체 TTS를 생성합니다. Fish Speech / Qwen3-TTS → 파일 저장 → Manifest 업데이트.
     </p>
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button class="btn btn-sm" onclick="batchSelectAll(true)">전체 선택</button>

@@ -109,6 +109,16 @@ function restoreFromCache() {
   const savedApi = lsGet('apiBase', '');
   if (savedApi) $('ttsApiBase').value = savedApi;
 
+  const savedQwen3Api = lsGet('qwen3ApiBase', '');
+  if (savedQwen3Api) $('ttsQwen3ApiBase').value = savedQwen3Api;
+
+  const savedBackend = lsGet('ttsBackend', 'fish');
+  if (savedBackend && $('ttsBackend')) {
+    $('ttsBackend').value = savedBackend;
+    $('ttsApiBase').style.display = savedBackend === 'fish' ? '' : 'none';
+    $('ttsQwen3ApiBase').style.display = savedBackend === 'qwen3' ? '' : 'none';
+  }
+
   const cachedVoices = lsGetJson('serverVoices', []);
   if (cachedVoices.length > 0) serverVoices = cachedVoices;
 }

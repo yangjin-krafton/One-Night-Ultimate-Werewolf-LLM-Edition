@@ -2,10 +2,20 @@
 // tts-reviewer-tts.js — TTS generation, M4A save, regen queue
 // ============================================================================
 
-// ── TTS Regeneration (Fish Speech API) ──
+// ── TTS Backend Selection ──
+function getBackend() {
+  return ($('ttsBackend') || {}).value || 'fish';
+}
+
 function getApiBase() {
   const val = $('ttsApiBase').value.trim().replace(/\/+$/, '');
   lsSet('apiBase', val);
+  return val;
+}
+
+function getQwen3ApiBase() {
+  const val = $('ttsQwen3ApiBase').value.trim().replace(/\/+$/, '');
+  lsSet('qwen3ApiBase', val);
   return val;
 }
 
@@ -14,10 +24,9 @@ function findVoiceEntry(tag) {
   return voicesJsonData.find(v => v.tag === tag) || null;
 }
 
-async function generateTts(text, speakerId, overrideTag) {
+// ── Fish Speech TTS ──
+async function generateTtsFish(text, tag) {
   const base = getApiBase();
-  const tag = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : null);
-
   const body = {
     text,
     format: 'm4a',
@@ -37,11 +46,98 @@ async function generateTts(text, speakerId, overrideTag) {
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => resp.statusText);
-    throw new Error(`TTS 실패 (${resp.status}): ${errText}`);
+    throw new Error(`Fish TTS 실패 (${resp.status}): ${errText}`);
   }
 
   const blob = await resp.blob();
   return { blob, blobUrl: URL.createObjectURL(blob) };
+}
+
+// ── Qwen3-TTS (Gradio API) ──
+async function generateTtsQwen3(text, tag) {
+  const base = getQwen3ApiBase();
+
+  // Resolve voice info from voice library
+  const entry = findVoiceEntry(tag);
+  const refName = entry ? entry.audio_filename : '';
+  const refText = entry ? (entry.prompt_text || '') : '';
+  const useXvec = entry ? (entry.xvec_only !== false) : true;
+  const genKwargs = entry && entry.gen ? entry.gen : {};
+
+  const maxTokens = genKwargs.max_new_tokens || 2048;
+  const doSample = genKwargs.do_sample !== false;
+  const temperature = genKwargs.temperature || 0.9;
+  const topP = genKwargs.top_p || 1.0;
+  const topK = genKwargs.top_k || 50;
+
+  // Step 1: Call generate_clone_from_file
+  const callUrl = `${base}/gradio_api/call/generate_clone_from_file`;
+  const callResp = await fetch(callUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      data: [refName, refText, useXvec, text, 'korean', maxTokens, doSample, temperature, topP, topK]
+    }),
+  });
+
+  if (!callResp.ok) {
+    const errText = await callResp.text().catch(() => callResp.statusText);
+    throw new Error(`Qwen3-TTS 호출 실패 (${callResp.status}): ${errText}`);
+  }
+
+  const { event_id } = await callResp.json();
+  if (!event_id) throw new Error('Qwen3-TTS: event_id 없음');
+
+  // Step 2: Read SSE stream
+  const sseUrl = `${callUrl}/${event_id}`;
+  const sseResp = await fetch(sseUrl);
+  const sseText = await sseResp.text();
+
+  let audioPath = null;
+  for (const line of sseText.split('\n')) {
+    if (line.startsWith('event:') && line.includes('error')) {
+      const nextData = sseText.split('\n').find((l, i, arr) => i > arr.indexOf(line) && l.startsWith('data:'));
+      throw new Error(`Qwen3-TTS 오류: ${nextData ? nextData.slice(5) : 'unknown'}`);
+    }
+    if (line.startsWith('data:') && audioPath === null) {
+      try {
+        const parsed = JSON.parse(line.slice(5));
+        if (Array.isArray(parsed) && parsed.length >= 2) {
+          const statusText = parsed[1] || '';
+          if (typeof statusText === 'string' && statusText.toLowerCase().includes('error')) {
+            throw new Error(`Qwen3-TTS 생성 오류: ${statusText}`);
+          }
+          const audioObj = parsed[0];
+          if (audioObj && typeof audioObj === 'object') {
+            audioPath = audioObj.path || audioObj.url;
+          }
+        }
+      } catch (e) {
+        if (e.message.includes('Qwen3-TTS')) throw e;
+      }
+    }
+  }
+
+  if (!audioPath) throw new Error('Qwen3-TTS: 오디오 경로 없음');
+
+  // Step 3: Download audio file
+  const fileUrl = `${base}/gradio_api/file=${audioPath}`;
+  const audioResp = await fetch(fileUrl);
+  if (!audioResp.ok) throw new Error(`Qwen3-TTS 오디오 다운로드 실패 (${audioResp.status})`);
+
+  const blob = await audioResp.blob();
+  return { blob, blobUrl: URL.createObjectURL(blob) };
+}
+
+// ── Unified TTS dispatch ──
+async function generateTts(text, speakerId, overrideTag) {
+  const backend = getBackend();
+  const tag = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : null);
+
+  if (backend === 'qwen3') {
+    return generateTtsQwen3(text, tag);
+  }
+  return generateTtsFish(text, tag);
 }
 
 function getTagOverride(idx) {

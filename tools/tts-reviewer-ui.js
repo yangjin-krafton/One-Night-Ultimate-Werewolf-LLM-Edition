@@ -406,12 +406,23 @@ $('pbNext').addEventListener('click', () => { if (playingIdx < currentClips.leng
 // ── Server Ping ──
 async function pingServer() {
   const dot = $('serverStatus');
+  const backend = getBackend();
+
   try {
-    const resp = await fetch(getApiBase() + '/v1/health', { method: 'GET' });
-    if (resp.ok) {
-      dot.className = 'status-dot ok'; dot.title = '연결됨 (Fish Speech)';
+    if (backend === 'qwen3') {
+      const resp = await fetch(getQwen3ApiBase() + '/config', { method: 'GET' });
+      if (resp.ok) {
+        dot.className = 'status-dot ok'; dot.title = '연결됨 (Qwen3-TTS)';
+      } else {
+        dot.className = 'status-dot err'; dot.title = `서버 응답: ${resp.status}`;
+      }
     } else {
-      dot.className = 'status-dot err'; dot.title = `서버 응답: ${resp.status}`;
+      const resp = await fetch(getApiBase() + '/v1/health', { method: 'GET' });
+      if (resp.ok) {
+        dot.className = 'status-dot ok'; dot.title = '연결됨 (Fish Speech)';
+      } else {
+        dot.className = 'status-dot err'; dot.title = `서버 응답: ${resp.status}`;
+      }
     }
   } catch {
     dot.className = 'status-dot err'; dot.title = '연결 실패';
@@ -423,6 +434,16 @@ $('btnPing').addEventListener('click', async () => {
   await pingServer();
   toast($('serverStatus').classList.contains('ok') ? 'TTS 서버 연결됨' : 'TTS 서버 연결 실패',
         $('serverStatus').classList.contains('ok') ? 'success' : 'error');
+});
+
+// ── Backend Switch ──
+$('ttsBackend').addEventListener('change', () => {
+  const backend = getBackend();
+  $('ttsApiBase').style.display = backend === 'fish' ? '' : 'none';
+  $('ttsQwen3ApiBase').style.display = backend === 'qwen3' ? '' : 'none';
+  $('serverStatus').className = 'status-dot';
+  $('serverStatus').title = 'TTS 서버 상태';
+  lsSet('ttsBackend', backend);
 });
 
 // ── Keyboard shortcuts ──
