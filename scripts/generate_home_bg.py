@@ -14,6 +14,12 @@ TEMP_DIR = ROOT / "scripts" / "_tmp_home_bg"
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--start", type=int, default=1, help="시작 번호 (1-based)")
+    parser.add_argument("--end", type=int, default=0, help="끝 번호 (0=전체)")
+    args = parser.parse_args()
+
     data = json.loads(PROMPTS_PATH.read_text("utf-8"))
     prefix = data["style_prefix"]
     suffix = data["style_suffix"]
@@ -22,20 +28,23 @@ def main():
     img_h = res.get("height", 1024)
     items = data["items"]
 
-    print(f"=== 홈 배경 이미지 {len(items)}장 생성 시작 ===")
+    start_idx = args.start - 1
+    end_idx = args.end if args.end > 0 else len(items)
+    items = items[start_idx:end_idx]
+
+    print(f"=== 홈 배경 이미지 #{args.start}~#{end_idx} ({len(items)}장) 생성 시작 ===")
     print(f"출력 디렉토리: {OUTPUT_DIR}")
     print()
 
-    for i, item in enumerate(items, 1):
+    for i, item in enumerate(items):
         item_id = item["id"]
         title = item["title"]
         prompt = prefix + item["prompt"] + suffix
 
-        # bg_home_01 ~ bg_home_10
-        file_id = f"bg_home_{i:02d}"
-        final_path = OUTPUT_DIR / f"{file_id}.webp"
+        # Use id from JSON (bg_home_01, bg_home_11, etc.)
+        file_id = item_id
 
-        print(f"[{i}/{len(items)}] {title} ({file_id})")
+        print(f"[{i+1}/{len(items)}] {title} ({file_id})")
         print(f"  prompt: {prompt[:80]}...")
 
         try:

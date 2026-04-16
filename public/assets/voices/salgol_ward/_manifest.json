@@ -1,0 +1,419 @@
+{
+  "generatedFrom": "salgol_ward.tts.json",
+  "clips": [
+    {
+      "clipId": "salgol_ward/ep1/pall/opening/001",
+      "speakerId": "Narrator",
+      "url": "/assets/voices/salgol_ward/ep1/pall/opening/001/voice.m4a",
+      "text": "[delight] 좋아요, [excited] 오늘도 쉬는 날은 멀어진 분위기네요. [calm] 커피 한 모금 하고 카드부터 확인한 뒤 바로 덮어 주세요. [surprised] 차트 열면 답 나올 것 같아도, [emphasis] 지금은 다 같이 눈 감고 시작할게요. [delight] 낮에는 누가 제일 먼저 남부터 몰아가는지 먼저 보면 돼요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/doppelganger/during/001",
+      "speakerId": "doppelganger",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/doppelganger/during/001/voice.m4a",
+      "text": "[surprised] 방금 그 말투, [calm] 차트 열어보면 답 나옵니다 하던 톤이랑 너무 비슷했어요. [excited] 도플갱어, [emphasis] 조용히 눈 떠 주세요. [surprised] 다른 플레이어 한 명의 카드를 보고 그 역할을 복제해 주세요. [calm] 복제한 역할이 밤에 행동하는 역할이면 그 규칙대로 이어서 움직여 주세요. [excited] 낮에는 누구 말투를 따라 했는지 금방 티 나니까 표정 관리 잘해 주세요. [emphasis] 괜히 티 나는 말은 너무 빨리 꺼내지 마세요. [surprised] 표정 정리하시고 다시 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/werewolf/during/001",
+      "speakerId": "werewolf",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/werewolf/during/001/voice.m4a",
+      "text": "[excited] 병동에서는 번아웃 오기 전에 선 긋는 사람보다 조용히 물어뜯는 사람이 더 무섭죠. [calm] 늑대인간, [surprised] 눈 떠 주세요. [emphasis] 다른 늑대인간이 있으면 서로 확인해 주시고, [excited] 혼자면 중앙 카드 한 장 보면 돼요. [calm] 낮에는 오늘 실화냐 소리 나오는 케이스네요 하면서 제일 먼저 희생양 세우는 쪽을 따라가면 편합니다. [surprised] 아무렇지 않은 얼굴로 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/alpha_wolf/during/001",
+      "speakerId": "alpha_wolf",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/alpha_wolf/during/001/voice.m4a",
+      "text": "[excited] 오더 하나로 병동 공기 바뀌는 거, [emphasis] 다들 아시죠. [calm] 태초의 늑대인간, [surprised] 바로 눈 떠 주세요. [excited] 태초의 늑대인간 전용 뒷면 늑대인간 카드 한 장을 늑대가 아닌 다른 플레이어 한 명 카드와 반드시 바꿔 주세요. [emphasis] 누구를 밀어 넣었는지 꼭 기억해 두세요. [calm] 그 카드는 이번 행동에서만 써요. [surprised] 낮에는 왜 그 사람을 골랐는지 바로 질문받을 거예요. [excited] 태연하게 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/mystic_wolf/during/001",
+      "speakerId": "mystic_wolf",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/mystic_wolf/during/001/voice.m4a",
+      "text": "[calm] 기록 안 맞으면 바로 티 나는데, [surprised] 시선도 마찬가지예요. [excited] 신비한 늑대인간, [emphasis] 살짝 눈 떠 주세요. [calm] 원하면 다른 플레이어 한 명의 카드를 확인해 주세요. [surprised] 누구를 보셨는지는 끝까지 감춰 주세요. [excited] 낮에는 그 사람이 기록 얘기 나오자마자 왜 굳었는지 찔러 봐 주세요. [emphasis] 당황하면 말이 빨라지거든요. [calm] 시선 거두시고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/dream_wolf/during/001",
+      "speakerId": "dream_wolf",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/dream_wolf/during/001/voice.m4a",
+      "text": "[calm] 아무것도 모르는 사람처럼 가는 게 의외로 제일 안전하죠. [delight] 당직 잠자는 늑대인간은 오늘 밤도 눈 뜨지 마세요. [surprised] 끝까지 정보 없는 척 유지하세요. [calm] 낮에는 텐션 올라간 사람부터 좀 수상해요 같은 분위기로 너무 빨리 반응하는 쪽을 보면 돼요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/minion/during/001",
+      "speakerId": "minion",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/minion/during/001/voice.m4a",
+      "text": "[delight] 대신 변명부터 해 주는 사람, [calm] 인정할 건 인정해야죠 하면서 들어오면 더 티 나더라고요. [excited] 하수인, [emphasis] 눈 떠 주세요. [delight] 늑대인간은 엄지를 들어 주세요. [calm] 하수인은 그 사람들을 확인해 주시고 늑대인간은 엄지를 내려 주세요. [excited] 낮에는 누가 먼저 커버 치는지 체크해 두세요. [emphasis] 선 넘는 추리는 좀 별로예요 하면서 말리는 사람도 같이 보면 돼요. [delight] 조용히 빠지시고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/squire/during/001",
+      "speakerId": "squire",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/squire/during/001/voice.m4a",
+      "text": "[calm] 인계 꼬이면 그날 텐션 끝나는 거 다들 아시잖아요. [delight] 종자, [emphasis] 차분히 눈 떠 주세요. [calm] 늑대인간은 엄지를 들어 주세요. [delight] 종자는 그 사람들을 확인해 주시고 늑대인간은 엄지를 내려 주세요. [emphasis] 낮에는 누가 동선 순서를 바꿔 말하는지 끝까지 따라가세요. [calm] 회진 전에 분위기부터 읽어야죠 하는 사람이면 더 좋습니다. [delight] 티 내지 말고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/mason/during/001",
+      "speakerId": "mason",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/mason/during/001/voice.m4a",
+      "text": "[delight] 같은 걸 본 사람끼리는 기록 디테일까지 잘 맞아요. [calm] 503호실 프리메이슨, [emphasis] 서로 볼 눈 떠 주세요. [delight] 다른 프리메이슨이 있으면 서로 확인해 주세요. [calm] 없다면 다른 프리메이슨 카드는 중앙에 있습니다. [emphasis] 낮에는 기록 안 맞는 분을 밀어 봐 주세요. [delight] 인계 꼬이면 바로 보이듯, [calm] 여기서도 말이 어긋나면 끝이에요. [emphasis] 믿을 분 기억하시고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/thing/during/001",
+      "speakerId": "thing",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/thing/during/001/voice.m4a",
+      "text": "[surprised] 방금 스친 느낌, [chuckle] 생각보다 오래 남죠. [calm] 어떤것, [emphasis] 눈 떠 주세요. [surprised] 양옆 중 한 명의 어깨나 팔을 가볍게 한 번만 치세요. [chuckle] 원치 않으시면 하지 않으셔도 됩니다. [calm] 낮에는 접촉 얘기에 유난히 놀라는 사람을 봐 주세요. [emphasis] 오늘 룩 괜찮다는 말 한마디엔 웃으면서 스침에는 과민하면 그게 더 수상합니다. [surprised] 손 거두시고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/seer/during/001",
+      "speakerId": "seer",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/seer/during/001/voice.m4a",
+      "text": "[surprised] 기록 한 줄만 제대로 봐도 판이 거의 정리될 때가 있어요. [calm] 501호 예언자, [delight] 조용히 눈 떠 주세요. [emphasis] 다른 플레이어 한 명의 카드를 보시거나 중앙 카드 두 장을 확인하실 수 있습니다. [surprised] 둘 중 하나만 선택해 주세요. [calm] 낮에는 누가 출처부터 캐묻는지 먼저 봐 주세요. [delight] 너무 확신하면 오히려 수상하죠, [emphasis] 이 말 괜히 나오는 게 아닙니다. [surprised] 본 내용 숨기시고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/apprentice_seer/during/001",
+      "speakerId": "apprentice_seer",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/apprentice_seer/during/001/voice.m4a",
+      "text": "[calm] 작은 정보도 없는 것보단 훨씬 낫죠. [surprised] 신환 견습 예언자, [delight] 살짝 눈 떠 주세요. [calm] 중앙 카드 한 장을 확인해 주세요. [surprised] 낮에는 중앙 얘기만 듣고 바로 단정하는 선배님을 기억해 두세요. [delight] 각 나왔다 싶으면 말이 빨라지는 타입이 보일 겁니다. [calm] 괜히 티 내지 마시고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/paranormal_investigator/during/001",
+      "speakerId": "paranormal_investigator",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/paranormal_investigator/during/001/voice.m4a",
+      "text": "[calm] 딱 이상한 지점이 보이면 그냥 넘기면 안 돼요. [excited] 심령 수사관, [surprised] 집중해서 눈 떠 주세요. [emphasis] 다른 플레이어 카드 최대 두 장까지 순서대로 확인해 주세요. [calm] 늑대를 보면 즉시 멈추고 그 편이 돼요. [excited] 낮에는 오늘 실화냐 하면서도 네가 어디서 멈췄냐만 집요하게 묻는 사람을 기억해 두세요. [surprised] 숨 고르고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/robber/during/001",
+      "speakerId": "robber",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/robber/during/001/voice.m4a",
+      "text": "[chuckle] 남의 카드 가져오면 상황이 훨씬 빨리 읽히거든요. [delight] 강도, [excited] 재빨리 눈 떠 주세요. [emphasis] 다른 플레이어 한 명과 카드를 바꾸고 새 자기 카드를 확인해 주세요. [chuckle] 낮에는 누가 교환 대상부터 집요하게 묻는지 보면 돼요. [delight] 너무 여유로운 얼굴이면 더 의심해 볼 만해요. [excited] 모르는 척하시고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/witch/during/001",
+      "speakerId": "witch",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/witch/during/001/voice.m4a",
+      "text": "[surprised] 카드 한 장만 옮겨도 병동 분위기 진짜 이상해집니다. [calm] 마녀, [excited] 조용히 눈 떠 주세요. [emphasis] 중앙 카드 한 장을 보시고, [surprised] 원하면 방금 본 그 카드만 아무 플레이어 카드와 바꿔 주세요. [calm] 옮기셨다면 방향까지 기억해 주세요. [excited] 낮에는 누가 중앙 카드 얘기를 못 하게 막는지 봐 주세요. [emphasis] 손절이 맞는지 물타기가 맞는지 모르겠어요 하듯 말 흐리는 사람도 같이요. [surprised] 아무렇지 않게 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/troublemaker/during/001",
+      "speakerId": "troublemaker",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/troublemaker/during/001/voice.m4a",
+      "text": "[chuckle] 둘만 바꿔 놔도 다음 날 바로 분위기 험해지죠. [excited] 말썽쟁이, [surprised] 장난칠 눈 떠 주세요. [emphasis] 다른 두 플레이어의 카드를 서로 바꿔 주세요. [chuckle] 내용은 보지 말고 누구 둘을 바꾸셨는지만 기억해 주세요. [excited] 낮에는 그 두 분 중 누가 먼저 말 꼬이는지 봐 주세요. [surprised] 그건 좀 오바 아닌가요 하며 급하게 선 긋는 쪽도 체크하세요. [emphasis] 웃음 참고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/village_idiot/during/001",
+      "speakerId": "village_idiot",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/village_idiot/during/001/voice.m4a",
+      "text": "[chuckle] 다들 멀쩡한 척해도 한 번 돌리면 바로 난리 납니다. [delight] 동네 얼간이, [calm] 어리둥절하게 눈 떠 주세요. [surprised] 원하면 자신을 제외한 모든 플레이어 카드를 왼쪽 또는 오른쪽으로 한 칸씩 밀어 주세요. [chuckle] 방향과 끝자리를 기억해 두셔야 합니다. [delight] 낮에는 방향 질문 피하는 분을 바로 찍어 봐 주세요. [calm] 도파민은 쇼핑보다 휴무표에서 나와요 같은 표정으로 눙치면 더 수상합니다. [surprised] 아무 일 없던 척 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/drunk/during/001",
+      "speakerId": "drunk",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/drunk/during/001/voice.m4a",
+      "text": "[chuckle] 어젯밤 기억은 흐려도 손이 바꾼 자리는 남아 있겠죠. [calm] 주정뱅이, [delight] 비틀거리듯 눈 떠 주세요. [emphasis] 자기 카드와 중앙 카드 한 장을 바꿔 주세요. [chuckle] 새 카드는 보지 말고 어느 중앙 카드였는지만 기억해 주세요. [calm] 낮에는 이번 달도 익절은 못 하고 존버네요 같은 톤으로 확신 넘치는 사람을 흔드시면 됩니다. [delight] 미장 열리면 잠이 안 오죠 하는 사람도 괜히 흔들릴 수 있어요. [emphasis] 다시 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/aura_seer/during/001",
+      "speakerId": "aura_seer",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/aura_seer/during/001/voice.m4a",
+      "text": "[delight] 누가 움직였는지는 병실 공기부터 달라요. [calm] 영기 예언자, [surprised] 느낌 따라 눈 떠 주세요. [emphasis] 오늘 밤 카드 확인이나 이동을 한 사람은 엄지를 들어 주세요. [delight] 영기 예언자는 그 사람들을 확인해 주세요. [calm] 낮에는 아무 행동 안 했다고 하는 분부터 대조해 봐 주세요. [surprised] 너무 안정적인 표정도 의외로 힌트가 돼요. [emphasis] 잔상 털고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/beholder/during/001",
+      "speakerId": "beholder",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/beholder/during/001/voice.m4a",
+      "text": "[calm] 가짜는 말보다 얼굴이 먼저 흔들려요. [delight] 주시자, [emphasis] 차분히 눈 떠 주세요. [calm] 예언자는 엄지를 들어 주세요. [delight] 주시자는 예언자가 누구인지 확인해 주세요. [emphasis] 낮에는 예언자 흉내 내는 사람 표정부터 보면 돼요. [calm] 괜히 자신감이 과하면 더 어색해 보여요. [delight] 조용히 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/revealer/during/001",
+      "speakerId": "revealer",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/revealer/during/001/voice.m4a",
+      "text": "[excited] 덮어 두고 우기면 더 수상해 보이는 거 아시죠. [emphasis] 계시자, [calm] 단호하게 눈 떠 주세요. [excited] 다른 플레이어 한 명의 카드를 공개 시도하세요. [emphasis] 늑대인간이면 다시 덮고 아니면 공개한 채 둬 주세요. [calm] 낮에는 왜 그 사람을 골랐는지 역으로 물어봐 주세요. [excited] 너무 확신하면 오히려 수상하죠, [emphasis] 그 기준으로 보면 돼요. [calm] 선 넘지 마시고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/role/insomniac/during/001",
+      "speakerId": "insomniac",
+      "url": "/assets/voices/salgol_ward/ep1/pall/role/insomniac/during/001/voice.m4a",
+      "text": "[calm] 끝까지 안 자면 마지막에 누가 건드렸는지 보여요. [surprised] 불면증, [delight] 예민하게 눈 떠 주세요. [emphasis] 지금 자기 카드를 확인해 주세요. [calm] 이 카드가 밤이 끝난 뒤 최종 역할이에요. [surprised] 낮에는 마지막 변경 가능성부터 분명하게 짚어 주세요. [delight] 확실하게 말해 주세요. [emphasis] 떨리는 티 숨기고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep1/pall/outro/001",
+      "speakerId": "Narrator",
+      "url": "/assets/voices/salgol_ward/ep1/pall/outro/001/voice.m4a",
+      "text": "[excited] 모두 눈 떠 주세요. [surprised] 누가 차트 보기 전에 결론부터 냈는지, [emphasis] 누가 제일 먼저 남을 지목했는지부터 봅시다."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/opening/001",
+      "speakerId": "Narrator",
+      "url": "/assets/voices/salgol_ward/ep2/pall/opening/001/voice.m4a",
+      "text": "[delight] 좋아요, [excited] 새벽 온콜 지나고 나면 병동 공기부터 달라지죠. [calm] 카드 확인하고 바로 엎어 두세요. [surprised] 지금은 잡담 말고, [emphasis] 다 같이 눈 감고 시작할게요. [delight] 낮에는 누가 차분한 척하다가 갑자기 남을 몰아가는지 보면 돼요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/doppelganger/during/001",
+      "speakerId": "doppelganger",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/doppelganger/during/001/voice.m4a",
+      "text": "[surprised] 목소리 하나만 비슷해도 다들 은근 잘 속습니다. [calm] 도플갱어, [excited] 눈 떠 주세요. [emphasis] 한 사람을 보고 복제하고, [surprised] 복제한 역할이 밤에 행동하면 그대로 이어서 하세요. [calm] 낮에는 네 목소리가 닮은 쪽을 먼저 짚으시면 됩니다. [excited] 오늘 룩 괜찮다는 말 듣고 텐션 오른 사람처럼 너무 신나 보이면 들켜요. [emphasis] 티 감추고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/werewolf/during/001",
+      "speakerId": "werewolf",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/werewolf/during/001/voice.m4a",
+      "text": "[excited] 병동 분위기 약한 쪽은 금방 보여요. [calm] 늑대인간, [surprised] 눈 떠 주세요. [emphasis] 서로 확인하고 혼자면 중앙 카드 한 장 봐 주세요. [excited] 낮에는 누가 격리 대상 지목을 제일 빨리 시작했는지 보면 돼요. [calm] 국장 보면 멘탈 관리가 더 필요해요 같은 체념 톤이면 더 자연스럽겠죠. [surprised] 조용히 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/alpha_wolf/during/001",
+      "speakerId": "alpha_wolf",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/alpha_wolf/during/001/voice.m4a",
+      "text": "[excited] 한 명만 밀어도 판이 확 기웁니다. [emphasis] 태초의 늑대인간, [calm] 눈 떠 주세요. [surprised] 전용 뒷면 늑대인간 카드 한 장을 늑대가 아닌 플레이어 한 명과 반드시 바꿔 주세요. [excited] 그 카드는 이번 행동에서만 써요. [emphasis] 낮에는 왜 그 자리를 흔들었는지 설명은 준비해 두셔야 해요. [calm] 딴얘기로 흘리려 해도 결국 캐물음이 들어올 거예요. [surprised] 침착하게 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/mystic_wolf/during/001",
+      "speakerId": "mystic_wolf",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/mystic_wolf/during/001/voice.m4a",
+      "text": "[calm] 멈칫한 순간은 생각보다 잘 안 숨겨져요. [surprised] 신비한 늑대인간, [excited] 눈 떠 주세요. [emphasis] 원하면 다른 플레이어 한 명의 카드를 확인해 주세요. [calm] 낮에는 그 사람이 차트 얘기 직후 왜 굳었는지 찔러 봐 주세요. [surprised] 괜한 허세보다 그 굳는 표정이 더 정확해요. [excited] 시선 거두고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/dream_wolf/during/001",
+      "speakerId": "dream_wolf",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/dream_wolf/during/001/voice.m4a",
+      "text": "[calm] 모른다는 얼굴 유지하는 것도 꽤 중요합니다. [delight] 당직 잠자는 늑대인간은 눈 뜨지 마세요. [surprised] 낮에는 질문 회피 빠른 사람을 보면 돼요. [calm] 너무 확신하는 사람 말고, [delight] 애매하게 빠지는 사람 쪽이 더 안전해 보여도 의심은 갑니다."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/minion/during/001",
+      "speakerId": "minion",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/minion/during/001/voice.m4a",
+      "text": "[delight] 대신 변명부터 해 주는 사람, [calm] 그 사람이 제일 티 납니다. [excited] 하수인, [emphasis] 눈 떠 주세요. [delight] 늑대의 엄지를 확인해 주세요. [calm] 낮에는 대신 변명부터 시작하는 사람을 찍어 주세요. [excited] 너무 여유롭게 커버 치면 더 의심해야 해요. [emphasis] 빠지고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/squire/during/001",
+      "speakerId": "squire",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/squire/during/001/voice.m4a",
+      "text": "[calm] 순서 기억하면 거짓말은 거의 잡힙니다. [delight] 종자, [emphasis] 눈 떠 주세요. [calm] 늑대의 엄지를 확인해 주세요. [delight] 낮에는 동선 순서를 바꿔 말하는 사람을 잡아 봐 주세요. [emphasis] 회진, [calm] 검사, [delight] 인계 순서 중 하나만 틀려도 바로 티 납니다. [emphasis] 조용히 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/mason/during/001",
+      "speakerId": "mason",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/mason/during/001/voice.m4a",
+      "text": "[delight] 같은 걸 본 사람 말은 그냥 맞아요. [calm] 503호실 프리메이슨, [emphasis] 눈 떠 주세요. [delight] 서로 확인해 주세요. [calm] 낮에는 출입 기록 안 맞는 진술을 미시면 됩니다. [emphasis] 꾸준한 톤으로 밀면 더 설득력 있어요. [delight] 믿는 분 기억하고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/thing/during/001",
+      "speakerId": "thing",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/thing/during/001/voice.m4a",
+      "text": "[surprised] 스친 느낌 하나가 계속 신경 쓰이죠. [chuckle] 어떤것, [calm] 눈 떠 주세요. [emphasis] 양옆 중 한 명을 가볍게 한 번 치세요. [surprised] 낮에는 접촉 얘기에 과민한 사람을 봐 주세요. [chuckle] 한숨 쉬는 사람보다 놀라는 쪽이 더 힌트예요. [calm] 손 거두고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/seer/during/001",
+      "speakerId": "seer",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/seer/during/001/voice.m4a",
+      "text": "[surprised] 정보 하나만 제대로 잡아도 거의 끝납니다. [calm] 501호 예언자, [delight] 눈 떠 주세요. [emphasis] 한 사람의 카드 또는 중앙 카드 두 장 중 하나를 확인해 주세요. [surprised] 낮에는 정보 출처를 집요하게 캐는 분을 의심해 주세요. [calm] 가볍게 포장해도 캐묻는 습관은 잘 안 숨겨져요. [delight] 본 내용 숨기고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/apprentice_seer/during/001",
+      "speakerId": "apprentice_seer",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/apprentice_seer/during/001/voice.m4a",
+      "text": "[calm] 작은 정보라도 없는 것보단 훨씬 낫죠. [surprised] 신환 견습 예언자, [delight] 눈 떠 주세요. [calm] 중앙 카드 한 장을 확인해 주세요. [surprised] 낮에는 중앙 얘기만 듣고 결론 내린 선배님을 찍어 주세요. [delight] 딴말을 섞으면 더 수상해 보여요. [calm] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/paranormal_investigator/during/001",
+      "speakerId": "paranormal_investigator",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/paranormal_investigator/during/001/voice.m4a",
+      "text": "[calm] 딱 멈춘 지점이 있으면 거기 뭔가 있는 겁니다. [excited] 심령 수사관, [surprised] 눈 떠 주세요. [emphasis] 최대 두 장까지 순서대로 보고 늑대를 보면 즉시 멈추세요. [calm] 낮에는 이 멈춘 지점을 캐묻는 사람을 기억해 두세요. [excited] 괜히 긴장했다는 말이 먼저 나오면 거의 티 나요. [surprised] 진정하고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/robber/during/001",
+      "speakerId": "robber",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/robber/during/001/voice.m4a",
+      "text": "[chuckle] 남의 거 가져오면 정보가 바로 생기잖아요. [delight] 강도, [excited] 눈 떠 주세요. [emphasis] 한 사람과 카드를 바꾸고 새 자기 카드를 확인해 주세요. [chuckle] 낮에는 교환 대상 질문이 빠른 사람을 추적해 주세요. [delight] 플렉스 한 번 했다가 후회하죠 같은 반응으로 눙치면 더 수상해요. [excited] 모른 척 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/witch/during/001",
+      "speakerId": "witch",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/witch/during/001/voice.m4a",
+      "text": "[surprised] 카드 한 장 옮기는 걸로 분위기 뒤집히는 거, [calm] 진짜 커요. [excited] 마녀, [emphasis] 눈 떠 주세요. [surprised] 중앙 카드 한 장을 보고 원하면 방금 본 그 카드만 플레이어 카드와 바꿔 주세요. [calm] 낮에는 중앙 카드 이동 얘기를 막는 사람을 봐 주세요. [excited] 뜬금없는 생활 얘기로 흐리는 쪽도 체크해 주세요. [emphasis] 조용히 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/troublemaker/during/001",
+      "speakerId": "troublemaker",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/troublemaker/during/001/voice.m4a",
+      "text": "[chuckle] 두 분만 건드려도 바로 분위기 꼬입니다. [excited] 말썽쟁이, [surprised] 눈 떠 주세요. [emphasis] 다른 두 플레이어의 카드를 서로 바꿔 주세요. [chuckle] 낮에는 그 둘 중 먼저 진술이 어긋난 사람을 찌르시면 됩니다. [excited] 텐션 올렸다가 급하게 내리는 사람이 보이면 거기입니다. [surprised] 웃음 참고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/village_idiot/during/001",
+      "speakerId": "village_idiot",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/village_idiot/during/001/voice.m4a",
+      "text": "[chuckle] 한 칸씩만 밀어도 다들 멘붕 옵니다. [delight] 동네 얼간이, [calm] 눈 떠 주세요. [surprised] 원하면 자신을 제외한 전원 카드를 한 칸씩 같은 방향으로 밀어 주세요. [chuckle] 낮에는 회전 방향 질문 피하는 사람을 걸러 봐 주세요. [delight] 지나치게 평온하면 더 의심해 볼 만해요. [calm] 딴청 피우고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/drunk/during/001",
+      "speakerId": "drunk",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/drunk/during/001/voice.m4a",
+      "text": "[chuckle] 모르는 게 오히려 말 걸기 편할 때도 있죠. [calm] 주정뱅이, [delight] 눈 떠 주세요. [emphasis] 자기 카드와 중앙 카드 한 장을 바꾸고 새 카드는 보지 마세요. [chuckle] 낮에는 네 무지를 핑계로 확신 과한 명을 흔드세요. [calm] 푸념하듯 말하면 더 자연스럽게 들릴 수 있어요. [delight] 비틀거리듯 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/aura_seer/during/001",
+      "speakerId": "aura_seer",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/aura_seer/during/001/voice.m4a",
+      "text": "[delight] 움직인 사람들은 공기부터 다릅니다. [calm] 영기 예언자, [surprised] 눈 떠 주세요. [emphasis] 오늘 밤 행동한 사람들의 엄지를 확인해 주세요. [delight] 낮에는 움직임이 없었다는 주장부터 대조해 주세요. [calm] 딴소리로 빠지는 사람도 같이 기억해 두세요. [surprised] 잔상 털고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/beholder/during/001",
+      "speakerId": "beholder",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/beholder/during/001/voice.m4a",
+      "text": "[calm] 가짜는 진짜 흉내낼수록 더 어색해요. [delight] 주시자, [emphasis] 눈 떠 주세요. [calm] 예언자의 엄지를 확인해 주세요. [delight] 낮에는 예언자 흉내 내는 표정을 잡아 봐 주세요. [emphasis] 리쥬란 맞고 출근한 날 티 안 나게 힘들어요 같은 표정 관리형 멘트도 과하면 티 납니다. [calm] 조용히 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/revealer/during/001",
+      "speakerId": "revealer",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/revealer/during/001/voice.m4a",
+      "text": "[excited] 덮어 두면 더 수상해 보이는 분이 꼭 계시죠. [emphasis] 계시자, [calm] 눈 떠 주세요. [excited] 한 사람의 카드를 공개 시도하고 늑대인간이면 다시 덮으세요. [emphasis] 낮에는 왜 그 대상을 골랐는지 먼저 되물어 봐 주세요. [calm] 너무 부드럽게 넘어가려는 사람도 체크해 주세요. [excited] 선 넘지 말고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/role/insomniac/during/001",
+      "speakerId": "insomniac",
+      "url": "/assets/voices/salgol_ward/ep2/pall/role/insomniac/during/001/voice.m4a",
+      "text": "[calm] 마지막에 바뀐 건 제가 제일 정확히 볼 수 있습니다. [surprised] 불면증, [delight] 눈 떠 주세요. [emphasis] 지금 자기 카드를 확인해 주세요. [calm] 낮에는 마지막 이동 가능성을 분명하게 짚어 주세요. [surprised] 퇴사각 재다가도 통장 보면 참죠 하듯 단정적으로요. [delight] 긴장 숨기고 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep2/pall/outro/001",
+      "speakerId": "Narrator",
+      "url": "/assets/voices/salgol_ward/ep2/pall/outro/001/voice.m4a",
+      "text": "[excited] 모두 눈 떠 주세요. [surprised] 누가 검증보다 결론을 먼저 냈는지, [emphasis] 누가 차분한 척하다가 바로 사람 몰았는지부터 볼게요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/opening/001",
+      "speakerId": "Narrator",
+      "url": "/assets/voices/salgol_ward/ep3/pall/opening/001/voice.m4a",
+      "text": "[delight] 좋아요, [excited] 밤샘 끝날 즈음엔 다들 딴얘기부터 꺼내지만 지금은 그게 더 수상해요. [calm] 카드 확인하고 바로 엎어 두세요. [surprised] 딴생각은 잠깐 접어 두고 눈 감아 주세요. [emphasis] 아침에는 첫 지목자부터 보고, [delight] 누가 잡담 뒤에 칼같이 사람을 자르는지 보죠."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/doppelganger/during/001",
+      "speakerId": "doppelganger",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/doppelganger/during/001/voice.m4a",
+      "text": "[surprised] 병실 말투 겹치면 바로 티 납니다. [calm] 도플갱어, [excited] 눈 떠 주세요. [emphasis] 한 명 카드 보고 복제해 주세요. [surprised] 말투 겹치는 둘부터 붙여 봐 주세요. [calm] 오늘 룩 괜찮다는 말 듣고 신난 사람처럼 너무 들뜨면 들킵니다. [excited] 다시 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/werewolf/during/001",
+      "speakerId": "werewolf",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/werewolf/during/001/voice.m4a",
+      "text": "[excited] 먼저 흔들리는 쪽은 진짜 금방 보여요. [calm] 늑대인간, [surprised] 눈 떠 주세요. [emphasis] 서로 확인하고 혼자면 중앙 한 장 봐 주세요. [excited] 먼저 결론 내린 입부터 따라가세요. [calm] 월배당 얘기하듯 차분한 척해도 피 냄새는 납니다. [surprised] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/alpha_wolf/during/001",
+      "speakerId": "alpha_wolf",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/alpha_wolf/during/001/voice.m4a",
+      "text": "[excited] 한 명 밀면 판이 확 꺾입니다. [emphasis] 태초의 늑대인간, [calm] 눈 떠 주세요. [surprised] 전용 늑대인간 카드 한 장을 늑대 아닌 한 명과 반드시 바꿔 주세요. [excited] 왜 골랐는지 낮에 답하셔야 합니다. [emphasis] 그 카드는 이번 행동에서만 써요. [calm] 네고 잘하면 인생 편해진다더니요 같은 여유로운 멘트로는 못 빠져나갑니다. [surprised] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/mystic_wolf/during/001",
+      "speakerId": "mystic_wolf",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/mystic_wolf/during/001/voice.m4a",
+      "text": "[calm] 먼저 굳는 얼굴은 못 숨깁니다. [surprised] 신비한 늑대인간, [excited] 눈 떠 주세요. [emphasis] 원하면 한 명 카드만 봐 주세요. [calm] 차트 펼칠 때 굳은 사람을 찔러 봐 주세요. [surprised] 리프팅 한 번 받으면 사진이 다르게 나와요 같은 자기관리 톤보다 그 굳는 눈이 더 정확해요. [excited] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/dream_wolf/during/001",
+      "speakerId": "dream_wolf",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/dream_wolf/during/001/voice.m4a",
+      "text": "[calm] 모른다는 말 너무 빠르면 더 수상합니다. [delight] 당직 잠자는 늑대인간은 계속 눈 뜨지 말아 주세요. [surprised] 먼저 모른다 꺼내는 쪽부터 의심해 주세요. [calm] 현생 핑계 대며 빠지는 말도 반복되면 티 납니다."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/minion/during/001",
+      "speakerId": "minion",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/minion/during/001/voice.m4a",
+      "text": "[delight] 변호부터 뛰는 분만 잘 봐도 됩니다. [calm] 하수인, [excited] 눈 떠 주세요. [emphasis] 늑대 엄지 확인해 주세요. [delight] 변호부터 뛰는 쪽만 표시해 두세요. [calm] 커피 수혈부터 해야겠어요 하며 자연스럽게 끼어드는 사람도 의외로 수상합니다. [excited] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/squire/during/001",
+      "speakerId": "squire",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/squire/during/001/voice.m4a",
+      "text": "[calm] 순서 꼬이면 바로 들킵니다. [delight] 종자, [emphasis] 눈 떠 주세요. [calm] 늑대 엄지 확인해 주세요. [delight] 병실 동선 순서 꼬아 말한 사람은 끝까지 물으세요. [emphasis] 회진, [calm] 오더, [delight] 인계 순서가 안 맞으면 끝이에요. [emphasis] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/mason/during/001",
+      "speakerId": "mason",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/mason/during/001/voice.m4a",
+      "text": "[delight] 같은 걸 본 사람들 말은 맞아떨어집니다. [calm] 503호실 프리메이슨, [emphasis] 눈 떠 주세요. [delight] 서로 확인해 주세요. [calm] 안 맞는 진술은 끊어 주세요. [emphasis] 연금저축, [delight] ISA, [calm] ETF 순서로 자산 얘기 외우듯 또박또박 말하는 사람처럼 안정감 있게 미시면 됩니다. [emphasis] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/thing/during/001",
+      "speakerId": "thing",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/thing/during/001/voice.m4a",
+      "text": "[surprised] 스친 느낌은 생각보다 오래 갑니다. [chuckle] 어떤것, [calm] 눈 떠 주세요. [emphasis] 양옆 중 한 명만 가볍게 치세요. [surprised] 접촉 얘기에 놀라는 사람을 찍어 주세요. [chuckle] 바프는 못 찍어도 셀카 각은 챙기죠 같은 잡담보다 그 반사 반응이 더 중요합니다. [calm] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/seer/during/001",
+      "speakerId": "seer",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/seer/during/001/voice.m4a",
+      "text": "[surprised] 정보 한 줄이면 충분할 때 있습니다. [calm] 501호 예언자, [delight] 눈 떠 주세요. [emphasis] 한 명 보거나 중앙 두 장 봐 주세요. [surprised] 출처부터 캐는 목소리부터 의심해 주세요. [calm] 너무 확신하는 사람보다, [delight] 정보 캐고도 아닌 척하는 사람이 더 수상합니다. [emphasis] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/apprentice_seer/during/001",
+      "speakerId": "apprentice_seer",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/apprentice_seer/during/001/voice.m4a",
+      "text": "[calm] 작은 단서가 더 잘 먹힐 때도 있죠. [surprised] 신환 견습 예언자, [delight] 눈 떠 주세요. [calm] 중앙 한 장만 봐 주세요. [surprised] 중앙 얘기 듣고 단정하는 선배님 기억해 주세요. [delight] 러닝까지 하면 그나마 머리가 비워져요 같은 잡담으로 흐리면 더 수상합니다. [calm] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/paranormal_investigator/during/001",
+      "speakerId": "paranormal_investigator",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/paranormal_investigator/during/001/voice.m4a",
+      "text": "[calm] 멈춘 지점은 절대 그냥 안 지나갑니다. [excited] 심령 수사관, [surprised] 눈 떠 주세요. [emphasis] 최대 두 장 보고 늑대 보이면 바로 멈추세요. [calm] 네 멈춘 지점만 묻는 사람 봐 주세요. [excited] 컨퍼런스 때보다 지금이 더 긴장돼요 같은 멘트가 먼저 나오면 거의 맞습니다. [surprised] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/robber/during/001",
+      "speakerId": "robber",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/robber/during/001/voice.m4a",
+      "text": "[chuckle] 훔치고 나면 그림이 더 잘 보입니다. [delight] 강도, [excited] 눈 떠 주세요. [emphasis] 한 명과 바꾸고 새 자기 카드 확인해 주세요. [chuckle] 교환 상대만 캐는 질문은 되받아치세요. [delight] N잡까지 하기엔 체력이 안 돼요 같은 현실 얘기로 흐리는 사람도 체크하세요. [excited] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/witch/during/001",
+      "speakerId": "witch",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/witch/during/001/voice.m4a",
+      "text": "[surprised] 카드 한 장만 움직여도 분위기 확 바뀝니다. [calm] 마녀, [excited] 눈 떠 주세요. [emphasis] 중앙 한 장 보고 원하면 그 카드만 옮기세요. [surprised] 중앙 카드 얘기 막는 사람부터 찔러 봐 주세요. [calm] 피부과 예약은 진짜 미리 잡아야 해요 하듯 딴얘기 섞는 쪽도 수상합니다. [excited] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/troublemaker/during/001",
+      "speakerId": "troublemaker",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/troublemaker/during/001/voice.m4a",
+      "text": "[chuckle] 두 분만 바꿔도 말은 바로 꼬입니다. [excited] 말썽쟁이, [surprised] 눈 떠 주세요. [emphasis] 다른 두 명 카드 서로 바꿔 주세요. [chuckle] 먼저 진술 비는 쪽을 밀어 주세요. [excited] 그건 좀 오바 아닌가요 하며 급하게 제동 거는 사람도 같이 봐 주세요. [surprised] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/village_idiot/during/001",
+      "speakerId": "village_idiot",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/village_idiot/during/001/voice.m4a",
+      "text": "[chuckle] 한 칸 돌리면 다들 바로 헷갈려 하죠. [delight] 동네 얼간이, [calm] 눈 떠 주세요. [surprised] 원하면 너 빼고 전원 카드를 한 칸 같은 방향으로 밀어 주세요. [chuckle] 방향 질문 피하는 사람 잘 봐 주세요. [delight] 주말 카페 투어가 유일한 리프레시예요 같은 평온한 얼굴이 오히려 함정일 수 있습니다. [calm] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/drunk/during/001",
+      "speakerId": "drunk",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/drunk/during/001/voice.m4a",
+      "text": "[chuckle] 모르는 상태가 오히려 편할 때도 있습니다. [calm] 주정뱅이, [delight] 눈 떠 주세요. [emphasis] 자기 카드와 중앙 한 장 바꾸고 새 카드는 보지 마세요. [chuckle] 확신 과한 쪽 흔드시면 됩니다. [calm] 국장 보면 멘탈 관리가 더 필요해요 같은 체념 톤으로 흔들면 더 잘 먹혀요. [delight] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/aura_seer/during/001",
+      "speakerId": "aura_seer",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/aura_seer/during/001/voice.m4a",
+      "text": "[delight] 움직인 사람들은 공기부터 다릅니다. [calm] 영기 예언자, [surprised] 눈 떠 주세요. [emphasis] 오늘 밤 행동한 사람 엄지 확인해 주세요. [delight] 안 움직였다는 말부터 대조해 주세요. [calm] 하이브리드 SUV, [surprised] 썬팅, [emphasis] 출고 얘기로 갑자기 새나가는 사람도 기록하세요. [delight] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/beholder/during/001",
+      "speakerId": "beholder",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/beholder/during/001/voice.m4a",
+      "text": "[calm] 가짜는 표정이 먼저 흔들립니다. [delight] 주시자, [emphasis] 눈 떠 주세요. [calm] 예언자 엄지 확인해 주세요. [delight] 예언자 흉내 표정부터 잡아 봐 주세요. [emphasis] 리쥬란 맞고 출근한 날 티 안 나게 힘들어요 같은 표정 관리형 멘트가 과하면 더 티 납니다. [calm] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/revealer/during/001",
+      "speakerId": "revealer",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/revealer/during/001/voice.m4a",
+      "text": "[excited] 덮어 두면 더 수상해 보입니다. [emphasis] 계시자, [calm] 눈 떠 주세요. [excited] 한 명 카드 공개 시도하고 늑대면 다시 덮으세요. [emphasis] 왜 그 사람을 골랐는지 먼저 물어봐 주세요. [calm] 인정할 건 인정해야죠 같은 말로 빠져나가려는 사람은 더 붙잡아야 합니다. [excited] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/role/insomniac/during/001",
+      "speakerId": "insomniac",
+      "url": "/assets/voices/salgol_ward/ep3/pall/role/insomniac/during/001/voice.m4a",
+      "text": "[calm] 마지막에 바뀐 건 제가 제일 먼저 봅니다. [surprised] 불면증, [delight] 눈 떠 주세요. [emphasis] 지금 자기 카드 확인해 주세요. [calm] 마지막 변경 가능성부터 분명하게 짚어 주세요. [surprised] 잔잔한 톤으로 단정하면 더 설득력 있어요. [delight] 눈 감아 주세요."
+    },
+    {
+      "clipId": "salgol_ward/ep3/pall/outro/001",
+      "speakerId": "Narrator",
+      "url": "/assets/voices/salgol_ward/ep3/pall/outro/001/voice.m4a",
+      "text": "[excited] 모두 눈 떠 주세요. [surprised] 차트 펼치기 전에, [emphasis] 누가 결국 제일 먼저 사람 잘랐는지부터 볼게요."
+    }
+  ]
+}

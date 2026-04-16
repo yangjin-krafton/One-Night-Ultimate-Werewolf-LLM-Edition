@@ -15,7 +15,7 @@ function episodeBgSrc(scenarioId, epId) { return imgPath('episodes', `${scenario
 function uiImgSrc(uiId) { return imgPath('ui', uiId); }
 
 // Home background: random selection from bg_home_01~10 (fallback to bg_m_home)
-const HOME_BG_COUNT = 10;
+const HOME_BG_COUNT = 40;
 function randomHomeBgSrc() {
   const idx = Math.floor(Math.random() * HOME_BG_COUNT) + 1;
   return imgPath('ui', `bg_home_${String(idx).padStart(2, '0')}`);
