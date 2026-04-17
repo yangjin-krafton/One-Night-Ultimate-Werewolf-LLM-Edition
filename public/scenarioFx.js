@@ -141,7 +141,7 @@ function updateRadioIntensity(intensity) {
   if (!c) return;
   const rt = audioCtx.currentTime + 0.05;
   rfxRamp(c.highpass.frequency, rfxLerp(20, 160, t), rt);
-  rfxRamp(c.lowpass.frequency, rfxLerp(20000, 11750, t), rt);
+  rfxRamp(c.lowpass.frequency, rfxLerp(20000, 4500, t), rt);
   rfxRamp(c.midBoost.gain, rfxLerp(0, 4, t), rt);
   c.distortion.curve = makeDistortionCurve(Math.round(rfxLerp(0, 75, t)));
   rfxRamp(c.compressor.ratio, rfxLerp(1, 6.5, t), rt);
