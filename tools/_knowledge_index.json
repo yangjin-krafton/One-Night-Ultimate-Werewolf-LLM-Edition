@@ -23,6 +23,34 @@
       "tags": ["tts", "revision", "strategy", "character", "template", "budget"]
     },
     {
+      "id": "tts_role_voice_style_table",
+      "title": "TTS 역할별 성격·말투 표",
+      "desc": "역할별 성격 키워드, 호칭, 눈 떠/감아 표현, 추임새, 어미를 표로 정리한 말투 가이드",
+      "path": "docs/TTS 역할별 성격·말투 표.md",
+      "tags": ["tts", "roles", "character", "tone", "speech", "style"]
+    },
+    {
+      "id": "tts_role_voice_style_table_dark_citadel",
+      "title": "TTS 역할별 성격·말투 표 - dark_citadel",
+      "desc": "dark_citadel 전용 말투 설정. 중세 유럽 성채, 왕실·귀족·기사·시민 호칭, 콩글리시 추임새 배치 가이드",
+      "path": "docs/TTS 역할별 성격·말투 표 - dark_citadel.md",
+      "tags": ["tts", "dark_citadel", "roles", "medieval", "europe", "speech", "style"]
+    },
+    {
+      "id": "tts_role_voice_style_table_floodgate_nameplates",
+      "title": "TTS 역할별 성격·말투 표 - floodgate_nameplates",
+      "desc": "floodgate_nameplates 전용 말투 설정. 조선 시대 수문 관아, 왕실·대감·나리·포졸·백성 호칭 가이드",
+      "path": "docs/TTS 역할별 성격·말투 표 - floodgate_nameplates.md",
+      "tags": ["tts", "floodgate_nameplates", "joseon", "korean_historical", "roles", "speech", "style"]
+    },
+    {
+      "id": "tts_role_voice_style_table_rust_orbit",
+      "title": "TTS 역할별 성격·말투 표 - rust_orbit",
+      "desc": "rust_orbit 전용 말투 설정. 우주정거장, 군인·연구원 컨셉, 원래 역할 이름 + 계급/직책 호칭 가이드",
+      "path": "docs/TTS 역할별 성격·말투 표 - rust_orbit.md",
+      "tags": ["tts", "rust_orbit", "space_station", "military", "research", "roles", "speech", "style"]
+    },
+    {
       "id": "scenario_spec",
       "title": "시나리오 생성 규격",
       "desc": "에피소드 정의(ep1/ep2/ep3=난이도/밀도), 역할 풀 요구사항, 덱 구성 규칙, 시나리오 분류체계",
