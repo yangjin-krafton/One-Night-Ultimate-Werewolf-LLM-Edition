@@ -73,6 +73,23 @@
 | `내 말을 들으시오 / 자네, 내 말을` | 호소형 직역 | squire, beholder, hunter |
 | `후후, ~하는 것이지요` | 악당 여유 번역투 | witch, mystic_wolf |
 
+
+## 성별·연령 축
+
+| 축 | 범위 | 대표 역할 |
+|------|------|------|
+| 노년 남성 | 60대 이상, 수염, 학자/원로 | `alpha_wolf`, `beholder` |
+| 중년 남성 | 40~50대, 묵직한 저음 | `werewolf`, `minion` |
+| 청장년 남성 | 30대, 건조·거친 톤 | `hunter`, `thing`, `drunk` |
+| 청년 남성 | 20대 전후, 밝거나 중성적 | `prince`, `mason`, `squire`, `tanner` |
+| 소년 | 10대 후반, 변성기 직후 | `village_idiot`, `apprentice_tanner` |
+| 노년 여성 | 할머니 톤, 나른한 저음 | `dream_wolf` |
+| 중년 여성 | 40대 전후, 차분·지혜 또는 이중성 | `seer`, `doppelganger` |
+| 청장년 여성 | 30대, 유혹/광기/저주 | `mystic_wolf`, `witch`, `cursed` |
+| 청년 여성 | 20대, 사무·신입·힐러 | `robber`, `paranormal_investigator`, `revealer`, `aura_seer`, `villager` |
+| 소녀 | 10대 소녀, 마법소녀/지침 | `apprentice_seer`, `insomniac` |
+| 작은 요정형 | 성별 외형 모호, 하이 피치 | `troublemaker` |
+
 ## 역할별 표
 
 아래 표는 기존 계층·콩글리시 축에 `더빙 캐릭터 원형`과 `더빙 번역투 샘플`을 추가한 확장판이다. `원형`은 한국 관객이 외화 더빙에서 쉽게 떠올릴 수 있는 인물 유형을 잡아 두고, 대사 톤을 그쪽으로 당긴다.

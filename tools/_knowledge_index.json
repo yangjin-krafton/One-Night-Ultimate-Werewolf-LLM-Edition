@@ -51,6 +51,20 @@
       "tags": ["tts", "rust_orbit", "space_station", "military", "research", "roles", "speech", "style"]
     },
     {
+      "id": "tts_role_voice_style_table_salgol_ward",
+      "title": "TTS 역할별 성격·말투 표 - salgol_ward",
+      "desc": "salgol_ward 전용 말투 설정. 한국 병원 의료진·병원 지원·환자 호칭과 병동 대화체 가이드",
+      "path": "docs/TTS 역할별 성격·말투 표 - salgol_ward.md",
+      "tags": ["tts", "salgol_ward", "hospital", "medical", "patient", "roles", "speech", "style"]
+    },
+    {
+      "id": "tts_role_voice_style_table_school_broadcast_prayer",
+      "title": "TTS 역할별 성격·말투 표 - school_broadcast_prayer",
+      "desc": "school_broadcast_prayer 전용 말투 설정. 한국 학교 호러 테마, 학생·선생님·교직원 호칭과 10대 구어체 가이드",
+      "path": "docs/TTS 역할별 성격·말투 표 - school_broadcast_prayer.md",
+      "tags": ["tts", "school_broadcast_prayer", "school", "student", "teacher", "staff", "teen", "speech", "style"]
+    },
+    {
       "id": "scenario_spec",
       "title": "시나리오 생성 규격",
       "desc": "에피소드 정의(ep1/ep2/ep3=난이도/밀도), 역할 풀 요구사항, 덱 구성 규칙, 시나리오 분류체계",
