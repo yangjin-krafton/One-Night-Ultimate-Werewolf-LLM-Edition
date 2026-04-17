@@ -112,26 +112,42 @@ const RADIO_CLIP_CHANCE = 0.5;
 
 function buildRadioChain() {
   const highpass = audioCtx.createBiquadFilter();
-  highpass.type = 'highpass'; highpass.frequency.value = 20; highpass.Q.value = 0.5;
+  highpass.type = 'highpass'; highpass.frequency.value = 20; highpass.Q.value = 0.7;
   const lowpass = audioCtx.createBiquadFilter();
-  lowpass.type = 'lowpass'; lowpass.frequency.value = 20000; lowpass.Q.value = 0.5;
+  lowpass.type = 'lowpass'; lowpass.frequency.value = 20000; lowpass.Q.value = 0.7;
+  // "Boxy" resonance — small speaker enclosure character
+  const boxResonance = audioCtx.createBiquadFilter();
+  boxResonance.type = 'peaking'; boxResonance.frequency.value = 800; boxResonance.Q.value = 1.5; boxResonance.gain.value = 0;
+  // Nasal mid-range — walkie-talkie voice body
   const midBoost = audioCtx.createBiquadFilter();
   midBoost.type = 'peaking'; midBoost.frequency.value = 1500; midBoost.Q.value = 2; midBoost.gain.value = 0;
+  // Presence peak — speech intelligibility through noise
+  const presence = audioCtx.createBiquadFilter();
+  presence.type = 'peaking'; presence.frequency.value = 2500; presence.Q.value = 1.2; presence.gain.value = 0;
   const distortion = audioCtx.createWaveShaper();
   distortion.curve = makeDistortionCurve(0);
   distortion.oversample = '4x';
   const compressor = audioCtx.createDynamicsCompressor();
   compressor.threshold.value = 0; compressor.ratio.value = 1; compressor.knee.value = 10;
+  // Signal flutter — LFO modulates gain for unstable reception feel
+  const flutter = audioCtx.createGain(); flutter.gain.value = 1.0;
+  const flutterLFO = audioCtx.createOscillator(); flutterLFO.type = 'sine'; flutterLFO.frequency.value = 3.5;
+  const flutterDepth = audioCtx.createGain(); flutterDepth.gain.value = 0;
+  flutterLFO.connect(flutterDepth); flutterDepth.connect(flutter.gain);
+  flutterLFO.start();
   const gain = audioCtx.createGain();
   gain.gain.value = 1.0;
 
   highpass.connect(lowpass);
-  lowpass.connect(midBoost);
-  midBoost.connect(distortion);
+  lowpass.connect(boxResonance);
+  boxResonance.connect(midBoost);
+  midBoost.connect(presence);
+  presence.connect(distortion);
   distortion.connect(compressor);
-  compressor.connect(gain);
+  compressor.connect(flutter);
+  flutter.connect(gain);
   gain.connect(audioCtx.destination);
-  return { highpass, lowpass, midBoost, distortion, compressor, gain };
+  return { highpass, lowpass, boxResonance, midBoost, presence, distortion, compressor, flutter, flutterLFO, flutterDepth, gain };
 }
 
 function updateRadioIntensity(intensity) {
@@ -140,13 +156,25 @@ function updateRadioIntensity(intensity) {
   const c = radioFx.chain;
   if (!c) return;
   const rt = audioCtx.currentTime + 0.05;
-  rfxRamp(c.highpass.frequency, rfxLerp(20, 160, t), rt);
+  // Highpass: 20→300Hz — real walkie-talkies aggressively cut bass
+  rfxRamp(c.highpass.frequency, rfxLerp(20, 300, t), rt);
+  // Lowpass: 20kHz→4500Hz — kill the highs
   rfxRamp(c.lowpass.frequency, rfxLerp(20000, 4500, t), rt);
+  // Box resonance: 0→5dB — small speaker enclosure coloring
+  rfxRamp(c.boxResonance.gain, rfxLerp(0, 5, t), rt);
+  // Mid boost: 0→4dB — nasal voice character
   rfxRamp(c.midBoost.gain, rfxLerp(0, 4, t), rt);
+  // Presence: 0→3dB — keeps speech clear through the effect
+  rfxRamp(c.presence.gain, rfxLerp(0, 3, t), rt);
+  // Distortion: 0→75 — analog clipping
   c.distortion.curve = makeDistortionCurve(Math.round(rfxLerp(0, 75, t)));
-  rfxRamp(c.compressor.ratio, rfxLerp(1, 6.5, t), rt);
-  rfxRamp(c.compressor.threshold, rfxLerp(0, -15, t), rt);
-  rfxRamp(c.gain.gain, rfxLerp(1.0, 0.8, t), rt);
+  // Compressor: aggressive AGC — keeps volume consistent regardless of EQ boosts
+  rfxRamp(c.compressor.ratio, rfxLerp(1, 12, t), rt);
+  rfxRamp(c.compressor.threshold, rfxLerp(0, -24, t), rt);
+  // Signal flutter: subtle gain wobble for unstable reception
+  rfxRamp(c.flutterDepth.gain, rfxLerp(0, 0.06, t), rt);
+  // Output gain: compensate for EQ boost stacking
+  rfxRamp(c.gain.gain, rfxLerp(1.0, 0.45, t), rt);
   if (radioFx.staticNoise) {
     rfxRamp(radioFx.staticNoise.gain.gain, 0.0075 * t, rt);
   }
@@ -156,11 +184,18 @@ function startStaticNoise(volume) {
   const bufLen = 2 * audioCtx.sampleRate;
   const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
   const data = buf.getChannelData(0);
-  for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+  // Mix continuous hiss with intermittent crackle/pops
+  for (let i = 0; i < bufLen; i++) {
+    const hiss = (Math.random() * 2 - 1) * 0.6;
+    // Random crackle bursts (~2% of samples, sharp transients)
+    const crackle = Math.random() < 0.02 ? (Math.random() > 0.5 ? 1 : -1) * (0.5 + Math.random() * 0.5) : 0;
+    data[i] = hiss + crackle;
+  }
   const src = audioCtx.createBufferSource();
   src.buffer = buf; src.loop = true;
+  // Bandpass shaped to radio band
   const filter = audioCtx.createBiquadFilter();
-  filter.type = 'bandpass'; filter.frequency.value = 3000; filter.Q.value = 0.5;
+  filter.type = 'bandpass'; filter.frequency.value = 2000; filter.Q.value = 0.8;
   const gain = audioCtx.createGain();
   gain.gain.value = volume;
   src.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
@@ -192,6 +227,7 @@ function disableRadioEffect() {
   if (!radioFx.active) return;
   stopStaticNoise();
   if (radioFx.chain) {
+    try { radioFx.chain.flutterLFO.stop(); } catch (_) {}
     Object.values(radioFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
     radioFx.chain = null;
   }
