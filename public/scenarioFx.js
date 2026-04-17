@@ -140,15 +140,15 @@ function updateRadioIntensity(intensity) {
   const c = radioFx.chain;
   if (!c) return;
   const rt = audioCtx.currentTime + 0.05;
-  rfxRamp(c.highpass.frequency, rfxLerp(20, 300, t), rt);
-  rfxRamp(c.lowpass.frequency, rfxLerp(20000, 3500, t), rt);
-  rfxRamp(c.midBoost.gain, rfxLerp(0, 8, t), rt);
-  c.distortion.curve = makeDistortionCurve(Math.round(rfxLerp(0, 150, t)));
-  rfxRamp(c.compressor.ratio, rfxLerp(1, 12, t), rt);
-  rfxRamp(c.compressor.threshold, rfxLerp(0, -30, t), rt);
-  rfxRamp(c.gain.gain, rfxLerp(1.0, 0.6, t), rt);
+  rfxRamp(c.highpass.frequency, rfxLerp(20, 160, t), rt);
+  rfxRamp(c.lowpass.frequency, rfxLerp(20000, 11750, t), rt);
+  rfxRamp(c.midBoost.gain, rfxLerp(0, 4, t), rt);
+  c.distortion.curve = makeDistortionCurve(Math.round(rfxLerp(0, 75, t)));
+  rfxRamp(c.compressor.ratio, rfxLerp(1, 6.5, t), rt);
+  rfxRamp(c.compressor.threshold, rfxLerp(0, -15, t), rt);
+  rfxRamp(c.gain.gain, rfxLerp(1.0, 0.8, t), rt);
   if (radioFx.staticNoise) {
-    rfxRamp(radioFx.staticNoise.gain.gain, 0.015 * t, rt);
+    rfxRamp(radioFx.staticNoise.gain.gain, 0.0075 * t, rt);
   }
 }
 
@@ -682,8 +682,8 @@ function updatePAIntensity(intensity) {
   rfxRamp(c.compressor.threshold, rfxLerp(0, -28, t), rt);
   // Corridor reverb: 0→0.35
   rfxRamp(c.wetGain.gain, rfxLerp(0, 0.35, t), rt);
-  rfxRamp(c.dryGain.gain, rfxLerp(1.0, 0.22, t), rt);
-  rfxRamp(c.output.gain, rfxLerp(1.0, 0.21, t), rt);
+  rfxRamp(c.dryGain.gain, rfxLerp(1.0, 0.55, t), rt);
+  rfxRamp(c.output.gain, rfxLerp(1.0, 0.7, t), rt);
 }
 
 function enablePAEffect() {
