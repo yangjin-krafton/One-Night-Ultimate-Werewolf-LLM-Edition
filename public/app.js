@@ -832,20 +832,74 @@ function buildPlaylist(manifest, scenarioId, episodeId, playerCount, wakeOrder) 
   return playlist;
 }
 
-// ===== BGM =====
+// ===== BGM (scenario-specific, auto-normalized) =====
 const bgmEl = document.getElementById('bgmPlayer');
 const BGM_DEFAULT_VOLUME = 0.25;
-bgmEl.volume = (() => { try { return parseFloat(localStorage.getItem('onw_bgm_vol')) || BGM_DEFAULT_VOLUME; } catch { return BGM_DEFAULT_VOLUME; } })();
+const bgmState = {
+  source: null,       // MediaElementAudioSourceNode
+  compressor: null,   // DynamicsCompressorNode — auto volume leveling
+  gainNode: null,     // GainNode — user volume control
+  connected: false,
+};
 
-function setBgmVolume(v) {
-  bgmEl.volume = Math.max(0, Math.min(1, v));
-  try { localStorage.setItem('onw_bgm_vol', String(bgmEl.volume)); } catch {}
+function getBgmUserVolume() {
+  try { return parseFloat(localStorage.getItem('onw_bgm_vol')) || BGM_DEFAULT_VOLUME; } catch { return BGM_DEFAULT_VOLUME; }
 }
 
-function startBgm() {
+// Connect bgmEl through Web Audio compressor chain for auto-normalization
+function ensureBgmChain() {
+  if (bgmState.connected || !audioCtx) return;
+  const src = audioCtx.createMediaElementSource(bgmEl);
+  // Aggressive compressor = broadcast-style volume leveler
+  const comp = audioCtx.createDynamicsCompressor();
+  comp.threshold.value = -30;   // catch most of the dynamic range
+  comp.ratio.value = 14;        // heavy limiting
+  comp.knee.value = 6;
+  comp.attack.value = 0.005;    // fast attack — tame peaks instantly
+  comp.release.value = 0.15;    // moderate release — smooth leveling
+  // Makeup gain after compression to restore perceived loudness
+  const makeup = audioCtx.createGain();
+  makeup.gain.value = 2.0;
+  // User volume control
+  const gain = audioCtx.createGain();
+  gain.gain.value = getBgmUserVolume();
+  src.connect(comp);
+  comp.connect(makeup);
+  makeup.connect(gain);
+  gain.connect(audioCtx.destination);
+  bgmState.source = src;
+  bgmState.compressor = comp;
+  bgmState.makeup = makeup;
+  bgmState.gainNode = gain;
+  bgmState.connected = true;
+}
+
+function setBgmVolume(v) {
+  const vol = Math.max(0, Math.min(1, v));
+  try { localStorage.setItem('onw_bgm_vol', String(vol)); } catch {}
+  if (bgmState.gainNode) {
+    bgmState.gainNode.gain.value = vol;
+  } else {
+    bgmEl.volume = vol;
+  }
+}
+
+function startBgm(scenarioId) {
   if (state._bgmFadeTimer) { clearInterval(state._bgmFadeTimer); state._bgmFadeTimer = null; }
+  // Load scenario-specific BGM
+  if (scenarioId) {
+    bgmEl.src = `assets/bgm/${scenarioId}.m4a`;
+  }
+  bgmEl.volume = 1.0; // HTMLAudio volume at max — gain control handled by Web Audio chain
   bgmEl.muted = false;
   bgmEl.currentTime = 0;
+  ensureBgmChain();
+  // Restore user volume through gain node
+  if (bgmState.gainNode) {
+    bgmState.gainNode.gain.value = getBgmUserVolume();
+  } else {
+    bgmEl.volume = getBgmUserVolume();
+  }
   bgmEl.play().catch(() => {});
 }
 
@@ -853,27 +907,43 @@ function stopBgm() {
   if (state._bgmFadeTimer) { clearInterval(state._bgmFadeTimer); state._bgmFadeTimer = null; }
   bgmEl.pause();
   bgmEl.currentTime = 0;
-  // Restore saved volume so next play starts at user-set level
-  const saved = (() => { try { return parseFloat(localStorage.getItem('onw_bgm_vol')) || BGM_DEFAULT_VOLUME; } catch { return BGM_DEFAULT_VOLUME; } })();
-  bgmEl.volume = saved;
+  if (bgmState.gainNode) {
+    bgmState.gainNode.gain.value = getBgmUserVolume();
+  } else {
+    bgmEl.volume = getBgmUserVolume();
+  }
 }
 
 function fadeOutBgm(duration = 3000) {
   const step = 50; // ms per tick
   const steps = duration / step;
-  const volDec = bgmEl.volume / steps;
-  state._bgmFadeTimer = setInterval(() => {
-    bgmEl.volume = Math.max(0, bgmEl.volume - volDec);
-    if (bgmEl.volume <= 0) {
-      clearInterval(state._bgmFadeTimer);
-      state._bgmFadeTimer = null;
-      bgmEl.pause();
-      bgmEl.currentTime = 0;
-      // Restore saved volume for next play
-      const saved = (() => { try { return parseFloat(localStorage.getItem('onw_bgm_vol')) || BGM_DEFAULT_VOLUME; } catch { return BGM_DEFAULT_VOLUME; } })();
-      bgmEl.volume = saved;
-    }
-  }, step);
+  if (bgmState.gainNode) {
+    const startVol = bgmState.gainNode.gain.value;
+    const volDec = startVol / steps;
+    state._bgmFadeTimer = setInterval(() => {
+      const cur = bgmState.gainNode.gain.value - volDec;
+      bgmState.gainNode.gain.value = Math.max(0, cur);
+      if (bgmState.gainNode.gain.value <= 0) {
+        clearInterval(state._bgmFadeTimer);
+        state._bgmFadeTimer = null;
+        bgmEl.pause();
+        bgmEl.currentTime = 0;
+        bgmState.gainNode.gain.value = getBgmUserVolume();
+      }
+    }, step);
+  } else {
+    const volDec = bgmEl.volume / steps;
+    state._bgmFadeTimer = setInterval(() => {
+      bgmEl.volume = Math.max(0, bgmEl.volume - volDec);
+      if (bgmEl.volume <= 0) {
+        clearInterval(state._bgmFadeTimer);
+        state._bgmFadeTimer = null;
+        bgmEl.pause();
+        bgmEl.currentTime = 0;
+        bgmEl.volume = getBgmUserVolume();
+      }
+    }, step);
+  }
 }
 
 // ===== WAKE LOCK (prevent screen off during playback) =====
@@ -965,7 +1035,7 @@ async function restoreGameSession(session) {
   state.playlistIndex = idx;
 
   try { history.replaceState(null, '', '?room=' + encodeURIComponent(session.roomCode)); } catch {}
-  startBgm();
+  startBgm(scenarioId);
   bgmEl.pause(); // BGM also paused until user resumes
   render();
   showToast('게임이 복원되었습니다. 재생 버튼을 눌러 이어서 진행하세요.');
@@ -1325,7 +1395,7 @@ async function startPlayback() {
   state.playing = true;
   state.playlistIndex = 0;
   saveGameSession();
-  startBgm();
+  startBgm(scenarioId);
   requestWakeLock();
 
   // Setup scenario-specific audio effects
@@ -1829,10 +1899,10 @@ function renderPlayingOverlayHTML() {
 
         <div class="play__bgm-row">
           <span class="play__bgm-label">BGM</span>
-          <input type="range" min="0" max="100" value="${Math.round(bgmEl.volume * 100)}"
+          <input type="range" min="0" max="100" value="${Math.round(getBgmUserVolume() * 100)}"
             class="play__bgm-slider"
             oninput="setBgmVolume(this.value/100); this.nextElementSibling.textContent=this.value+'%'" />
-          <span class="play__bgm-val">${Math.round(bgmEl.volume * 100)}%</span>
+          <span class="play__bgm-val">${Math.round(getBgmUserVolume() * 100)}%</span>
         </div>
 
         <button class="play__exit-btn" onclick="stopPlayback()">나가기</button>
