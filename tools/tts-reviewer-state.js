@@ -12,7 +12,12 @@ let manifestData = null;
 let voiceMap = null;
 let currentClips = [];
 let playingIdx = -1;
-let isPlayAll = false;
+// "연속 재생" toggle — if true, auto-advance to next clip when one ends.
+// Restored from localStorage on init.
+let continuousPlay = (() => {
+  try { return localStorage.getItem('tts-reviewer:continuousPlay') === '1'; }
+  catch { return false; }
+})();
 let regenQueue = [];
 let regenRunning = false;
 let selectedClips = new Set(); // indices of selected clips

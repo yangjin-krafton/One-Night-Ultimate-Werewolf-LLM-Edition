@@ -700,7 +700,11 @@
     <select id="selEpisode"><option value="">--</option></select>
   </div>
   <div class="selector-group" id="playGroup" style="display:none">
-    <button class="btn" id="btnPlayAll" disabled>&#9654; 전체 재생</button>
+    <label id="btnContinuousWrap" title="켜면 현재 재생 중인 클립 이후 다음 클립이 자동으로 이어서 재생됩니다"
+           style="display:inline-flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;
+                  padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--surface2)">
+      <input type="checkbox" id="btnContinuousPlay" style="accent-color:var(--accent)"> 연속 재생
+    </label>
     <button class="btn" id="btnStopAll" disabled>&#9632; 정지</button>
     <button class="btn primary" id="btnRegenAll" onclick="regenAllClips()" disabled>&#9889; 전체 재생성</button>
     <button class="btn" id="btnBatch" onclick="openBatchPanel()" style="background:var(--accent);color:#fff;border-color:var(--accent)">&#9881; 배치 생성</button>

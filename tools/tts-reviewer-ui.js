@@ -79,7 +79,6 @@ function renderEpisode(episodeId) {
 
   renderClipList();
   renderStats();
-  $('btnPlayAll').disabled = false;
   $('btnStopAll').disabled = false;
   $('btnRegenAll').disabled = false;
   if (typeof updateLmSkillInfo === 'function') updateLmSkillInfo();
@@ -353,7 +352,7 @@ function revertEdit(idx) {
 // ── Audio Playback ──
 const audioPlayer = document.getElementById('audioPlayer');
 
-function playClip(idx) { stopAll(); isPlayAll = false; _play(idx); }
+function playClip(idx) { stopAll(); _play(idx); }
 
 // Monotonic token — any async step from a stale _play run is discarded.
 let _playToken = 0;
@@ -368,7 +367,8 @@ async function _play(idx) {
   if (myToken !== _playToken) return; // superseded during async src resolve
 
   if (!src) {
-    if (isPlayAll && (idx + 1) < currentClips.length) { _play(idx + 1); }
+    // Skip missing clips when continuous-play is on, otherwise just report.
+    if (continuousPlay && (idx + 1) < currentClips.length) { _play(idx + 1); }
     else { toast('오디오 파일이 없습니다', 'error'); stopAll(); }
     return;
   }
@@ -412,12 +412,11 @@ audioPlayer.addEventListener('ended', () => {
     // If user changed clip or stopped during outro, bail.
     if (endedToken !== _playToken) return;
     if (playingIdx !== endedIdx) return;
-    const hasNext = isPlayAll && (endedIdx + 1) < currentClips.length;
+    const hasNext = continuousPlay && (endedIdx + 1) < currentClips.length;
     if (hasNext) {
       _play(endedIdx + 1);
     } else {
       playingIdx = -1;
-      isPlayAll = false;
       $('playbackBar').classList.remove('visible');
       updateBottomPadding();
       if (typeof audiofxOnPlaybackEnd === 'function') audiofxOnPlaybackEnd();
@@ -428,7 +427,7 @@ audioPlayer.addEventListener('error', () => {
   // Ignore errors for stale sources (src was changed mid-load)
   if (!audioPlayer.src) return;
   toast(`오디오 재생 실패: clip #${playingIdx + 1}`, 'error');
-  if (isPlayAll && (playingIdx + 1) < currentClips.length) {
+  if (continuousPlay && (playingIdx + 1) < currentClips.length) {
     _play(playingIdx + 1);
   } else if (typeof audiofxOnPlaybackEnd === 'function') {
     audiofxOnPlaybackEnd();
@@ -436,9 +435,9 @@ audioPlayer.addEventListener('error', () => {
 });
 
 function stopAll() {
-  // Invalidate any in-flight _play / intro / outro continuations
+  // Invalidate any in-flight _play / intro / outro continuations.
+  // Note: continuousPlay is user-controlled via toggle — NOT reset here.
   _playToken++;
-  isPlayAll = false;
   try { audioPlayer.pause(); } catch {}
   audioPlayer.removeAttribute('src');
   try { audioPlayer.load(); } catch {}
@@ -449,7 +448,17 @@ function stopAll() {
   if (typeof audiofxOnStop === 'function') audiofxOnStop();
 }
 
-$('btnPlayAll').addEventListener('click', () => { stopAll(); isPlayAll = true; _play(0); });
+// ── Continuous-play toggle ──
+(function initContinuousPlayToggle() {
+  const cb = $('btnContinuousPlay');
+  if (!cb) return;
+  cb.checked = continuousPlay;
+  cb.addEventListener('change', () => {
+    continuousPlay = cb.checked;
+    try { localStorage.setItem('tts-reviewer:continuousPlay', continuousPlay ? '1' : '0'); } catch {}
+  });
+})();
+
 $('btnStopAll').addEventListener('click', stopAll);
 $('pbPrev').addEventListener('click', () => { if (playingIdx > 0) { const p = playingIdx; stopAll(); _play(p - 1); } });
 $('pbNext').addEventListener('click', () => { if (playingIdx < currentClips.length - 1) { const p = playingIdx; stopAll(); _play(p + 1); } });
