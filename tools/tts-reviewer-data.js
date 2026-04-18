@@ -52,6 +52,8 @@ function showSelectors() {
   $('selectorGroup').style.display = '';
   $('episodeGroup').style.display = '';
   $('playGroup').style.display = '';
+  const fx = $('audioFxGroup');
+  if (fx) fx.style.display = '';
 }
 
 function initSelectors() {

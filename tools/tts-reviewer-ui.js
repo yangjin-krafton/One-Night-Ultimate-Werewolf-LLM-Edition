@@ -83,6 +83,7 @@ function renderEpisode(episodeId) {
   $('btnStopAll').disabled = false;
   $('btnRegenAll').disabled = false;
   if (typeof updateLmSkillInfo === 'function') updateLmSkillInfo();
+  if (typeof audiofxOnScenarioChange === 'function') audiofxOnScenarioChange(scenarioId);
 }
 
 function findAudioUrl(scenarioId, episodeId, clipType, roleId) {
@@ -375,17 +376,40 @@ async function _play(idx) {
   $('pbNowPlaying').innerHTML = `<span class="role">${roleDisplayName(clip.roleId)}</span> &mdash; ${escapeHtml(clip.text.substring(0, 80))}...`;
 
   audioPlayer.src = src;
-  audioPlayer.play().catch(() => {});
+  // Ensure BGM is playing, then run intro SFX, then start clip
+  if (typeof audiofxOnClipStart === 'function') audiofxOnClipStart();
+  const introPromise = (typeof audiofxBeforeClipPlay === 'function')
+    ? audiofxBeforeClipPlay() : Promise.resolve();
+  introPromise.then(() => {
+    if (playingIdx !== idx) return; // aborted
+    audioPlayer.play().catch(() => {});
+  });
 }
 
 audioPlayer.addEventListener('ended', () => {
   document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
-  if (isPlayAll) { _play(playingIdx + 1); }
-  else { playingIdx = -1; $('playbackBar').classList.remove('visible'); updateBottomPadding(); }
+  const outroPromise = (typeof audiofxAfterClipEnd === 'function')
+    ? audiofxAfterClipEnd() : Promise.resolve();
+  outroPromise.then(() => {
+    const hasNext = isPlayAll && (playingIdx + 1) < currentClips.length;
+    if (hasNext) {
+      _play(playingIdx + 1);
+    } else {
+      playingIdx = -1;
+      isPlayAll = false;
+      $('playbackBar').classList.remove('visible');
+      updateBottomPadding();
+      if (typeof audiofxOnPlaybackEnd === 'function') audiofxOnPlaybackEnd();
+    }
+  });
 });
 audioPlayer.addEventListener('error', () => {
   toast(`오디오 재생 실패: clip #${playingIdx + 1}`, 'error');
-  if (isPlayAll) _play(playingIdx + 1);
+  if (isPlayAll && (playingIdx + 1) < currentClips.length) {
+    _play(playingIdx + 1);
+  } else if (typeof audiofxOnPlaybackEnd === 'function') {
+    audiofxOnPlaybackEnd();
+  }
 });
 
 function stopAll() {
@@ -396,6 +420,7 @@ function stopAll() {
   document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
   $('playbackBar').classList.remove('visible');
   updateBottomPadding();
+  if (typeof audiofxOnStop === 'function') audiofxOnStop();
 }
 
 $('btnPlayAll').addEventListener('click', () => { stopAll(); isPlayAll = true; _play(0); });
