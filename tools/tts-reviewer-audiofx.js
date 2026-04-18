@@ -34,6 +34,16 @@ let bgmEnabled = fxLsGet('bgmEnabled', '1') === '1';
 let sfxEnabled = fxLsGet('sfxEnabled', '1') === '1';
 let currentScenarioId = null;
 
+// ===== Playback generation token =====
+// Bumped on every clip start / stop — async continuations check this
+// to avoid stale SFX/BGM decisions from interrupted playback.
+let _playGen = 0;
+function audiofxBumpGen() { return ++_playGen; }
+function audiofxIsStale(gen) { return gen !== _playGen; }
+
+// Separate gen for async startBgm (src resolution race)
+let _bgmStartGen = 0;
+
 function getBgmUserVolume() {
   const v = parseFloat(fxLsGet('bgmVolume', String(BGM_DEFAULT_VOLUME)));
   return isNaN(v) ? BGM_DEFAULT_VOLUME : Math.max(0, Math.min(1, v));
@@ -117,23 +127,32 @@ async function resolveBgmSrc(scenarioId) {
 
 async function startBgm(scenarioId) {
   if (!bgmEl || !scenarioId) return;
+  const myGen = ++_bgmStartGen;
   if (state._bgmFadeTimer) { clearInterval(state._bgmFadeTimer); state._bgmFadeTimer = null; }
   const newSrc = await resolveBgmSrc(scenarioId);
+  // A newer start/stop happened while we were awaiting — abort.
+  if (myGen !== _bgmStartGen) return;
   if (!newSrc) return;
-  bgmEl.src = newSrc;
-  bgmEl.volume = 1.0;
-  bgmEl.muted = false;
-  bgmEl.loop = true;
-  bgmEl.currentTime = 0;
+  // If already playing the same source, just restore volume and bail (no restart).
+  const already = bgmEl.src && bgmEl.src.endsWith('/' + scenarioId + '.m4a') && !bgmEl.paused;
+  if (!already) {
+    bgmEl.src = newSrc;
+    bgmEl.volume = 1.0;
+    bgmEl.muted = false;
+    bgmEl.loop = true;
+    bgmEl.currentTime = 0;
+  }
   ensureAudioCtx();
   ensureBgmChain();
   if (bgmState.gainNode) bgmState.gainNode.gain.value = getBgmUserVolume();
   else bgmEl.volume = getBgmUserVolume();
-  bgmEl.play().catch(() => {});
+  if (!already) bgmEl.play().catch(() => {});
 }
 
 function stopBgm() {
   if (!bgmEl) return;
+  // Abort any pending startBgm
+  _bgmStartGen++;
   if (state._bgmFadeTimer) { clearInterval(state._bgmFadeTimer); state._bgmFadeTimer = null; }
   bgmEl.pause();
   bgmEl.currentTime = 0;
@@ -175,12 +194,16 @@ function fadeOutBgm(duration = 1500) {
 }
 
 // ===== SFX integration =====
-// Apply SFX chain decision for one clip (random 50% like real game).
-// Must be called BEFORE audio playback starts.
-function audiofxBeforeClipPlay() {
-  if (!sfxEnabled) return Promise.resolve();
-  ensureAudioCtx();
+// All SFX functions accept an optional `gen` token. If the playback
+// generation changes while an async step is pending, the result is discarded
+// so stale SFX never leak across clips.
+
+async function audiofxBeforeClipPlay(gen) {
+  if (!sfxEnabled) return;
+  if (!ensureAudioCtx()) return;
+  // Always reset per-clip flags first — no leftovers from previous clip.
   if (typeof scenarioFxResetClip === 'function') scenarioFxResetClip();
+  if (gen !== undefined && audiofxIsStale(gen)) return;
 
   // Radio
   if (typeof radioFx !== 'undefined' && radioFx.active) {
@@ -212,27 +235,28 @@ function audiofxBeforeClipPlay() {
       palaceFx.clipHasPalace = true; updatePalaceIntensity(1);
     } else { palaceFx.clipHasPalace = false; updatePalaceIntensity(0); }
   }
+  if (gen !== undefined && audiofxIsStale(gen)) return;
 
-  // Play intro SFX
+  // Play intro SFX in parallel
   const p = [];
   if (typeof radioFx !== 'undefined' && radioFx.clipHasRadio && typeof playSquelchIn === 'function') p.push(playSquelchIn());
   if (typeof phoneFx !== 'undefined' && phoneFx.clipHasPhone && typeof playPhoneCallIn === 'function') p.push(playPhoneCallIn());
   if (typeof cavernFx !== 'undefined' && cavernFx.clipHasCavern && typeof playCavernIntro === 'function') p.push(playCavernIntro());
   if (typeof paFx !== 'undefined' && paFx.clipHasPA && typeof playPAChime === 'function') p.push(playPAChime());
   if (typeof palaceFx !== 'undefined' && palaceFx.clipHasPalace && typeof playPalaceIntro === 'function') p.push(playPalaceIntro());
-  return Promise.all(p);
+  if (p.length) await Promise.all(p).catch(() => {});
 }
 
-// Play outro SFX after a clip ends.
-function audiofxAfterClipEnd() {
-  if (!sfxEnabled) return Promise.resolve();
+async function audiofxAfterClipEnd(gen) {
+  if (!sfxEnabled) return;
+  if (gen !== undefined && audiofxIsStale(gen)) return;
   const p = [];
   if (typeof radioFx !== 'undefined' && radioFx.clipHasRadio && typeof playSquelchOut === 'function') p.push(playSquelchOut());
   if (typeof phoneFx !== 'undefined' && phoneFx.clipHasPhone && typeof playPhoneHangUp === 'function') p.push(playPhoneHangUp());
   if (typeof cavernFx !== 'undefined' && cavernFx.clipHasCavern && typeof playCavernOutro === 'function') p.push(playCavernOutro());
   if (typeof paFx !== 'undefined' && paFx.clipHasPA && typeof playPAChimeOut === 'function') p.push(playPAChimeOut());
   if (typeof palaceFx !== 'undefined' && palaceFx.clipHasPalace && typeof playPalaceOutro === 'function') p.push(playPalaceOutro());
-  return Promise.all(p);
+  if (p.length) await Promise.all(p).catch(() => {});
 }
 
 // Called when scenario (or episode) is loaded — sets up SFX chain only.
@@ -257,10 +281,13 @@ function audiofxOnScenarioChange(scenarioId) {
   }
 }
 
-// Called right before a clip starts playing — ensure BGM is running.
+// Called right before a clip starts playing.
+// Bumps the generation (invalidating all stale async SFX/BGM ops) and
+// ensures BGM is running. Returns the new gen — pass it to
+// audiofxBeforeClipPlay / audiofxAfterClipEnd so they can abort if superseded.
 function audiofxOnClipStart() {
-  if (!bgmEnabled || !currentScenarioId) return;
-  if (!bgmEl) return;
+  const gen = audiofxBumpGen();
+  if (!bgmEnabled || !currentScenarioId || !bgmEl) return gen;
   // Cancel any in-progress fade-out
   if (state._bgmFadeTimer) {
     clearInterval(state._bgmFadeTimer);
@@ -269,15 +296,19 @@ function audiofxOnClipStart() {
     else bgmEl.volume = getBgmUserVolume();
   }
   if (bgmEl.paused) startBgm(currentScenarioId);
+  return gen;
 }
 
 // Called when playback ends or stops — fade BGM out.
+// Idempotent: repeated calls don't stack fade timers, and reset-clip flags
+// ensure no stale outro SFX leaks.
 function audiofxOnPlaybackEnd() {
+  // Invalidate any pending async continuations (intro/outro promises).
+  audiofxBumpGen();
   if (typeof scenarioFxResetClip === 'function') scenarioFxResetClip();
-  if (bgmEl && !bgmEl.paused) fadeOutBgm(1500);
+  if (bgmEl && !bgmEl.paused && !state._bgmFadeTimer) fadeOutBgm(1500);
 }
 
-// Kept for backward compat — same behavior as audiofxOnPlaybackEnd.
 function audiofxOnStop() { audiofxOnPlaybackEnd(); }
 
 // ===== UI wiring =====

@@ -355,13 +355,21 @@ const audioPlayer = document.getElementById('audioPlayer');
 
 function playClip(idx) { stopAll(); isPlayAll = false; _play(idx); }
 
+// Monotonic token — any async step from a stale _play run is discarded.
+let _playToken = 0;
+
 async function _play(idx) {
   if (idx < 0 || idx >= currentClips.length) { stopAll(); return; }
 
+  const myToken = ++_playToken;
+
   const clip = currentClips[idx];
   const src = await resolveAudioSrc(clip);
+  if (myToken !== _playToken) return; // superseded during async src resolve
+
   if (!src) {
-    if (isPlayAll) { _play(idx + 1); } else { toast('오디오 파일이 없습니다', 'error'); }
+    if (isPlayAll && (idx + 1) < currentClips.length) { _play(idx + 1); }
+    else { toast('오디오 파일이 없습니다', 'error'); stopAll(); }
     return;
   }
 
@@ -375,25 +383,38 @@ async function _play(idx) {
   updateBottomPadding();
   $('pbNowPlaying').innerHTML = `<span class="role">${roleDisplayName(clip.roleId)}</span> &mdash; ${escapeHtml(clip.text.substring(0, 80))}...`;
 
+  // Reset audio element state to a known baseline before new src
+  try { audioPlayer.pause(); } catch {}
   audioPlayer.src = src;
-  // Ensure BGM is playing, then run intro SFX, then start clip
-  if (typeof audiofxOnClipStart === 'function') audiofxOnClipStart();
+
+  // Ensure BGM + SFX chain; store the fx gen for later abort checks
+  const fxGen = (typeof audiofxOnClipStart === 'function') ? audiofxOnClipStart() : undefined;
+
   const introPromise = (typeof audiofxBeforeClipPlay === 'function')
-    ? audiofxBeforeClipPlay() : Promise.resolve();
+    ? audiofxBeforeClipPlay(fxGen) : Promise.resolve();
   introPromise.then(() => {
-    if (playingIdx !== idx) return; // aborted
+    // Abort if another _play / stop happened
+    if (myToken !== _playToken) return;
+    if (playingIdx !== idx) return;
     audioPlayer.play().catch(() => {});
   });
 }
 
 audioPlayer.addEventListener('ended', () => {
+  // Capture token at the moment 'ended' fires — defends against user clicking
+  // another clip while outro SFX is still playing.
+  const endedToken = _playToken;
+  const endedIdx = playingIdx;
   document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
   const outroPromise = (typeof audiofxAfterClipEnd === 'function')
     ? audiofxAfterClipEnd() : Promise.resolve();
   outroPromise.then(() => {
-    const hasNext = isPlayAll && (playingIdx + 1) < currentClips.length;
+    // If user changed clip or stopped during outro, bail.
+    if (endedToken !== _playToken) return;
+    if (playingIdx !== endedIdx) return;
+    const hasNext = isPlayAll && (endedIdx + 1) < currentClips.length;
     if (hasNext) {
-      _play(playingIdx + 1);
+      _play(endedIdx + 1);
     } else {
       playingIdx = -1;
       isPlayAll = false;
@@ -404,6 +425,8 @@ audioPlayer.addEventListener('ended', () => {
   });
 });
 audioPlayer.addEventListener('error', () => {
+  // Ignore errors for stale sources (src was changed mid-load)
+  if (!audioPlayer.src) return;
   toast(`오디오 재생 실패: clip #${playingIdx + 1}`, 'error');
   if (isPlayAll && (playingIdx + 1) < currentClips.length) {
     _play(playingIdx + 1);
@@ -413,9 +436,12 @@ audioPlayer.addEventListener('error', () => {
 });
 
 function stopAll() {
+  // Invalidate any in-flight _play / intro / outro continuations
+  _playToken++;
   isPlayAll = false;
-  audioPlayer.pause();
+  try { audioPlayer.pause(); } catch {}
   audioPlayer.removeAttribute('src');
+  try { audioPlayer.load(); } catch {}
   playingIdx = -1;
   document.querySelectorAll('.clip-card.playing').forEach(el => el.classList.remove('playing'));
   $('playbackBar').classList.remove('visible');
