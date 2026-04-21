@@ -24,6 +24,29 @@ function findVoiceEntry(tag) {
   return voicesJsonData.find(v => v.tag === tag) || null;
 }
 
+// Auto-load the Qwen3 server's own voices.json so users don't have to
+// pick the ref folder manually. The container mounts /data/voices/ref and
+// Gradio's file server exposes it via /gradio_api/file=/data/voices/ref/voices.json.
+let _qwen3VoicesLoadPromise = null;
+function ensureQwen3VoicesLoaded() {
+  if (voicesJsonData.length > 0) return Promise.resolve();
+  if (_qwen3VoicesLoadPromise) return _qwen3VoicesLoadPromise;
+  const base = getQwen3ApiBase();
+  _qwen3VoicesLoadPromise = (async () => {
+    const url = `${base}/gradio_api/file=/data/voices/ref/voices.json`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`voices.json 로드 실패 (${resp.status})`);
+    const data = await resp.json();
+    voicesJsonData = data.voices || [];
+    serverVoices = voicesJsonData.map(v => v.tag).sort();
+    console.log(`[Qwen3] voices.json 자동 로드: ${voicesJsonData.length}개`);
+  })().catch(e => {
+    _qwen3VoicesLoadPromise = null;
+    throw e;
+  });
+  return _qwen3VoicesLoadPromise;
+}
+
 // ── Fish Speech TTS ──
 async function generateTtsFish(text, tag) {
   const base = getApiBase();
@@ -56,6 +79,8 @@ async function generateTtsFish(text, tag) {
 // ── Qwen3-TTS (Gradio API) ──
 async function generateTtsQwen3(text, tag) {
   const base = getQwen3ApiBase();
+
+  await ensureQwen3VoicesLoaded();
 
   // Resolve voice info from voice library
   const entry = findVoiceEntry(tag);
@@ -299,6 +324,7 @@ async function runQueue() {
       }
     } catch (e) {
       log.textContent += `  -> 실패: ${e.message}\n`;
+      console.error(`[regen #${idx + 1} ${roleDisplayName(clip.roleId)}]`, e);
     }
 
     queueDoneCount++;
