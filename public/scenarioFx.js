@@ -85,15 +85,11 @@ function scenarioFxDisableAll() {
   disablePalaceEffect();
 }
 
-// Enable the correct effect for a scenario — single dispatch point
+// Enable the correct effect for a scenario — single dispatch point.
+// SFX effects temporarily disabled: map intentionally empty so no scenario
+// activates radio/phone/cavern/PA/palace. BGM is unaffected.
 function scenarioFxEnableFor(scenarioId) {
-  const map = {
-    'rust_orbit': enableRadioEffect,
-    'school_broadcast_prayer': enablePhoneEffect,
-    'dark_citadel': enableCavernEffect,
-    'salgol_ward': enablePAEffect,
-    'floodgate_nameplates': enablePalaceEffect,
-  };
+  const map = {};
   const fn = map[scenarioId];
   if (fn) { ensureMediaSource(); fn(); }
   else { ensureDirectRouting(); }
