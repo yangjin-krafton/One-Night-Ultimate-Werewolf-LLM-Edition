@@ -198,11 +198,13 @@ function fadeOutBgm(duration = 1500) {
 // generation changes while an async step is pending, the result is discarded
 // so stale SFX never leak across clips.
 
-async function audiofxBeforeClipPlay(gen) {
+async function audiofxBeforeClipPlay(gen, isNarration) {
   if (!sfxEnabled) return;
   if (!ensureAudioCtx()) return;
   // Always reset per-clip flags first — no leftovers from previous clip.
   if (typeof scenarioFxResetClip === 'function') scenarioFxResetClip();
+  // Narration echo — dry path is always clean; only narration clips hear wet tail
+  if (typeof setNarrationActive === 'function') setNarrationActive(!!isNarration);
   if (gen !== undefined && audiofxIsStale(gen)) return;
 
   // Radio

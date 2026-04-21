@@ -390,8 +390,9 @@ async function _play(idx) {
   // Ensure BGM + SFX chain; store the fx gen for later abort checks
   const fxGen = (typeof audiofxOnClipStart === 'function') ? audiofxOnClipStart() : undefined;
 
+  const isNarration = clip.type === 'opening' || clip.type === 'outro';
   const introPromise = (typeof audiofxBeforeClipPlay === 'function')
-    ? audiofxBeforeClipPlay(fxGen) : Promise.resolve();
+    ? audiofxBeforeClipPlay(fxGen, isNarration) : Promise.resolve();
   introPromise.then(() => {
     // Abort if another _play / stop happened
     if (myToken !== _playToken) return;

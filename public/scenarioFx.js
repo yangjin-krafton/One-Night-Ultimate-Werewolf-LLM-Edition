@@ -83,16 +83,17 @@ function scenarioFxDisableAll() {
   disableCavernEffect();
   disablePAEffect();
   disablePalaceEffect();
+  disableNarrationEffect();
 }
 
 // Enable the correct effect for a scenario — single dispatch point.
-// SFX effects temporarily disabled: map intentionally empty so no scenario
-// activates radio/phone/cavern/PA/palace. BGM is unaffected.
+// Scenario SFX temporarily disabled (empty map). Narration echo is installed
+// as the default routing; its wet path is gated per-clip via setNarrationActive.
 function scenarioFxEnableFor(scenarioId) {
   const map = {};
   const fn = map[scenarioId];
   if (fn) { ensureMediaSource(); fn(); }
-  else { ensureDirectRouting(); }
+  else { enableNarrationEffect(); }
 }
 
 // ===== RADIO (WALKIE-TALKIE) EFFECT — rust_orbit =====
@@ -896,3 +897,88 @@ function disablePalaceEffect() {
 function playPalaceIntro() { return Promise.resolve(); }
 function playPalaceOutro() { return Promise.resolve(); }
 // >>> EXPERIMENTAL END — floodgate_nameplates palace-hall <<<
+
+// ===== NARRATION ECHO — applied ONLY to narration (opening/outro) clips =====
+// Parallel dry+wet mix: dry path is untouched so the voice never breaks.
+// Wet path is band-limited (HP 250Hz, LP 5.5kHz) and mixed low, so the reverb
+// adds ambience without masking consonants or muddying low end.
+const narrationFx = {
+  enabled: false,  // chain installed on the shared media source
+  active: false,   // wet path currently audible (per-clip toggle)
+  chain: null,
+};
+const NARR_WET_LEVEL = 0.55;   // wet mix depth when narration active
+const NARR_PREDELAY_SEC = 0.07; // 70ms — keeps dry transient distinct from tail
+
+function buildNarrationImpulse(durationSec, decay) {
+  const sr = audioCtx.sampleRate;
+  const len = Math.max(1, Math.floor(sr * durationSec));
+  const impulse = audioCtx.createBuffer(2, len, sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, decay);
+    }
+  }
+  return impulse;
+}
+
+function buildNarrationChain() {
+  const input = audioCtx.createGain(); input.gain.value = 1.0;
+  const dryGain = audioCtx.createGain(); dryGain.gain.value = 1.0;
+
+  const preDelay = audioCtx.createDelay(0.5);
+  preDelay.delayTime.value = NARR_PREDELAY_SEC;
+  const wetHP = audioCtx.createBiquadFilter();
+  wetHP.type = 'highpass'; wetHP.frequency.value = 180; wetHP.Q.value = 0.7;
+  const wetLP = audioCtx.createBiquadFilter();
+  wetLP.type = 'lowpass'; wetLP.frequency.value = 7000; wetLP.Q.value = 0.7;
+  const convolver = audioCtx.createConvolver();
+  convolver.buffer = buildNarrationImpulse(2.6, 2.2);
+  const wetGain = audioCtx.createGain(); wetGain.gain.value = 0;
+
+  const output = audioCtx.createGain(); output.gain.value = 1.0;
+
+  input.connect(dryGain); dryGain.connect(output);
+  input.connect(preDelay); preDelay.connect(wetHP); wetHP.connect(wetLP);
+  wetLP.connect(convolver); convolver.connect(wetGain); wetGain.connect(output);
+  output.connect(audioCtx.destination);
+
+  return { input, dryGain, preDelay, wetHP, wetLP, convolver, wetGain, output };
+}
+
+function enableNarrationEffect() {
+  if (narrationFx.enabled) return;
+  if (!audioCtx) return;
+  const src = ensureMediaSource();
+  try { src.disconnect(); } catch (_) {}
+  narrationFx.chain = buildNarrationChain();
+  src.connect(narrationFx.chain.input);
+  narrationFx.enabled = true;
+  narrationFx.active = false;
+}
+
+function disableNarrationEffect() {
+  if (!narrationFx.enabled) return;
+  if (narrationFx.chain) {
+    Object.values(narrationFx.chain).forEach(n => { try { n.disconnect(); } catch (_) {} });
+    narrationFx.chain = null;
+  }
+  if (radioFx.mediaSource && audioCtx) {
+    try { radioFx.mediaSource.disconnect(); } catch (_) {}
+    radioFx.mediaSource.connect(audioCtx.destination);
+  }
+  narrationFx.enabled = false;
+  narrationFx.active = false;
+}
+
+// Per-clip wet toggle — ramped to avoid clicks.
+// Non-narration clips get wetGain=0 → pure dry path → identical to no effect.
+function setNarrationActive(isNarr) {
+  if (!narrationFx.enabled || !narrationFx.chain || !audioCtx) return;
+  const target = isNarr ? NARR_WET_LEVEL : 0;
+  const rt = audioCtx.currentTime + 0.03;
+  rfxRamp(narrationFx.chain.wetGain.gain, target, rt);
+  narrationFx.active = !!isNarr;
+}

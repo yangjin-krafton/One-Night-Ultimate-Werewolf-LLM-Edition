@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="210mm" height="297mm" viewBox="0 0 210 297">
+  <defs>
+    <pattern id="tabPattern" patternUnits="userSpaceOnUse" width="2.5" height="2.5" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="2.5" stroke="#bbb" stroke-width="0.2"/>
+    </pattern>
+    <filter id="grayscale"><feColorMatrix type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0"/></filter>
+  </defs>
+
+  <!-- Header -->
+  <text x="105" y="20" text-anchor="middle" font-family="serif" font-size="6" fill="#111" font-weight="bold">
+    大正浪漫 人狼 · 紙キューブ [Set A · 牡丹 線畫]
+  </text>
+  <text x="105" y="29" text-anchor="middle" font-family="sans-serif" font-size="3.3" fill="#555">
+    실선 = 자르기 · 점선 = 접기 · 돌출부(탭) = 풀칠면 · 인쇄 배율 100%
+  </text>
+  <text x="105" y="35" text-anchor="middle" font-family="sans-serif" font-size="3.0" fill="#888">
+    잉크 절약형 — 흰 바탕 검정 선화 + 포인트 牡丹紅 · 앞면은 &lt;image href&gt; 수정으로 역할 교체
+  </text>
+
+  <!-- Glue tabs: 흰색 채움 (잉크 0, 시각적으로 불투명 흰색) -->
+  <g fill="#ffffff" stroke="none">
+    <polygon points="58,73.5 65,66.5 101,66.5 108,73.5"/>
+    <polygon points="58,73.5 51,80.5 51,116.5 58,123.5"/>
+    <polygon points="108,73.5 115,80.5 115,116.5 108,123.5"/>
+    <polygon points="8,123.5 1,130.5 1,166.5 8,173.5"/>
+    <polygon points="58,173.5 51,180.5 51,216.5 58,223.5"/>
+    <polygon points="108,173.5 115,180.5 115,216.5 108,223.5"/>
+    <polygon points="58,223.5 65,230.5 101,230.5 108,223.5"/>
+  </g>
+
+  <!-- ========== TOP (윗면): Peony line medallion ========== -->
+  <g transform="translate(58,73.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <rect x="4" y="4" width="92" height="92" fill="none" stroke="#111" stroke-width="0.5"/>
+    <rect x="6" y="6" width="88" height="88" fill="none" stroke="#111" stroke-width="0.2"/>
+    <g transform="translate(50,50)" fill="none" stroke="#111" stroke-width="0.45">
+      <ellipse cx="0" cy="-24" rx="7" ry="14"/>
+      <ellipse cx="0" cy="-24" rx="7" ry="14" transform="rotate(45)"/>
+      <ellipse cx="0" cy="-24" rx="7" ry="14" transform="rotate(90)"/>
+      <ellipse cx="0" cy="-24" rx="7" ry="14" transform="rotate(135)"/>
+      <ellipse cx="0" cy="-24" rx="7" ry="14" transform="rotate(180)"/>
+      <ellipse cx="0" cy="-24" rx="7" ry="14" transform="rotate(225)"/>
+      <ellipse cx="0" cy="-24" rx="7" ry="14" transform="rotate(270)"/>
+      <ellipse cx="0" cy="-24" rx="7" ry="14" transform="rotate(315)"/>
+    </g>
+    <g transform="translate(50,50)" fill="none" stroke="#111" stroke-width="0.4">
+      <ellipse cx="0" cy="-14" rx="4" ry="7"/>
+      <ellipse cx="0" cy="-14" rx="4" ry="7" transform="rotate(60)"/>
+      <ellipse cx="0" cy="-14" rx="4" ry="7" transform="rotate(120)"/>
+      <ellipse cx="0" cy="-14" rx="4" ry="7" transform="rotate(180)"/>
+      <ellipse cx="0" cy="-14" rx="4" ry="7" transform="rotate(240)"/>
+      <ellipse cx="0" cy="-14" rx="4" ry="7" transform="rotate(300)"/>
+    </g>
+    <g transform="translate(50,50)">
+      <circle r="4" fill="none" stroke="#111" stroke-width="0.35"/>
+      <circle r="2.2" fill="#b83757"/>
+    </g>
+    <g fill="#111">
+      <circle cx="12" cy="12" r="0.9"/><circle cx="88" cy="12" r="0.9"/>
+      <circle cx="12" cy="88" r="0.9"/><circle cx="88" cy="88" r="0.9"/>
+    </g>
+  </g>
+
+  <!-- ========== LEFT (왼쪽): Vine with peony buds ========== -->
+  <g transform="translate(8,123.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <rect x="4" y="4" width="92" height="92" fill="none" stroke="#111" stroke-width="0.5"/>
+    <path d="M50,10 Q30,25 50,40 Q70,55 50,70 Q30,85 50,95" fill="none" stroke="#111" stroke-width="0.9" stroke-linecap="round"/>
+    <g fill="none" stroke="#111" stroke-width="0.45">
+      <ellipse cx="38" cy="32" rx="5" ry="2" transform="rotate(-30 38 32)"/>
+      <ellipse cx="62" cy="62" rx="5" ry="2" transform="rotate(-30 62 62)"/>
+      <ellipse cx="38" cy="87" rx="5" ry="2" transform="rotate(-30 38 87)"/>
+    </g>
+    <g transform="translate(50,22)" fill="none" stroke="#111" stroke-width="0.4">
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(288)"/>
+      <circle r="1.3" fill="#b83757" stroke="none"/>
+    </g>
+    <g transform="translate(50,50)" fill="none" stroke="#111" stroke-width="0.45">
+      <ellipse cx="0" cy="-12" rx="5" ry="8"/>
+      <ellipse cx="0" cy="-12" rx="5" ry="8" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-12" rx="5" ry="8" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-12" rx="5" ry="8" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-12" rx="5" ry="8" transform="rotate(288)"/>
+      <circle r="1.8" fill="#b83757" stroke="none"/>
+    </g>
+    <g transform="translate(50,78)" fill="none" stroke="#111" stroke-width="0.4">
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(288)"/>
+      <circle r="1.3" fill="#b83757" stroke="none"/>
+    </g>
+  </g>
+
+  <!-- ========== FRONT (앞면): Role slot ========== -->
+  <g transform="translate(58,123.5)">
+    <rect width="50" height="50" fill="#ffffff"/>
+    <rect x="2" y="2" width="46" height="46" fill="none" stroke="#111" stroke-width="0.5"/>
+    <rect x="3" y="3" width="44" height="44" fill="none" stroke="#111" stroke-width="0.2"/>
+    <image href="images_web/taisho_roman/roles/werewolf.webp" xlink:href="images_web/taisho_roman/roles/werewolf.webp"
+           x="4" y="4" width="42" height="42" preserveAspectRatio="xMidYMid slice"/>
+    <!-- 그레이스케일 인쇄 원하면 위 image에 filter="url(#grayscale)" 추가 -->
+  </g>
+
+  <!-- ========== RIGHT (오른쪽): Mirror vine ========== -->
+  <g transform="translate(108,123.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <rect x="4" y="4" width="92" height="92" fill="none" stroke="#111" stroke-width="0.5"/>
+    <path d="M50,10 Q70,25 50,40 Q30,55 50,70 Q70,85 50,95" fill="none" stroke="#111" stroke-width="0.9" stroke-linecap="round"/>
+    <g fill="none" stroke="#111" stroke-width="0.45">
+      <ellipse cx="62" cy="32" rx="5" ry="2" transform="rotate(30 62 32)"/>
+      <ellipse cx="38" cy="62" rx="5" ry="2" transform="rotate(30 38 62)"/>
+      <ellipse cx="62" cy="87" rx="5" ry="2" transform="rotate(30 62 87)"/>
+    </g>
+    <g transform="translate(50,22)" fill="none" stroke="#111" stroke-width="0.4">
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(288)"/>
+      <circle r="1.3" fill="#b83757" stroke="none"/>
+    </g>
+    <g transform="translate(50,50)" fill="none" stroke="#111" stroke-width="0.45">
+      <ellipse cx="0" cy="-12" rx="5" ry="8"/>
+      <ellipse cx="0" cy="-12" rx="5" ry="8" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-12" rx="5" ry="8" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-12" rx="5" ry="8" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-12" rx="5" ry="8" transform="rotate(288)"/>
+      <circle r="1.8" fill="#b83757" stroke="none"/>
+    </g>
+    <g transform="translate(50,78)" fill="none" stroke="#111" stroke-width="0.4">
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-9" rx="3.5" ry="6" transform="rotate(288)"/>
+      <circle r="1.3" fill="#b83757" stroke="none"/>
+    </g>
+  </g>
+
+  <!-- ========== BACK (뒷면): Large outlined emblem ========== -->
+  <g transform="translate(158,123.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <rect x="4" y="4" width="92" height="92" fill="none" stroke="#111" stroke-width="0.6"/>
+    <rect x="6.5" y="6.5" width="87" height="87" fill="none" stroke="#111" stroke-width="0.2"/>
+    <g transform="translate(50,50)" fill="none" stroke="#111">
+      <circle r="38" stroke-width="0.5"/>
+      <circle r="36" stroke-width="0.2"/>
+      <g stroke-width="0.4">
+        <ellipse cx="0" cy="-22" rx="5" ry="10"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(36)"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(72)"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(108)"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(144)"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(180)"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(216)"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(252)"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(288)"/>
+        <ellipse cx="0" cy="-22" rx="5" ry="10" transform="rotate(324)"/>
+      </g>
+      <g stroke-width="0.35">
+        <ellipse cx="0" cy="-11" rx="3" ry="6"/>
+        <ellipse cx="0" cy="-11" rx="3" ry="6" transform="rotate(60)"/>
+        <ellipse cx="0" cy="-11" rx="3" ry="6" transform="rotate(120)"/>
+        <ellipse cx="0" cy="-11" rx="3" ry="6" transform="rotate(180)"/>
+        <ellipse cx="0" cy="-11" rx="3" ry="6" transform="rotate(240)"/>
+        <ellipse cx="0" cy="-11" rx="3" ry="6" transform="rotate(300)"/>
+      </g>
+    </g>
+    <g transform="translate(50,50)">
+      <circle r="6" fill="#b83757"/>
+      <text x="0" y="2.2" text-anchor="middle" font-family="serif" font-size="7" fill="#fff" font-weight="bold">狼</text>
+    </g>
+    <text x="50" y="96" text-anchor="middle" font-family="serif" font-size="3.5" fill="#111" letter-spacing="2">大正浪漫 人狼</text>
+  </g>
+
+  <!-- ========== BOTTOM (바닥): Small mark ========== -->
+  <g transform="translate(58,173.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <rect x="4" y="4" width="92" height="92" fill="none" stroke="#111" stroke-width="0.5"/>
+    <g fill="#111" opacity="0.4">
+      <circle cx="20" cy="20" r="0.9"/><circle cx="80" cy="20" r="0.9"/>
+      <circle cx="20" cy="80" r="0.9"/><circle cx="80" cy="80" r="0.9"/>
+      <circle cx="50" cy="15" r="0.6"/><circle cx="50" cy="85" r="0.6"/>
+      <circle cx="15" cy="50" r="0.6"/><circle cx="85" cy="50" r="0.6"/>
+    </g>
+    <g transform="translate(50,50)" fill="none" stroke="#111">
+      <circle r="14" stroke-width="0.6"/>
+      <circle r="11" stroke-width="0.25"/>
+    </g>
+    <text x="50" y="54" text-anchor="middle" font-family="serif" font-size="14" fill="#b83757" font-weight="bold">狼</text>
+  </g>
+
+  <!-- Folds -->
+  <g fill="none" stroke="#777" stroke-width="0.3" stroke-dasharray="1.6,1.2">
+    <line x1="58"  y1="123.5" x2="58"  y2="173.5"/>
+    <line x1="108" y1="123.5" x2="108" y2="173.5"/>
+    <line x1="158" y1="123.5" x2="158" y2="173.5"/>
+    <line x1="58"  y1="123.5" x2="108" y2="123.5"/>
+    <line x1="58"  y1="173.5" x2="108" y2="173.5"/>
+    <line x1="58"  y1="73.5"  x2="58"  y2="123.5"/>
+    <line x1="108" y1="73.5"  x2="108" y2="123.5"/>
+    <line x1="58"  y1="73.5"  x2="108" y2="73.5"/>
+    <line x1="58"  y1="173.5" x2="58"  y2="223.5"/>
+    <line x1="108" y1="173.5" x2="108" y2="223.5"/>
+    <line x1="58"  y1="223.5" x2="108" y2="223.5"/>
+    <line x1="8"   y1="123.5" x2="8"   y2="173.5"/>
+  </g>
+
+  <!-- CUT outline -->
+  <path d="M 65,66.5 L 101,66.5 L 108,73.5 L 115,80.5 L 115,116.5 L 108,123.5 L 208,123.5 L 208,173.5 L 108,173.5 L 115,180.5 L 115,216.5 L 108,223.5 L 101,230.5 L 65,230.5 L 58,223.5 L 51,216.5 L 51,180.5 L 58,173.5 L 8,173.5 L 1,166.5 L 1,130.5 L 8,123.5 L 58,123.5 L 51,116.5 L 51,80.5 L 58,73.5 Z"
+    fill="none" stroke="black" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Footer -->
+  <text x="105" y="252" text-anchor="middle" font-family="serif" font-size="3.5" fill="#111">Set A · 牡丹 線畫 — 50×50×50mm · 포인트 컬러 牡丹紅 #b83757</text>
+  <g transform="translate(80,262)">
+    <line x1="0" y1="0" x2="50" y2="0" stroke="#111" stroke-width="0.4"/>
+    <line x1="0" y1="-1.5" x2="0" y2="1.5" stroke="#111" stroke-width="0.4"/>
+    <line x1="50" y1="-1.5" x2="50" y2="1.5" stroke="#111" stroke-width="0.4"/>
+    <text x="25" y="-2.5" text-anchor="middle" font-family="sans-serif" font-size="2.8" fill="#111">50 mm</text>
+  </g>
+  <g font-family="sans-serif" font-size="2.8" fill="#555">
+    <text x="12" y="275">T=윗면 牡丹紋</text>
+    <text x="12" y="280">L=왼쪽 牡丹蔓</text>
+    <text x="12" y="285">F=앞면 役割</text>
+    <text x="160" y="275">R=오른쪽 牡丹蔓</text>
+    <text x="160" y="280">Bk=뒷면 圓紋</text>
+    <text x="160" y="285">Bt=바닥 狼印</text>
+  </g>
+</svg>

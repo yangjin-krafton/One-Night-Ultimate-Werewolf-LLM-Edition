@@ -1187,6 +1187,9 @@ async function playClip(clip) {
   const isNarration = clip.phase === 'opening' || clip.phase === 'outro';
   const isPreRecorded = !isNarration && !isSpeechClip(clip);
 
+  // Narration echo — dry stays clean; only narration clips hear the wet tail
+  if (typeof setNarrationActive === 'function') setNarrationActive(isNarration);
+
   // Radio effect (rust_orbit)
   if (radioFx.active) {
     if (isPreRecorded && Math.random() < RADIO_CLIP_CHANCE) {

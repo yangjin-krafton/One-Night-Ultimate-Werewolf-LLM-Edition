@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="210mm" height="297mm" viewBox="0 0 210 297">
+  <defs>
+    <pattern id="tabPattern" patternUnits="userSpaceOnUse" width="2.5" height="2.5" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="2.5" stroke="#bbb" stroke-width="0.2"/>
+    </pattern>
+    <pattern id="seigaihaB" x="0" y="0" width="14" height="7" patternUnits="userSpaceOnUse">
+      <path d="M0,7 A7,7 0 0,1 14,7" fill="none" stroke="#111" stroke-width="0.35"/>
+      <path d="M2.5,7 A4.5,4.5 0 0,1 11.5,7" fill="none" stroke="#111" stroke-width="0.25"/>
+      <path d="M5,7 A2,2 0 0,1 9,7" fill="none" stroke="#111" stroke-width="0.2"/>
+    </pattern>
+    <filter id="grayscale"><feColorMatrix type="matrix" values="0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0.33 0.33 0.33 0 0  0 0 0 1 0"/></filter>
+  </defs>
+
+  <!-- Header -->
+  <text x="105" y="20" text-anchor="middle" font-family="serif" font-size="6" fill="#111" font-weight="bold">
+    大正浪漫 人狼 · 紙キューブ [Set B · 月夜 線畫]
+  </text>
+  <text x="105" y="29" text-anchor="middle" font-family="sans-serif" font-size="3.3" fill="#555">
+    실선 = 자르기 · 점선 = 접기 · 돌출부(탭) = 풀칠면 · 인쇄 배율 100%
+  </text>
+  <text x="105" y="35" text-anchor="middle" font-family="sans-serif" font-size="3.0" fill="#888">
+    잉크 절약형 — 흰 바탕 검정 선화 + 포인트 山吹金 · 앞면은 &lt;image href&gt; 수정으로 역할 교체
+  </text>
+
+  <!-- Glue tabs: 흰색 채움 (잉크 0, 시각적으로 불투명 흰색) -->
+  <g fill="#ffffff" stroke="none">
+    <polygon points="58,73.5 65,66.5 101,66.5 108,73.5"/>
+    <polygon points="58,73.5 51,80.5 51,116.5 58,123.5"/>
+    <polygon points="108,73.5 115,80.5 115,116.5 108,123.5"/>
+    <polygon points="8,123.5 1,130.5 1,166.5 8,173.5"/>
+    <polygon points="58,173.5 51,180.5 51,216.5 58,223.5"/>
+    <polygon points="108,173.5 115,180.5 115,216.5 108,223.5"/>
+    <polygon points="58,223.5 65,230.5 101,230.5 108,223.5"/>
+  </g>
+
+    <!-- ========== TOP (윗면): Cloud ribbon (90° rotated, continuous with L/R) ==========  -->
+  <g transform="translate(58,73.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <g transform="rotate(90 50 50)">
+    <g fill="none" stroke="#111" stroke-width="0.8">
+      <path d="M50,0 Q42,16 50,30 Q58,44 50,58 Q42,72 50,86 Q58,100 50,100"/>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="0.4">
+      <path d="M35,0 Q27,18 35,34 Q43,52 35,68 Q27,84 35,100"/>
+      <path d="M65,0 Q73,18 65,34 Q57,52 65,68 Q73,84 65,100"/>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="0.5">
+      <circle cx="50" cy="20" r="3.5"/>
+      <circle cx="50" cy="50" r="4.5"/>
+      <circle cx="50" cy="80" r="3.5"/>
+    </g>
+    <g fill="#c9a227">
+      <circle cx="50" cy="20" r="1.3"/>
+      <circle cx="50" cy="50" r="1.7"/>
+      <circle cx="50" cy="80" r="1.3"/>
+    </g>
+    <g fill="#111" opacity="0.6">
+      <circle cx="20" cy="15" r="0.45"/><circle cx="80" cy="15" r="0.45"/>
+      <circle cx="20" cy="85" r="0.45"/><circle cx="80" cy="85" r="0.45"/>
+    </g>
+    </g>
+  </g>
+
+      <!-- ========== LEFT (왼쪽): Cloud ribbon ==========  -->
+  <g transform="translate(8,123.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <g fill="none" stroke="#111" stroke-width="0.8">
+      <path d="M50,0 Q42,16 50,30 Q58,44 50,58 Q42,72 50,86 Q58,100 50,100"/>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="0.4">
+      <path d="M35,0 Q27,18 35,34 Q43,52 35,68 Q27,84 35,100"/>
+      <path d="M65,0 Q73,18 65,34 Q57,52 65,68 Q73,84 65,100"/>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="0.5">
+      <circle cx="50" cy="20" r="3.5"/>
+      <circle cx="50" cy="50" r="4.5"/>
+      <circle cx="50" cy="80" r="3.5"/>
+    </g>
+    <g fill="#c9a227">
+      <circle cx="50" cy="20" r="1.3"/>
+      <circle cx="50" cy="50" r="1.7"/>
+      <circle cx="50" cy="80" r="1.3"/>
+    </g>
+    <g fill="#111" opacity="0.6">
+      <circle cx="20" cy="15" r="0.45"/><circle cx="80" cy="15" r="0.45"/>
+      <circle cx="20" cy="85" r="0.45"/><circle cx="80" cy="85" r="0.45"/>
+    </g>
+  </g>
+
+    <!-- ========== FRONT (앞면): Role slot ========== -->
+  <g transform="translate(58,123.5)">
+    <rect width="50" height="50" fill="#ffffff"/>
+    <rect x="2" y="2" width="46" height="46" fill="none" stroke="#111" stroke-width="0.5"/>
+    <rect x="3" y="3" width="44" height="44" fill="none" stroke="#111" stroke-width="0.2"/>
+    <image href="images_web/taisho_roman/roles/werewolf.webp" xlink:href="images_web/taisho_roman/roles/werewolf.webp"
+           x="4" y="4" width="42" height="42" preserveAspectRatio="xMidYMid slice"/>
+  </g>
+
+    <!-- ========== RIGHT (오른쪽): Cloud ribbon (same as L) ==========  -->
+  <g transform="translate(108,123.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <g fill="none" stroke="#111" stroke-width="0.8">
+      <path d="M50,0 Q42,16 50,30 Q58,44 50,58 Q42,72 50,86 Q58,100 50,100"/>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="0.4">
+      <path d="M35,0 Q27,18 35,34 Q43,52 35,68 Q27,84 35,100"/>
+      <path d="M65,0 Q73,18 65,34 Q57,52 65,68 Q73,84 65,100"/>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="0.5">
+      <circle cx="50" cy="20" r="3.5"/>
+      <circle cx="50" cy="50" r="4.5"/>
+      <circle cx="50" cy="80" r="3.5"/>
+    </g>
+    <g fill="#c9a227">
+      <circle cx="50" cy="20" r="1.3"/>
+      <circle cx="50" cy="50" r="1.7"/>
+      <circle cx="50" cy="80" r="1.3"/>
+    </g>
+    <g fill="#111" opacity="0.6">
+      <circle cx="20" cy="15" r="0.45"/><circle cx="80" cy="15" r="0.45"/>
+      <circle cx="20" cy="85" r="0.45"/><circle cx="80" cy="85" r="0.45"/>
+    </g>
+  </g>
+
+      <!-- ========== BACK (뒷면): Seigaiha waves + crescent (moved from BOTTOM) ==========  -->
+  <g transform="translate(158,123.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <rect width="100" height="100" fill="url(#seigaihaB)" opacity="0.75"/>
+    <rect x="4" y="4" width="92" height="92" fill="none" stroke="#111" stroke-width="0.5"/>
+    <g transform="translate(50,50)">
+      <circle r="13" fill="#ffffff"/>
+      <circle r="13" fill="none" stroke="#111" stroke-width="0.6"/>
+      <circle r="10" fill="none" stroke="#111" stroke-width="0.25"/>
+      <path d="M-7,-2 A7,7 0 1,0 -2,-8 A5,5 0 1,1 -7,-2 Z" fill="none" stroke="#111" stroke-width="0.45"/>
+      <circle cx="2" cy="1" r="1.2" fill="#c9a227"/>
+    </g>
+  </g>
+
+      <!-- ========== BOTTOM (바닥): Cloud ribbon (90° rotated, continuous with L/R) ==========  -->
+  <g transform="translate(58,173.5) scale(0.5)">
+    <rect width="100" height="100" fill="#ffffff"/>
+    <g transform="rotate(90 50 50)">
+    <g fill="none" stroke="#111" stroke-width="0.8">
+      <path d="M50,0 Q42,16 50,30 Q58,44 50,58 Q42,72 50,86 Q58,100 50,100"/>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="0.4">
+      <path d="M35,0 Q27,18 35,34 Q43,52 35,68 Q27,84 35,100"/>
+      <path d="M65,0 Q73,18 65,34 Q57,52 65,68 Q73,84 65,100"/>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="0.5">
+      <circle cx="50" cy="20" r="3.5"/>
+      <circle cx="50" cy="50" r="4.5"/>
+      <circle cx="50" cy="80" r="3.5"/>
+    </g>
+    <g fill="#c9a227">
+      <circle cx="50" cy="20" r="1.3"/>
+      <circle cx="50" cy="50" r="1.7"/>
+      <circle cx="50" cy="80" r="1.3"/>
+    </g>
+    <g fill="#111" opacity="0.6">
+      <circle cx="20" cy="15" r="0.45"/><circle cx="80" cy="15" r="0.45"/>
+      <circle cx="20" cy="85" r="0.45"/><circle cx="80" cy="85" r="0.45"/>
+    </g>
+    </g>
+  </g>
+
+    <!-- Folds -->
+  <g fill="none" stroke="#777" stroke-width="0.3" stroke-dasharray="1.6,1.2">
+    <line x1="58"  y1="123.5" x2="58"  y2="173.5"/>
+    <line x1="108" y1="123.5" x2="108" y2="173.5"/>
+    <line x1="158" y1="123.5" x2="158" y2="173.5"/>
+    <line x1="58"  y1="123.5" x2="108" y2="123.5"/>
+    <line x1="58"  y1="173.5" x2="108" y2="173.5"/>
+    <line x1="58"  y1="73.5"  x2="58"  y2="123.5"/>
+    <line x1="108" y1="73.5"  x2="108" y2="123.5"/>
+    <line x1="58"  y1="73.5"  x2="108" y2="73.5"/>
+    <line x1="58"  y1="173.5" x2="58"  y2="223.5"/>
+    <line x1="108" y1="173.5" x2="108" y2="223.5"/>
+    <line x1="58"  y1="223.5" x2="108" y2="223.5"/>
+    <line x1="8"   y1="123.5" x2="8"   y2="173.5"/>
+  </g>
+
+  <!-- CUT outline -->
+  <path d="M 65,66.5 L 101,66.5 L 108,73.5 L 115,80.5 L 115,116.5 L 108,123.5 L 208,123.5 L 208,173.5 L 108,173.5 L 115,180.5 L 115,216.5 L 108,223.5 L 101,230.5 L 65,230.5 L 58,223.5 L 51,216.5 L 51,180.5 L 58,173.5 L 8,173.5 L 1,166.5 L 1,130.5 L 8,123.5 L 58,123.5 L 51,116.5 L 51,80.5 L 58,73.5 Z"
+    fill="none" stroke="black" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Footer -->
+  <text x="105" y="252" text-anchor="middle" font-family="serif" font-size="3.5" fill="#111">Set B · 月夜 線畫 — 50×50×50mm · 포인트 컬러 山吹金 #c9a227</text>
+  <g transform="translate(80,262)">
+    <line x1="0" y1="0" x2="50" y2="0" stroke="#111" stroke-width="0.4"/>
+    <line x1="0" y1="-1.5" x2="0" y2="1.5" stroke="#111" stroke-width="0.4"/>
+    <line x1="50" y1="-1.5" x2="50" y2="1.5" stroke="#111" stroke-width="0.4"/>
+    <text x="25" y="-2.5" text-anchor="middle" font-family="sans-serif" font-size="2.8" fill="#111">50 mm</text>
+  </g>
+  <g font-family="sans-serif" font-size="2.8" fill="#555">
+    <text x="12" y="275">T=윗면 雲帯</text>
+    <text x="12" y="280">L=왼쪽 雲帯</text>
+    <text x="12" y="285">F=앞면 役割</text>
+    <text x="160" y="275">R=오른쪽 雲帯</text>
+    <text x="160" y="280">Bk=뒷면 青海波</text>
+    <text x="160" y="285">Bt=바닥 雲帯</text>
+  </g>
+</svg>
