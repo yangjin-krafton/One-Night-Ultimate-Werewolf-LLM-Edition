@@ -7,80 +7,80 @@
   </defs>
 
   <!-- Title / Instructions -->
-  <text x="105" y="18" text-anchor="middle" font-family="sans-serif" font-size="5" fill="#222" font-weight="bold">A4 종이 큐브 수납 트레이 도안 — 50mm 큐브 6개(2×3) 수납용</text>
+  <text x="105" y="18" text-anchor="middle" font-family="sans-serif" font-size="5" fill="#222" font-weight="bold">A4 종이 큐브 수납 트레이 도안 — 50mm 큐브 6개(2×3) 여유 수납용</text>
   <text x="105" y="26" text-anchor="middle" font-family="sans-serif" font-size="3.4" fill="#555">실선(검정) = 자르기 · 점선 = 접기(계곡 접기) · 빗금 영역 = 풀칠</text>
   <text x="105" y="32" text-anchor="middle" font-family="sans-serif" font-size="3.4" fill="#555">인쇄 설정: 배율 100% / 실제 크기로 (Fit to page · 페이지에 맞춤 해제)</text>
-  <text x="105" y="38" text-anchor="middle" font-family="sans-serif" font-size="3.2" fill="#888">두께 180~220g/㎡ 종이 권장 · 큐브 50×50×50mm 기준 · 상단 오픈 트레이</text>
+  <text x="105" y="38" text-anchor="middle" font-family="sans-serif" font-size="3.2" fill="#888">두께 180~220g/㎡ 종이 권장 · 큐브 50mm 기준 · 큐브당 약 2mm 여유 · 상단 오픈 트레이</text>
 
   <!-- GLUE TABS (hatched fill) -->
   <g fill="url(#tabPattern)" stroke="none">
     <!-- Back wall left + right tabs -->
-    <polygon points="54,45 47,52 47,68 54,75"/>
-    <polygon points="156,45 163,52 163,68 156,75"/>
+    <polygon points="52,42 45,49 45,65 52,72"/>
+    <polygon points="158,42 165,49 165,65 158,72"/>
     <!-- Front wall left + right tabs -->
-    <polygon points="54,227 47,234 47,250 54,257"/>
-    <polygon points="156,227 163,234 163,250 156,257"/>
+    <polygon points="52,230 45,237 45,253 52,260"/>
+    <polygon points="158,230 165,237 165,253 158,260"/>
   </g>
 
   <!-- CUT outline (single closed path, clockwise from back-wall TL) -->
-  <path d="M 54,45 L 156,45 L 163,52 L 163,68 L 156,75 L 186,75 L 186,227 L 156,227 L 163,234 L 163,250 L 156,257 L 54,257 L 47,250 L 47,234 L 54,227 L 24,227 L 24,75 L 54,75 L 47,68 L 47,52 Z"
+  <path d="M 52,42 L 158,42 L 165,49 L 165,65 L 158,72 L 188,72 L 188,230 L 158,230 L 165,237 L 165,253 L 158,260 L 52,260 L 45,253 L 45,237 L 52,230 L 22,230 L 22,72 L 52,72 L 45,65 L 45,49 Z"
     fill="none" stroke="black" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round"/>
 
   <!-- FOLD lines (dashed) -->
   <g fill="none" stroke="#333" stroke-width="0.3" stroke-dasharray="2,1.5">
     <!-- Floor-to-wall folds (4 sides) -->
-    <line x1="54"  y1="75"  x2="156" y2="75"/>
-    <line x1="54"  y1="227" x2="156" y2="227"/>
-    <line x1="54"  y1="75"  x2="54"  y2="227"/>
-    <line x1="156" y1="75"  x2="156" y2="227"/>
+    <line x1="52"  y1="72"  x2="158" y2="72"/>
+    <line x1="52"  y1="230" x2="158" y2="230"/>
+    <line x1="52"  y1="72"  x2="52"  y2="230"/>
+    <line x1="158" y1="72"  x2="158" y2="230"/>
     <!-- Tab-to-wall folds (back wall left + right) -->
-    <line x1="54"  y1="45"  x2="54"  y2="75"/>
-    <line x1="156" y1="45"  x2="156" y2="75"/>
+    <line x1="52"  y1="42"  x2="52"  y2="72"/>
+    <line x1="158" y1="42"  x2="158" y2="72"/>
     <!-- Tab-to-wall folds (front wall left + right) -->
-    <line x1="54"  y1="227" x2="54"  y2="257"/>
-    <line x1="156" y1="227" x2="156" y2="257"/>
+    <line x1="52"  y1="230" x2="52"  y2="260"/>
+    <line x1="158" y1="230" x2="158" y2="260"/>
   </g>
 
   <!-- Cube position guides on floor (light, non-cut) -->
   <g fill="none" stroke="#d8d8d8" stroke-width="0.2" stroke-dasharray="1,1">
     <!-- Horizontal cube boundaries (row dividers inside floor) -->
-    <line x1="55"  y1="126" x2="155" y2="126"/>
-    <line x1="55"  y1="176" x2="155" y2="176"/>
+    <line x1="53"  y1="125" x2="157" y2="125"/>
+    <line x1="53"  y1="177" x2="157" y2="177"/>
     <!-- Vertical cube boundary (column divider inside floor) -->
-    <line x1="105" y1="76"  x2="105" y2="226"/>
+    <line x1="105" y1="73"  x2="105" y2="229"/>
   </g>
 
   <!-- Wall labels -->
   <g font-family="sans-serif" font-size="4" fill="#aaa" text-anchor="middle">
-    <text x="105" y="63">뒷벽 (BACK · h 30mm)</text>
-    <text x="39"  y="153">왼쪽 벽 (L)</text>
-    <text x="171" y="153">오른쪽 벽 (R)</text>
-    <text x="105" y="245">앞벽 (FRONT · h 30mm)</text>
+    <text x="105" y="60">뒷벽 (BACK · h 30mm)</text>
+    <text x="37"  y="151">왼쪽 벽 (L)</text>
+    <text x="173" y="151">오른쪽 벽 (R)</text>
+    <text x="105" y="248">앞벽 (FRONT · h 30mm)</text>
   </g>
 
-  <!-- Cube cell labels (2 columns × 3 rows, each 50×50mm) -->
+  <!-- Cube cell labels (2 columns × 3 rows, each ~53×52.7mm holding a 50mm cube) -->
   <g font-family="sans-serif" font-size="3.6" fill="#cfcfcf" text-anchor="middle">
-    <text x="80"  y="103">50 × 50</text>
-    <text x="130" y="103">50 × 50</text>
-    <text x="80"  y="153">50 × 50</text>
-    <text x="130" y="153">50 × 50</text>
-    <text x="80"  y="203">50 × 50</text>
-    <text x="130" y="203">50 × 50</text>
+    <text x="78.5"  y="100">50mm 큐브</text>
+    <text x="131.5" y="100">50mm 큐브</text>
+    <text x="78.5"  y="152">50mm 큐브</text>
+    <text x="131.5" y="152">50mm 큐브</text>
+    <text x="78.5"  y="205">50mm 큐브</text>
+    <text x="131.5" y="205">50mm 큐브</text>
   </g>
 
   <!-- Floor header (subtle) -->
-  <text x="105" y="82" text-anchor="middle" font-family="sans-serif" font-size="3" fill="#cfcfcf">바닥 FLOOR  102 × 152 mm  (2 열 × 3 행)</text>
+  <text x="105" y="80" text-anchor="middle" font-family="sans-serif" font-size="3" fill="#cfcfcf">바닥 FLOOR  106 × 158 mm  (2 열 × 3 행 · 큐브당 약 2mm 여유)</text>
 
   <!-- Assembly note -->
-  <text x="105" y="265" text-anchor="middle" font-family="sans-serif" font-size="3.2" fill="#666">
-    완성 트레이 내측: 102 × 152 × 30mm  ·  큐브 6개 수납 (2×3)  ·  탭 깊이 7mm
+  <text x="105" y="268" text-anchor="middle" font-family="sans-serif" font-size="3.2" fill="#666">
+    완성 트레이 내측: 106 × 158 × 30mm  ·  50mm 큐브 6개 수납 (2×3)  ·  탭 깊이 7mm
   </text>
-  <text x="105" y="271" text-anchor="middle" font-family="sans-serif" font-size="2.9" fill="#888">
+  <text x="105" y="274" text-anchor="middle" font-family="sans-serif" font-size="2.9" fill="#888">
     조립: 4면 벽을 위로 접고, 앞·뒷벽의 좌·우 탭을 좌·우 벽 안쪽에 풀칠해 붙입니다.
   </text>
 
   <!-- 50mm scale bar for verification -->
-  <g transform="translate(80,283)">
+  <g transform="translate(80,285)">
     <line x1="0"  y1="0"    x2="50" y2="0"    stroke="#333" stroke-width="0.4"/>
     <line x1="0"  y1="-1.5" x2="0"  y2="1.5"  stroke="#333" stroke-width="0.4"/>
     <line x1="50" y1="-1.5" x2="50" y2="1.5"  stroke="#333" stroke-width="0.4"/>
