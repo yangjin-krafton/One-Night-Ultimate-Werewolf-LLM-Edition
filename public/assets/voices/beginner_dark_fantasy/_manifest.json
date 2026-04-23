@@ -11,13 +11,13 @@
       "clipId": "beginner_dark_fantasy/ep1/pall/role/doppelganger/during/001",
       "speakerId": "doppelganger",
       "url": "/assets/voices/beginner_dark_fantasy/ep1/pall/role/doppelganger/during/001/voice.m4a",
-      "text": "거울 속 아주머니의 얼굴을 마주할 시간이야. 도플갱어 부인, 살짝만 눈 떠 봐. 다른 플레이어 한 명의 카드를 확인하고 그 역할을 그대로 복사하는 거야. 복제한 게 밤에 행동하는 역할이면 그 규칙대로 지금 바로, 아니면 해당 차례에 다시 깨서 움직이는 거지. 새 얼굴 챙기고 다시 감아. 내일은 복제한 얼굴로 누구보다 먼저 입을 뗄 준비를 해 두지."
+      "text": "거울 속 아주머니의 얼굴을 마주할 시간이야. 도플갱어 부인, 살짝만 눈 떠 봐. 다른 플레이어 한 명의 카드를 확인하고 그 역할을 그대로 복사하는 거야. 복제한 게 밤에 행동하는 역할이면 그 규칙대로 지금 바로 행동하고, 아니면 해당 차례에 다시 깨서 움직이는 거지. 새 얼굴 챙기고 다시 감아. 내일은 복제한 얼굴로 누구보다 먼저 입을 뗄 준비를 해 두지."
     },
     {
       "clipId": "beginner_dark_fantasy/ep1/pall/role/werewolf/during/001",
       "speakerId": "werewolf",
       "url": "/assets/voices/beginner_dark_fantasy/ep1/pall/role/werewolf/during/001/voice.m4a",
-      "text": "피 냄새가 짙어진다. 늑대인간, 눈 떠라. 다른 늑대가 있으면 서로 얼굴을 확인해라. 혼자라면 중앙 카드 한 장을 들춰 봐라. 다 봤으면 이빨 숨기고 다시 엎드려라. 내일은 네 정체를 가려 줄 희생양을 찾거나, 혼자 본 중앙 카드로 마을 사람을 연기해라."
+      "text": "피 냄새가 짙어진다. 늑대인간, 눈 떠라. 다른 늑대가 있으면 서로 얼굴을 확인해라. 혼자라면 중앙 카드 한 장을 들춰 봐라. 다봤으면 이빨 숨기고 다시 엎드려라. 내일은 네 정체를 가려 줄 희생양을 찾거나, 혼자 본 중앙 카드로 마을 사람을 연기해라."
     },
     {
       "clipId": "beginner_dark_fantasy/ep1/pall/role/alpha_wolf/during/001",
@@ -107,7 +107,7 @@
       "clipId": "beginner_dark_fantasy/ep1/pall/role/drunk/during/001",
       "speakerId": "drunk",
       "url": "/assets/voices/beginner_dark_fantasy/ep1/pall/role/drunk/during/001/voice.m4a",
-      "text": "세상이 빙글빙글, 혀도 빙글빙글 돌아요오. 주정뱅이. 네 카드랑 중앙 카드 한 장을 바꿔 놓는 거야아. 근데 새 카드는 절대 못 봐요. 어느 위치의 중앙 카드랑 바꿨는지만... ㅎㅎ, 그것만 기억해 두고 어지러우니까 다시 자자아. 내일은 원래 역할은 날아갔다 치고 남들 말 주워서 네 정체 찾자아."
+      "text": "취하니까아... 아이 모래겠다아. 그래도 기분 좋다아, 한잔 더어... 어어, 주정뱅이 잠깐 눈 떠 봐. 네 카드하고 중앙 카드 한 장은 꼭 바꿔 놔야 해애. 대신 새 카드는 보면 안 돼요오. 어느 자리랑 바꿨는지만 겨우 붙잡아 두고 다시 자자아. 내일은 남들 말 주워 담으면서 네가 뭐가 됐는지 더듬어 보자아."
     },
     {
       "clipId": "beginner_dark_fantasy/ep1/pall/role/aura_seer/during/001",
@@ -125,7 +125,7 @@
       "clipId": "beginner_dark_fantasy/ep1/pall/role/revealer/during/001",
       "speakerId": "revealer",
       "url": "/assets/voices/beginner_dark_fantasy/ep1/pall/role/revealer/during/001/voice.m4a",
-      "text": "어둠 속에 숨은 진실을 강제로 끌어냅니다. 계시자님, 이제 드러내 보시죠. 다른 플레이어 한 명의 카드를 뒤집어 공개합니다. 그 카드가 늑대인간이나 무두장이면 다시 덮으시죠. 그 외면 공개된 상태 그대로 둡니다. 자기 카드는 대상이 아니죠. 판정 끝났습니다, 감으시죠. 내일 아침 모두가 눈을 뜨면, 뒤집힌 카드의 주인이 토론의 중심이 될 겁니다."
+      "text": "어둠 속에 숨은 진실을 강제로 끌어냅니다. 계시자님, 이제 눈을 떠 보시죠. 다른 플레이어 한 명의 카드를 뒤집어 공개할게요. 그 카드가 늑대인간이나 무두장이면 다시 덮으시죠. 그 외면 공개된 상태 그대로 둡니다. 자기 카드는 대상이 아니죠. 판정 끝났습니다, 감으시죠. 내일 아침 모두가 눈을 뜨면, 뒤집힌 카드의 주인이 토론의 중심이 될 겁니다."
     },
     {
       "clipId": "beginner_dark_fantasy/ep1/pall/role/insomniac/during/001",
@@ -281,7 +281,7 @@
       "clipId": "beginner_dark_fantasy/ep2/pall/role/drunk/during/001",
       "speakerId": "drunk",
       "url": "/assets/voices/beginner_dark_fantasy/ep2/pall/role/drunk/during/001/voice.m4a",
-      "text": "미지의 카드가아... 꼭 기회인 건 아닌데요오, 뭐 재밌죠오. 주정뱅이, 비틀비틀 깨 보자아. 네 카드랑 중앙 카드 한 장을 바꾸는 거야아. 새 카드는 못 보니까 어느 위치랑 바꿨는지 기억하는 게 핵심이거든요오. 어지러우니까 얼른 감아아. 내일은 사람들이 본 중앙 카드 정보를 주워다가 네 새 정체를 더듬더듬 추적하자아."
+      "text": "헤에... 취하니까 더 모르겠네에, 아이 모래겠다아. 그래도 기분 좋다아. 주정뱅이, 비틀비틀 일어나 보자아. 네 카드랑 중앙 카드 한 장, 그거 하나만 바꾸면 돼애. 새 카드는 못 보니까 어느 자리 건드렸는지만 꼭 기억하자아. 한잔 더 생각나도 지금은 감아아. 내일은 사람들이 본 중앙 정보 주워다가 네 새 정체를 더듬더듬 맞춰 보자아."
     },
     {
       "clipId": "beginner_dark_fantasy/ep2/pall/role/aura_seer/during/001",
@@ -455,7 +455,7 @@
       "clipId": "beginner_dark_fantasy/ep3/pall/role/drunk/during/001",
       "speakerId": "drunk",
       "url": "/assets/voices/beginner_dark_fantasy/ep3/pall/role/drunk/during/001/voice.m4a",
-      "text": "취중의 기억은 정말이지 남지를 않아요오. 주정뱅이, 어어, 지금 네 차례야아. 자기 카드는 중앙 한 장과 반드시 교환해야 하고 거부할 수 없거든요오. 새 카드는 절대 확인 못 해서, 최종 정체가 늑대인간이어도 본인은 마을 팀처럼 행동하다 처형되면 마을이 이기는 거야아. 태초의 늑대인간 전용 뒷면 카드는 대상이 아니라 절대 건드리지 못해요오.어느 위치의 중앙 카드랑 바꿨는지만 기억해 두고 어지러우니까 얼른 감아아. 내일은 다른 사람들 정보에 기대서, 어어... 네 새 정체를 더듬더듬 찾자아."
+      "text": "으으... 취하니까아 아이 모래겠다아. 한잔 더 마시기 전에 해야지이. 주정뱅이, 어어, 지금 네 차례야아. 자기 카드는 중앙 한 장과 반드시 바꿔야 하고 거부는 안 돼요오. 새 카드는 끝까지 못 봐서, 늑대인간 카드를 집어도 본인은 마을 사람처럼 떠들다 처형될 수 있거든요오. 태초의 늑대인간 전용 뒷면 카드는 손대면 안 되고, 어느 자리랑 바꿨는지만 붙들고 있어야 해애. 혹시 예언자가 그 중앙을 봤다면 네 새 정체가 잡힐 수도 있지이. 비틀거리기 전에 얼른 감아아."
     },
     {
       "clipId": "beginner_dark_fantasy/ep3/pall/role/aura_seer/during/001",
