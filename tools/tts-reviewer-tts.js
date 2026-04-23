@@ -154,15 +154,34 @@ async function generateTtsQwen3(text, tag) {
   return { blob, blobUrl: URL.createObjectURL(blob) };
 }
 
-// ── Unified TTS dispatch ──
+// ── Unified TTS dispatch (serialized via shared mutex) ──
+// A single chain prevents concurrent TTS requests regardless of caller
+// (batch generation, regen queue, one-off clip regen, etc.). This keeps
+// only one in-flight request at a time against the TTS backend and avoids
+// file-write races on the same path.
+let _ttsMutexChain = Promise.resolve();
+let _ttsInFlight = 0;
+
+function getTtsInFlight() { return _ttsInFlight; }
+
 async function generateTts(text, speakerId, overrideTag) {
   const backend = getBackend();
   const tag = overrideTag || (voiceMap ? (voiceMap[speakerId] || voiceMap['Narrator']) : null);
 
-  if (backend === 'qwen3') {
-    return generateTtsQwen3(text, tag);
+  // Acquire mutex slot — chain onto previous call.
+  const prev = _ttsMutexChain;
+  let release;
+  _ttsMutexChain = new Promise(r => (release = r));
+
+  try {
+    await prev;  // wait for previous call (errors isolated below — prev never rejects here)
+    _ttsInFlight++;
+    if (backend === 'qwen3') return await generateTtsQwen3(text, tag);
+    return await generateTtsFish(text, tag);
+  } finally {
+    _ttsInFlight--;
+    release();  // let next queued caller proceed
   }
-  return generateTtsFish(text, tag);
 }
 
 function getTagOverride(idx) {
